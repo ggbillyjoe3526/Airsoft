@@ -31,7 +31,7 @@ describe('an Extraction run, settled (M47, LV1)', () => {
     expect(locker.open).toBe(true);
     r.yours.use = false;
     r.moveYou(run.exits.find((e) => e.open)!.position);
-    r.play(r.run.rules.extractTime + 1);
+    r.play(r.run.rules.extractTime + 1, r.clearExit);
     expect(r.state.round.reason).toBe('extracted');
 
     const haul = runHaul(run);

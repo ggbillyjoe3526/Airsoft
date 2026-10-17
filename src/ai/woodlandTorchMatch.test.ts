@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BOT_TORCH, BOTS, NIGHT_SIGHT } from '../config/bots';
-import { HITS, ROUNDS } from '../config/hits';
+import { ROUNDS } from '../config/hits';
 import { DEPOT } from '../map/depot';
 import { nightSightRange } from '../map/nightSight';
 import { torchSightRange } from '../map/torchLight';
@@ -49,7 +49,7 @@ describe('bots and their weapon torches in a match (M33h acceptances 2 and 3)', 
     const explainedAt = new Map<number, number>();
     let carried = -1;
     // Woodland is a night field, so the harness fits every bot its torch as the game does (M57, audit AI-02).
-    const stats = playMatch(240, 3, undefined, BOTS, 'elimination', ROUNDS, WOODLAND, 4, HITS, (state, controller) => {
+    const stats = playMatch(240, 3, undefined, BOTS, 'elimination', ROUNDS, WOODLAND, 4, undefined, (state, controller) => {
       if (state.tick === 1) carried = state.characters.filter((c) => lightInHand(c) === LIGHT).length;
       for (const e of state.events) {
         if (e.type === 'torch') {
@@ -109,13 +109,13 @@ describe('bots and their weapon torches in a match (M33h acceptances 2 and 3)', 
   it('on Depot by day: the same kits with torches play exactly as without, and nobody switches one', { timeout: 30_000 }, () => {
     let switches = 0;
     let carried = -1;
-    const withTorches = playMatch(40, 7, undefined, BOTS, 'elimination', ROUNDS, DEPOT, ROUNDS.teamSize, HITS, (state) => {
+    const withTorches = playMatch(40, 7, undefined, BOTS, 'elimination', ROUNDS, DEPOT, ROUNDS.teamSize, undefined, (state) => {
       if (state.tick === 1) carried = state.characters.filter((c) => lightInHand(c) === LIGHT).length;
       for (const e of state.events) if (e.type === 'torch') switches++;
     }, undefined, true);
     // By day the harness fits none, as the game fits none.
     let carriedByDefault = -1;
-    const without = playMatch(40, 7, undefined, BOTS, 'elimination', ROUNDS, DEPOT, ROUNDS.teamSize, HITS, (state) => {
+    const without = playMatch(40, 7, undefined, BOTS, 'elimination', ROUNDS, DEPOT, ROUNDS.teamSize, undefined, (state) => {
       if (state.tick === 1) carriedByDefault = state.characters.filter((c) => lightInHand(c) !== null).length;
     });
     expect(carried).toBe(2 * ROUNDS.teamSize);

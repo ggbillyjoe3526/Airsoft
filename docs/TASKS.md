@@ -28,19 +28,6 @@ below. The item numbers are his. Where an older block overlaps one of these, the
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
 
-## BD1 · Blender models by default (playtest item 1)
-tier: core
-perf: required
-touches: src/config/dev.ts, src/settings/dev.ts, src/ui/devSettings.ts, src/render/, src/assets/, src/config/assets.ts, src/config/renderQuality.ts, src/ui/menus/
-contract: none
-acceptance:
-  1. The Blender figures, replicas and attachments are the default everywhere, menu pictures included. The code-built models remain only on Low, or go.
-  2. The code paths behind the Dev toggles "Disable figure models" and "Disable all models" are gone (ST1 takes the toggles out of the menu).
-  3. Load size stays under the 30 MB target, and the perf gate is green on every preset.
-  4. The hit volume fits the rigged figures (HV1) in this task or straight after it.
-status: open
-attempts: 0
-
 ## BL1 · Attack / Defend: fewer attacker wins, more rounds won at the pole (after playtest)
 tier: core
 perf: skip
@@ -81,20 +68,6 @@ acceptance:
   3. Bots use height: anchors and careful bots hold upper-floor spots, and flankers take the high routes. At least a third of knockouts involve a player above the street (first guess; tune in play).
   4. The ends stay even: neither wins more than 55 % of decided Elimination rounds by Day or by Night, and Attack / Defend stays in its 40–60 % band at every difficulty.
   5. The stairs and the Plaza stair still climb without a jump (BP5), and Extraction on Neon Heights stays in its bands.
-status: open
-attempts: 0
-
-## HV1 · The hit area fits each rigged figure (with the figures going default)
-tier: core
-perf: skip
-touches: src/config/hits.ts, src/config/figureRig.ts, src/render/riggedFigure.ts, src/render/riggedHitVolume.test.ts, src/render/figureHitVolume.test.ts
-contract: none
-acceptance:
-  1. William's ruling (2026-10-16: fit to each figure): the head, chest and hips of the hit volume follow each rigged figure, the human's and the robot's, as the legs already do (IM8). The two may differ.
-  2. `render/riggedHitVolume.test.ts` passes the bar on every pose for both figures: at most 4 % of the drawn body missed and 3 % thin air (today 5.5–11.5 % thin air on the human, 7–11 % on the robot). The vault's rise is held to the same bar or listed in the record with its figure.
-  3. Running and sprinting: the volume leans with the figure, closing the sprint gap (today up to 16 %), or the record shows why it can't and William decides.
-  4. With the Dev figure switches on (the built-in figures), the hit volume and every hit test stay exactly as today.
-  5. Bot-only balance on Depot, Woodland and Neon Heights stays in its bands with the rigged figures drawn, and the KNOWN_ISSUES rows for the rigged figures' fit close.
 status: open
 attempts: 0
 

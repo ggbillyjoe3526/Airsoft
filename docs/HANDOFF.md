@@ -12,11 +12,11 @@ each `src/` folder's `README.md`.
   at the top of `docs/TASKS.md` (ST1, MR1, HD1, MV1, BD1, MS1, TT1), each built by its own thread. He played Dev 6 (2026-10-16). The Beta 1 blocks are in `docs/TASKS.md`, highest
   priority first: fixes, balance, performance and polish, with no features. His playtest made three of them: WL1
   (Woodland Attack / Defend), NH1 (Neon Heights' upper floors, placed with the Maps Update) and HV1 (the hit area
-  fitted to each figure, his ruling, placed with the figures leaving the Dev switches). The callouts' pace is fine, and
+  fitted to each figure, his ruling, done in HV1 with BD1, which made the rigged figures the default). The callouts' pace is fine, and
   the overtime flag went unseen because rounds ended first. The spring sniper waits for 0.2 and his specs.
 - **Waiting on the owner:** trying Adaptive difficulty, the laptop and desktop Ultra perf baselines (PF2 waits on
   them), and the Save checks in Firefox and Edge (`docs/PLAYTEST.md` › Only you can do these).
-- **Vault clips.** Both rigged figures behind the Dev switches have their own (shared in
+- **Vault clips.** Both rigged figures (the default since BD1) have their own (shared in
   `tools/blender/bot-figure/scripts/bot18.py`: the robot's built with it in RM10, the human's spliced into its RM9
   export); a figure file without them falls back to the old placeholder. The built-in figures don't change. Of the
   bots, anchors aim from cover where they stand still to fight or hold (BN1; not while sidestepping or hunting, BP5);

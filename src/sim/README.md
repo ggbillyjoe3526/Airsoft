@@ -21,7 +21,8 @@ The gameplay rules: plain data and pure functions, with no Three.js, no DOM and 
 - `bbs.ts`, `hitbox.ts`, `ricochet.ts`, `levelRay.ts`: BBs against the level (through `WorldQuery`) and against
   character hit volumes (`hitbox.ts`: chest, hips and swinging legs, matched to the drawn figure by
   `render/figureHitVolume.test.ts`; with the rigged figures drawn the legs sit on theirs, `figureLegs.ts` blending their
-  leg clips by the figure's own rules, IM8). Every body stops a BB; only one in play is knocked out (M85). A ricochet knocks
+  leg clips by the figure's own rules, IM8, and the head, chest, shoulders and hips on theirs, `figureBody.ts`
+  blending their upper-body points the same way, HV1; every match since BD1). Every body stops a BB; only one in play is knocked out (M85). A ricochet knocks
   someone out only if `HitConfig.ricochetsCount`. `levelRay.ts` is the
   allocation-free slab test that answers Rapier's static ray casts. `leaves.ts` (FO1): a BB that runs into a bush
   (`WorldQuery.foliage`) stops once it has crossed `stopDepth` of leaves (`BB.leaf`), and one out of an edge is thrown

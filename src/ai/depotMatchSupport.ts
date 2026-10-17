@@ -1,7 +1,7 @@
 import { expect } from 'vitest';
 import { BALLISTICS, WIND } from '../config/ballistics';
 import { BOTS, type BotConfig } from '../config/bots';
-import { type HitConfig, HITS, ROUNDS } from '../config/hits';
+import { type HitConfig, ROUNDS } from '../config/hits';
 import { type MatchMode, unknownMode } from '../config/modes';
 import { FOOTSTEPS } from '../config/footsteps';
 import { BODY, MOVEMENT } from '../config/movement';
@@ -27,6 +27,7 @@ import { BotController } from './botController';
 import { drawIdentities } from './botRoster';
 import type { BotIdentity } from './personality';
 import { lowCoverBlocks, tallCoverBlocks } from './cover';
+import { dressFigures, RIGGED_HITS } from './riggedHitsSupport';
 import { sightConditionsOf } from './perception';
 
 /**
@@ -81,7 +82,8 @@ export function playMatch(
   rules: RoundRules = ROUNDS,
   map: MapData = DEPOT,
   teamSize: number = ROUNDS.teamSize,
-  hits: HitConfig = HITS,
+  /** The hit rules: by default a match's, with the rigged figures' hit volumes (BD1, HV1). */
+  hits: HitConfig = RIGGED_HITS,
   onTick: (state: GameState, bots: BotController) => void = () => {},
   /** Who carries something other than the default loadout (a bot's kit, BG1): its character, or undefined for the default. */
   carry: (id: number, team: number) => Character | undefined = () => undefined,
@@ -119,6 +121,8 @@ export function playMatch(
       id++;
     }
   }
+  // Humans and robots mixed as a match mixes them: each one's hit volume takes its figure's shape (HV1).
+  dressFigures(seed, state.characters);
   const botCharacters = hider ? state.characters.filter((c) => c.team === 1) : state.characters;
   if (torches) fitNightTorches(botCharacters);
   // Round 1 as the game starts it: each team at its end; a hider stands at its spot instead.
@@ -290,7 +294,7 @@ export function playFollowMatch(seconds: number, seed: number, map: MapData = DE
   const REJOIN = 3;
   /** Per character, seconds in a row spent carrying out the order (a fight or cover resets it). */
   const following = new Map<number, number>();
-  const stats = playMatch(seconds, seed, undefined, BOTS, 'elimination', ROUNDS, map, ROUNDS.teamSize, HITS, (state, bots) => {
+  const stats = playMatch(seconds, seed, undefined, BOTS, 'elimination', ROUNDS, map, ROUNDS.teamSize, RIGGED_HITS, (state, bots) => {
     const leader = state.characters[0]!;
     if (state.events.some((e) => e.type === 'roundStart') || state.tick === 1) bots.giveOrder(leader, 'follow');
     if (state.round.phase !== 'live' || leader.status !== 'alive') return;
@@ -326,7 +330,7 @@ export interface RicochetTally {
 
 /** 16 seeds of 3v3 in `mode` with ricochets counting (friendly fire on, FA12): the tallies over them all. */
 export function tallyRicochetMatches(mode: MatchMode): RicochetTally {
-  const hits = { ...HITS, ricochetsCount: true };
+  const hits = { ...RIGGED_HITS, ricochetsCount: true };
   const t: RicochetTally = { rounds: 0, favoured: 0, captures: 0, hits: 0, ricochetHits: 0, directFriendly: 0, friendlyRicochets: 0, selfHits: 0 };
   for (let seed = 1; seed <= 16; seed++) {
     const stats = playMatch(forRoundsMode(mode, { elimination: 300, attackDefend: 400 }), seed, undefined, BOTS, mode, ROUNDS, DEPOT, ROUNDS.teamSize, hits);

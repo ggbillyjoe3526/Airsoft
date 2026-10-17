@@ -59,6 +59,8 @@ export interface RiggedFrame {
   eyeY: number;
   eyeZ: number;
   firstPerson: boolean;
+  /** The angle of the bottom of the view below level (radians, negative down): your own body shows looking down (BD1). */
+  viewLow: number;
   /** The upper body's lean (the flinch and the peek), radians about the figure's own X and Z (it faces -Z). */
   leanX: number;
   leanZ: number;
@@ -132,6 +134,12 @@ export class RiggedFigure {
   private readonly lowerActions: (THREE.AnimationAction | null)[] = [];
   private readonly upperActions: (THREE.AnimationAction | null)[] = [];
   private readonly lods: THREE.SkinnedMesh[] = [];
+  /**
+   * Its shadow twin (BD1): the body at its coarsest level in one draw, on FIGURE_RIG.shadowLayer, where the drawn body's
+   * materials would cost a shadow draw each (a shadow map's texels don't show the coarser level).
+   */
+  private readonly shadow: THREE.SkinnedMesh;
+  private readonly shadowMaterial: THREE.Material;
   private firstPersonMesh: THREE.SkinnedMesh | null = null;
   private readonly hips: THREE.Object3D;
   private readonly spine: THREE.Object3D;
@@ -233,7 +241,10 @@ export class RiggedFigure {
     });
 
     this.parts = this.partsFor(false);
-    for (let lod = 0; lod < 3; lod++) this.lods.push(this.skinned(rig.geometry(lod, this.parts)));
+    this.shadowMaterial = new THREE.MeshBasicMaterial({ side: this.materials[0]?.side ?? THREE.FrontSide });
+    for (let lod = 0; lod < 3; lod++) this.lods.push(this.skinned(rig.geometry(lod, this.parts), this.materials));
+    this.shadow = this.skinned(rig.geometry(2, this.parts), this.shadowMaterial);
+    this.shadow.layers.set(FIGURE_RIG.shadowLayer);
 
     this.mixer = new THREE.AnimationMixer(this.bones);
     POSE_CLIPS.forEach((_, slot) => {
@@ -381,13 +392,15 @@ export class RiggedFigure {
     const give = FIGURE_RIG.lodGive;
     while (this.lod < 2 && dist > lod[this.lod]! + give) this.lod++;
     while (this.lod > 0 && dist < lod[this.lod - 1]! - give) this.lod--;
-    for (let i = 0; i < 3; i++) {
-      const m = this.lods[i]!;
-      m.visible = !f.firstPerson && i === this.lod;
-      m.castShadow = f.castShadow;
-    }
+    for (let i = 0; i < 3; i++) this.lods[i]!.visible = !f.firstPerson && i === this.lod;
+    this.shadow.visible = !f.firstPerson && f.castShadow;
+    this.shadow.castShadow = this.shadow.visible;
     // Your own body casts no shadow (as before it was drawn: a headless, armless one would look wrong).
-    if (this.firstPersonMesh) this.firstPersonMesh.visible = f.firstPerson;
+    if (this.firstPersonMesh) {
+      const fp = FIGURE_RIG.firstPerson;
+      const highest = fp.highest.standing + (fp.highest.crouched - fp.highest.standing) * c.crouchAmount;
+      this.firstPersonMesh.visible = f.firstPerson && (f.viewLow < highest + fp.margin || c.vault.active);
+    }
     this.updateHeld(c, pose, f, yaw);
   }
 
@@ -396,6 +409,7 @@ export class RiggedFigure {
     this.mixer.stopAllAction();
     this.mixer.uncacheRoot(this.bones);
     for (const m of this.materials) m.dispose();
+    this.shadowMaterial.dispose();
     this.skeleton.dispose();
     this.root.removeFromParent();
   }
@@ -414,9 +428,9 @@ export class RiggedFigure {
     ];
   }
 
-  /** A mesh of `geometry` skinned to this figure's bones, in its materials. */
-  private skinned(geometry: THREE.BufferGeometry): THREE.SkinnedMesh {
-    const mesh = new THREE.SkinnedMesh(geometry, this.materials);
+  /** A mesh of `geometry` skinned to this figure's bones, in `material` (its materials, or the shadow twin's one). */
+  private skinned(geometry: THREE.BufferGeometry, material: THREE.Material | THREE.Material[]): THREE.SkinnedMesh {
+    const mesh = new THREE.SkinnedMesh(geometry, material);
     mesh.bind(this.skeleton, this.setup.rig.bindMatrix);
     mesh.boundingSphere = BOUNDS.clone();
     mesh.castShadow = false;
@@ -438,7 +452,7 @@ export class RiggedFigure {
   /** Switches your own first-person body on or off: no head (its own merged mesh, made once) and no arms. */
   private setFirstPerson(on: boolean): void {
     this.firstPerson = on;
-    if (on && !this.firstPersonMesh) this.firstPersonMesh = this.skinned(this.setup.rig.geometry(0, this.partsFor(true)));
+    if (on && !this.firstPersonMesh) this.firstPersonMesh = this.skinned(this.setup.rig.geometry(0, this.partsFor(true)), this.materials);
     if (!on) for (const b of this.arms) b.scale.set(1, 1, 1);
   }
 

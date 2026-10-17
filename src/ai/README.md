@@ -56,7 +56,8 @@ seeded per bot.
   `BOT_SKILL` and never changes it; tuning in `config/adaptiveDifficulty.ts`, the saved rating in
   `settings/adaptiveRating.ts`, the between-matches part in `src/adaptivePicks.ts`.
 - Tests: `ai.test.ts`, `botTactics.test.ts` and one file per behaviour. The match guards (`depotMatch.*`, `*Match.*`
-  over `depotMatchSupport.ts` and `extractionRunSupport.ts`) are the `slow` project: they check what must never happen
+  over `depotMatchSupport.ts` and `extractionRunSupport.ts`, which play with the rigged figures' hit rules from
+  `riggedHitsSupport.ts`, as a match does since BD1) are the `slow` project: they check what must never happen
   (rounds played and settled, nobody stuck, falling or hit by a teammate, each mode's rules). They are seed-sensitive:
   re-measure over 16 seeds before changing a threshold (`docs/DECISIONS.md`). `testSupport.ts` (the small worlds and
   the one-bot duel the unit tests share) and the other files named `*Support.ts` here are test-only.

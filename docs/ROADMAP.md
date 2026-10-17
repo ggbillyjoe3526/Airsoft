@@ -64,8 +64,8 @@ pulled into Dev 5, and Dev 7 is folded away (its mode checks join the toolkit he
    2x scope, silencers and weapon torches remodelled lower, rounder and smaller in Blender, behind "Disable all models"
    (done 2026-10-12; `docs/records/RM8.md`).
 11. **The Blender figures in the game** (BF1, pulled into Dev 5 by the owner 2026-10-12): the rigged human and robot as
-   every player and bot, behind the Dev switches (done 2026-10-12; `docs/records/BF1.md`). All eleven items are done,
-   and the owner tagged 0.1 Dev 5 on 2026-10-13.
+   every player and bot, behind the Dev switches until BD1 made them the default (done 2026-10-12;
+   `docs/records/BF1.md`). All eleven items are done, and the owner tagged 0.1 Dev 5 on 2026-10-13.
 
 ### Audit 2: the last tasks
 
@@ -475,8 +475,7 @@ These land in whichever update the owner likes:
 - **Higher-detail models** (owner, 2026-10-05 and 2026-10-09). A Blender art pass over figures, replicas, attachments,
   props and set dressing, using the headroom WebGPU gives. It keeps art direction v3, the download target (about 30 MB
   to start), Low's 60 fps at 1080p on a laptop and the WebGL fallback. The Blender figures, replicas and attachments
-  built in 0.1 Dev 5 stay behind the Dev switches until the owner is happy with them. The figures come first, in
-  [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build) (owner, 2026-10-13).
+  built in 0.1 Dev 5 are the default since 0.1 Beta 1 (BD1, owner 2026-10-16); the Dev switches are gone.
 - **Hand signals and more team calls,** with bots that act on them. Three orders and their wheel are in (M22, M23);
   pings and asking for a magazine come in 0.1 Dev 6.
 

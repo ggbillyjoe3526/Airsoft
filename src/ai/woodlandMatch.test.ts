@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BOTS } from '../config/bots';
-import { HITS, ROUNDS } from '../config/hits';
+import { ROUNDS } from '../config/hits';
 import type { MatchMode } from '../config/modes';
 import { WOODLAND } from '../map/woodland';
 import { initPhysics } from '../physics/physicsWorld';
@@ -31,7 +31,7 @@ describe('a 6v6 bot match on Woodland (M33d, acceptance 5)', () => {
     let longestStill = 0;
     let closestToFlag = Number.POSITIVE_INFINITY;
     const flag = WOODLAND.flag!;
-    const stats = playMatch(SECONDS, 1, undefined, BOTS, mode, ROUNDS, WOODLAND, TEAM_SIZE, HITS, (state, controller) => {
+    const stats = playMatch(SECONDS, 1, undefined, BOTS, mode, ROUNDS, WOODLAND, TEAM_SIZE, undefined, (state, controller) => {
       for (const c of state.characters) {
         if (mode === 'attackDefend' && c.team === state.round.attackers && c.status === 'alive') closestToFlag = Math.min(closestToFlag, Math.hypot(c.position.x - flag.x, c.position.z - flag.z));
         const firing = state.events.some((e) => e.type === 'shot' && e.characterId === c.id);

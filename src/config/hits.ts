@@ -61,11 +61,52 @@ export interface HitConfig {
     maxStride: number;
   };
   /**
-   * The rigged figures' own legs (IM8), when a match draws them (the Dev switches off): with them the legs' hit volumes
+   * The rigged figures' own legs (IM8), when a match draws them (BD1: unless their files can't be loaded): with them the legs' hit volumes
    * sit on the drawn legs' joints on every pose and the walk cycle steps at the figures' strides (sim/figureLegs.ts);
    * without them (the built-in figures) the legs swing as `legs` says.
    */
   figureLegs?: FigureLegs;
+  /**
+   * The rigged figures' upper bodies (HV1), by figure kind (Character.figure: 0 the human, 1 the robot), when a match
+   * draws them: the head, chest and hips then sit where each figure draws them on every pose (sim/figureBody.ts), and the
+   * legs take that figure's own radii. Without them (the built-in figures) the upper body is the one above.
+   */
+  figureBodies?: readonly FigureBody[];
+}
+
+/** The bones a figure's hit shape hangs its points on (render/figureBody.ts reads their frames from the clips). */
+export type FigureHitBone = 'Hips' | 'Spine1' | 'Chest' | 'Head';
+
+/** A point of a figure's hit shape: `at` metres in `bone`'s own frame (x across, y along the bone, up; z forward). */
+export interface FigureHitPoint {
+  bone: FigureHitBone;
+  at: readonly [number, number, number];
+}
+
+/**
+ * One figure's hit volume above the legs and its legs' radii (HV1; owner, 2026-10-16: "fit to each figure"), measured
+ * against that figure by render/riggedHitVolume.test.ts. The chest and the hips are each two capsules side by side,
+ * `halfWidth` either side of the middle (an oval: wider than deep), from `bottom` to `top`; the shoulders one capsule
+ * across, from `left` to `right`; the head a sphere. The legs' joints are the figures' own (FigureLegs).
+ */
+export interface FigureHitShape {
+  head: { centre: FigureHitPoint; radius: number };
+  chest: { bottom: FigureHitPoint; top: FigureHitPoint; halfWidth: number; radius: number };
+  shoulders: { left: FigureHitPoint; right: FigureHitPoint; radius: number };
+  hips: { bottom: FigureHitPoint; top: FigureHitPoint; halfWidth: number; radius: number };
+  legs: { thigh: number; shin: number; boot: number };
+}
+
+/**
+ * A figure's upper body as plain numbers (HV1), read from its file as it loads (render/figureBody.ts): its hit shape's
+ * points (sim/figureBody.ts BODY_POINT) on every sample of each leg clip, by the legs' slots, in the figure's own frame
+ * (x right, y up from the feet, z forward-negative). Each clip has two sets: `whole`, the figure playing the clip with
+ * its own upper body (sprinting, vaulting, calling the hit, walking off, out), and `aimed`, the same legs under the
+ * aim's upper body (in play otherwise, render/figurePose.ts). The samples match the legs' (FigureLegClip.frames).
+ */
+export interface FigureBody {
+  shape: FigureHitShape;
+  clips: readonly { frames: number; whole: Float32Array; aimed: Float32Array }[];
 }
 
 /**

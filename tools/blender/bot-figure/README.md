@@ -2,8 +2,8 @@
 
 The realistic bot figures built in Blender: a human player figure and a bare robot. The owner approved v10 on
 2026-10-12; v11 (IM8) lowers its kneel and crouch walk to the game's crouch. The game draws it (BF1) from
-`src/assets/models/characters/human.glb` and `robot.glb` with their sidecars, behind the Dev switches "Disable figure
-models" and "Disable all models" (#175). Pictures are in the project files (`concepts/bot-figure-v10-2026-10-12/`, v11's
+`src/assets/models/characters/human.glb` and `robot.glb` with their sidecars, for every player and bot since BD1 (before
+it, behind the Dev switches, #175). Pictures are in the project files (`concepts/bot-figure-v10-2026-10-12/`, v11's
 crouch in `concepts/figure-moves-fix-2026-10-12/`; earlier rounds in `concepts/bot-figure-v8-2026-10-11/`,
 `concepts/bot-figure-v6-2026-10-11/` and `concepts/bot-figure-v5-2026-10-10/`). The figures are redesigned to look
 more realistic in 0.1 Dev 6 from the owner's reference photos (`docs/DECISIONS.md` › Art direction and graphics): the

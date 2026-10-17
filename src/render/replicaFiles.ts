@@ -7,8 +7,8 @@ import type { MaterialKey } from './replicaBuilder';
 
 /**
  * Replica models from files (M101, config/assets.ts REPLICA_FILE, docs/CC0_ASSETS.md › Replica models). Each
- * `src/assets/models/replicas/<replica id>.glb` in the build loads once the Dev tab's "Disable all models" lets the files
- * in (RM4, render/modelFiles.ts); the viewmodel, the menus' pictures and the figures then draw that replica from it in
+ * `src/assets/models/replicas/<replica id>.glb` in the build loads as the game starts (BD1, render/modelFiles.ts); the
+ * viewmodel, the menus' pictures and the figures then draw that replica from it in
  * place of its built-in model. Without a file, or with one that can't be
  * used (a warning says why), the built-in model is drawn as before.
  */

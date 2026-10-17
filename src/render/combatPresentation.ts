@@ -620,7 +620,7 @@ export class CombatPresentation {
   }
 
   /**
-   * Where a rigged figure (behind the Dev switches) draws `c`'s muzzle, or false for a built-in figure: the session
+   * Where a rigged figure (BF1) draws `c`'s muzzle, or false for a built-in figure: the session
    * hands it the figures' own (MatchPresentation.riggedMuzzle). Their replicas sit up to about 0.2 m from the built-in
    * figures' muzzle, so a BB drawn from figureMuzzle would leave the air beside the rigged replica (BP4).
    */

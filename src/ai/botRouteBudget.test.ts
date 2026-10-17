@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BOTS } from '../config/bots';
-import { HITS, ROUNDS } from '../config/hits';
+import { ROUNDS } from '../config/hits';
 import { NAV } from '../config/nav';
 import type { MapData } from '../map/mapTypes';
 import { NEON_HEIGHTS } from '../map/neonHeights';
@@ -79,7 +79,7 @@ function measure(map: MapData, seed: number, teamSize: number, seconds: number) 
     // Bots without personalities (BN1): this measures the route budget, and the probe needs searches longer than a
     // tick's budget. On Woodland's seed 1 the neutral bots ran one of 12,419 nodes; with personalities drawn (anchors
     // hold, rushers push) the longest was 6,857 and the probe had nothing to carry over.
-    playMatch(seconds, seed, undefined, BOTS, 'elimination', ROUNDS, map, teamSize, HITS, () => {
+    playMatch(seconds, seed, undefined, BOTS, 'elimination', ROUNDS, map, teamSize, undefined, () => {
       out.ticks++;
       out.maxTick = Math.max(out.maxTick, tally.tick);
       if (tally.tick > 0) out.busyTicks++;

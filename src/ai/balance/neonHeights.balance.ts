@@ -1,6 +1,6 @@
 import { beforeAll, describe, it } from 'vitest';
 import { BOTS } from '../../config/bots';
-import { HITS, ROUNDS } from '../../config/hits';
+import { ROUNDS } from '../../config/hits';
 import type { LightingPresetId } from '../../config/render';
 import { mapUnderLighting } from '../../map/lightingChoice';
 import { NEON_HEIGHTS } from '../../map/neonHeights';
@@ -28,7 +28,7 @@ describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Elimination match on Ne
     let westWins = 0;
     let onTime = 0;
     for (let seed = 1; seed <= 48; seed++) {
-      const stats = playMatch(300, seed, undefined, BOTS, 'elimination', ROUNDS, map, TEAM_SIZE, HITS);
+      const stats = playMatch(300, seed, undefined, BOTS, 'elimination', ROUNDS, map, TEAM_SIZE, undefined);
       for (const r of stats.results) {
         rounds++;
         if (r.reason === 'time') onTime++;

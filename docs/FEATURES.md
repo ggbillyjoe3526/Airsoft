@@ -48,6 +48,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Skip to next round from the spectator camera while you are out: the rest of the round plays out at once; Esc does the same without opening the pause menu (M83, PT1)
 - Bots always call their hits (Phase 1)
 - BBs stop at the first body they hit; hit areas follow the drawn figure in every pose, and on Dev figures the legs follow their walk, run and crouch (M85, IM8); a BB that hits a player already out knocks on the body (M85)
+- Hit areas fit each figure, human and robot: head, chest, shoulders and hips follow the body as it moves, and each character's hit area takes its figure's shape (HV1)
 - Friendly fire, on by default, as a match setting (Phase 1, M20)
 - Hit flinch, impact puffs that show at once and a crosshair that opens with your real spread (M3, M10, M28)
 
@@ -198,7 +199,6 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   Disable levelling (unlocks every item; a cheat with no XP and no records), +500 XP, Level up and Reset level buttons,
   free case openings, time of day, bots hold fire, spectate any bot, bot intentions, adaptive difficulty, end the round now, reset the save,
   Diagnostics Copy and Report a Bug, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42, M83, M90, IM7)
-- Dev switches Disable all models and Disable figure models (both on by default): turned off, they bring back the Blender replicas, parts and menu pictures, then the player and bot figures (RM4)
 - The build's version on the title screen (M24)
 - Screens fetched on first use: the Loadout, Armory and Settings, and the range, load in the background after the title; a failed download says so and tries again (IM1)
 
@@ -261,7 +261,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   (FA2, FA7, G5)
 - Raised dock and ramps cast shadows; BB streaks consistent on any screen; replica sheen now on Medium and preserved
   across preset switches; contact shadows under every player on all presets (FA3, FA7)
-- Players, replicas, parts and hands rebuilt in Counter-Strike / Valorant style with more detail on Medium and High;
+- Players, replicas, parts and hands rebuilt in Counter-Strike / Valorant style with more detail on High, and on Medium figures drop to lower detail with distance;
   barrels and silencer model details on High; third-person rifles show a fitted silencer (FA8)
 - Replicas and attachments redesigned: blockier two-tone style with stippled grips; red dot as enclosed square hood,
   silencer hexagonal body (G2)
@@ -272,10 +272,11 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Players as masked humans (high-cut or bump helmet, balaclava, visor; no bare faces) in team camo with a team-colour
   plate carrier, or robots in a light or dark shell by team, mixed on both teams when Look › Robots is on; their
   replicas in the team's colours (G7)
-- Your first-person arms: dark gloves, team camo sleeves and armband, or robot arms when your player is a robot (G7)
+- Your first-person arms: dark gloves, team camo sleeves and armband, or robot arms when your player is a robot; your own body shows only when you look down far enough to see it (G7, BD1)
 - An optional glTF player model dropped into the assets folder replaces the built-in figures (M25a)
-- Blender human figure, shown when the Dev figure switches are off: realistic body, gloved hands that grip the AEG and pistol, four heads (high-cut helmet, goggled cap, boonie hat, full-cut helmet) and team colour on the vest, armbands and bands (RM9)
-- Blender robot figure, shown when the Dev figure switches are off: boxier mechanical limbs, visor head with headset and antenna, white suit with team shoulder caps; both Blender figures vault with their own animations (RM10)
+- Blender human figure, realistic body, gloved hands that grip the AEG and pistol, four heads (high-cut helmet, goggled cap, boonie hat, full-cut helmet) and team colour on the vest, armbands and bands (RM9)
+- Blender robot figure, boxier mechanical limbs, visor head with headset and antenna, white suit with team shoulder caps; both Blender figures vault with their own animations (RM10)
+- Players and bots are the rigged Blender humans and robots by default, and every menu picture shows the Blender models (BD1)
 - Blender figures have a holstered pose: arms hang with the replica holstered, and the rifle is slung across the back until drawn (BP4)
 - Block surface finishes and paints (plaster, metal, glazed tiles, asphalt, paving); six city props (arcade cabinet,
   vending machine, market stall, planter, phone booth, delivery van); painted ground markings and plaster ceilings under
@@ -320,6 +321,5 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - `?seed=N`, `?quality=<preset>` and `?perf` in any build; `?nolock` and `?script=perf` on the dev server and in the
   smoke test's build (Phase 3, FA11b)
 - `npm run t` and `npm run t:all`: tests with dots and failures only (TE1)
-- Dev figure switches (Disable figure models, Disable all models): with both off, players and bots are the rigged Blender humans and robots (BF1)
 - Dev settings › Bots run low on BBs: 8 s into each round one bot per team is down to its last magazine, to watch the hand-off (MG1)
 - Bug reports: Diagnostics and the crash screen take a note and a Report a Bug button that opens a GitHub issue with the report filled in; long reports are cut and copied whole (IM7)

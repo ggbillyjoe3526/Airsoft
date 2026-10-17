@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
+import { FIGURE_RIG } from '../config/figureRig';
 import { type LightingPreset, type QualitySettings, TORCH_BEAMS } from '../config/render';
 import { TORCHES } from '../config/torches';
 import type { SurfaceHit, WorldQuery } from '../sim/armament';
@@ -250,6 +251,7 @@ export class TorchBeams {
       spot.shadow.mapSize.set(S.mapSize, S.mapSize);
       spot.shadow.camera.near = S.near;
       spot.shadow.camera.far = light.reach;
+      spot.shadow.camera.layers.enable(FIGURE_RIG.shadowLayer);
       spot.shadow.bias = S.bias;
       spot.shadow.normalBias = S.normalBias;
       if (quality.shadowRadius !== undefined) spot.shadow.radius = quality.shadowRadius;
