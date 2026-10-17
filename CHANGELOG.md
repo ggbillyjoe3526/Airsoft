@@ -33,6 +33,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **HD1** · BB impacts kick up a smaller, fainter puff with less grit
 - **HD1** · Scoreboard no longer shows a YOU tag (screen readers still hear which side is yours)
 - **TT1** · Tutorial cards are one or two short sentences; the four you only read move on by themselves after 5–8 s, with a bar filling; the lean step is gone
+- **MS1** · Depot has cranes, container stacks, sheds, silos, chimneys, a water tower and a power line over its walls
+- **MS1** · Woodland's cabin has a grey tin roof, taller walls and lanterns; pines have layered branches, bushes are smaller, nights brighter
+- **MS1** · Neon Heights is ringed by towers up to 72 m with adverts, lit windows, 27 more neon signs, lantern cables and skybridges
 
 ### Fixed
 - **KI1** · Leaning beside a wall that cuts the lean eases the view over 0.1 s instead of jumping
@@ -53,6 +56,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **KI1** · The Armory keeps an item you own in colour
 
 ### Internal
+- **MS1** · Tests remove skyline pieces no player can see and keep hung units and cables clear of the player's room; perf baselines re-recorded
 - **Pipeline** · Code changes get critic, QA and performance review before a pull request is ready; CI fails it without passing verdicts
 - **KI1** · Bot tests cover the cycle, a leaning teammate's torso, Follow me's trail and the squad order lip fallback
 - **KI1** · Game test covers settling a match; Dev Time of day bake test added; Your team match test plays Woodland and Neon Heights

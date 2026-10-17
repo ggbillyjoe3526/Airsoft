@@ -10,6 +10,8 @@ meshes. The format, coordinates and Extraction block are in `docs/ARCHITECTURE.m
   only by `render/mapDressing.ts`: `depotDressing.ts`, `woodlandDressing.ts`, `neonHeightsDressing.ts`, and the range's
   `rangeDressing.ts` (M81: also its props and the wall kept clear round its distance boards). Each has one low wall
   built to be vaulted (M102, `config/vault.ts` `VAULT_WALL_HEIGHT`), checked by `vaultSpots.test.ts`.
+  `ms1QA.test.ts` checks MS1's map detail: Woodland's cabin roof, lanterns, bush sizes and brighter night, and Neon
+  Heights' signs.
 - `woodlandExtraction.ts`, `neonHeightsExtraction.ts` and the shared `extractionBlock.ts`: each map's Extraction block.
   `playableMode.ts` falls back to Elimination where a mode's data is missing.
 - `surfaces.ts` (walkable heights), `terrain.ts` (heightfield), `foliage.ts` (bushes: they hide you and stop BBs deep in, FO1;

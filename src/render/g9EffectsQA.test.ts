@@ -148,17 +148,18 @@ describe('G9 QA: the cost the code states is the cost it has (acceptance 3: “e
   });
   const stated = (map: string): number => Number(new RegExp(`${map} \\(Medium, High\\): ([\\d ]+) more triangles`).exec(source)![1]!.replace(/ /g, ''));
 
-  it('Woodland: the stated 11 808 more triangles is what Medium and High draw', () => {
-    expect(stated('Woodland')).toBe(11808);
+  it('Woodland: the stated 11 888 more triangles is what Medium and High draw', () => {
+    expect(stated('Woodland')).toBe(11888);
     for (const q of [QUALITY.medium, QUALITY.high]) expect(extraTriangles(WOODLAND, q)).toBe(stated('Woodland'));
   });
 
   // Was BUG G9-QA-6 (fixed): src/config/dressing.ts said Neon Heights costs 9 546 more triangles (the junk mesh 5 558),
   // but the junk mesh is 5 666 and the whole is 9 654: the stated figure was 108 triangles stale. Under the 15 000 cap,
   // but the criterion is that the cost stated in the code is the real one.
-  // BP5 ended the Plaza landing where its stair starts: the junk and litter laid on and along it changed, 9 630.
-  it('Neon Heights: the stated 9 630 more triangles is what Medium and High draw', () => {
-    expect(stated('Neon Heights')).toBe(9630);
+  // BP5 ended the Plaza landing where its stair starts: the junk and litter laid on and along it changed, 9 630. MS1's
+  // denser city (signs, wall units, cables, more towers with adverts and light strips): 34 102.
+  it('Neon Heights: the stated 34 102 more triangles is what Medium and High draw', () => {
+    expect(stated('Neon Heights')).toBe(34102);
     for (const q of [QUALITY.medium, QUALITY.high]) expect(extraTriangles(NEON_HEIGHTS, q)).toBe(stated('Neon Heights'));
   });
 });

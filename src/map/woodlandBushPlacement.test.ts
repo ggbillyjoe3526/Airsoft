@@ -30,7 +30,8 @@ describe("Woodland's bushes keep clear of the places people start from or fight 
   it('gives every bush a real size: wider than a person, never taller than a standing one with a hat', () => {
     for (const b of BUSHES) {
       expect(b.radius).toBeGreaterThanOrEqual(0.5);
-      expect(b.height).toBeGreaterThanOrEqual(1);
+      // MS1 (owner: small and decorative): from 0.9 m, the taller ones crouch cover.
+      expect(b.height).toBeGreaterThanOrEqual(0.9);
       expect(b.height).toBeLessThanOrEqual(2.2);
       expect(Number.isFinite(b.x + b.y + b.z)).toBe(true);
     }

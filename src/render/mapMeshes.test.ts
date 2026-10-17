@@ -467,9 +467,10 @@ describe('the woodland look (M33i)', () => {
       const names = group.children.map((c) => c.name);
       expect(names).toEqual(expect.arrayContaining(['map-bark', 'map-stone', 'map-planks', 'map-canopy', 'map-terrain', 'map-foliage']));
       expect(names.filter((n) => n === 'map-crate')).toHaveLength(0);
-      // The map's whole share of a frame (Low: 150k triangles with the figures, Medium 200k at 5v5): measured 52k / 55k.
+      // The map's whole share of a frame (Low: 150k triangles with the figures, Medium 200k at 5v5): measured 52k / 55k,
+      // then 55.6k / 66.9k with MS1's fuller crowns and bushes (owner, 2026-10-16: the trees looked low-poly and broken).
       const total = group.children.reduce((n, c) => n + drawn(c as THREE.Mesh), 0);
-      expect(total, q.mapDetail ? 'medium' : 'low').toBeLessThan(q.mapDetail ? 60_000 : 56_000);
+      expect(total, q.mapDetail ? 'medium' : 'low').toBeLessThan(q.mapDetail ? 68_000 : 56_000);
       disposeMapMeshes(group);
     }
   });

@@ -193,8 +193,8 @@ describe('AC1: Depot’s textures and GPU memory are unchanged', () => {
     }
   });
 
-  it('asks for every woods surface on Woodland (bark, planks, stone, the ground tile)', () => {
-    expect(new Set(texturesFor(WOODLAND))).toEqual(new Set([...CORE_SURFACES, 'bark', 'planks', 'stone', 'groundDetail']));
+  it('asks for every woods surface on Woodland (bark, planks, stone, the ground tile, and MS1 its cabin roof\'s cladding)', () => {
+    expect(new Set(texturesFor(WOODLAND))).toEqual(new Set([...CORE_SURFACES, 'bark', 'planks', 'stone', 'groundDetail', 'cladding']));
   });
 
   it('frees the woods’ textures with the shared set', () => {

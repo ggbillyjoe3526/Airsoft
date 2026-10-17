@@ -68,6 +68,37 @@ export function depotDressing(blocks: readonly MapBlock[]): MapDressing {
       { kind: 'chimney', x: 54, z: -34, width: 3, depth: 3, height: 34, smoke: true },
       { kind: 'chimney', x: -30, z: 47, width: 2.6, depth: 2.6, height: 28, smoke: true },
       { kind: 'powerLine', points: [{ x: -62, z: 40 }, { x: -22, z: 42 }, { x: 18, z: 44 }, { x: 58, z: 41 }], height: 14 },
+      // MS1: the rest of the estate, only what shows over the walls (nothing under about 5 m does, from anywhere a
+      // player can stand: render/skylineSeen.test.ts).
+      // North: the crane over its container stacks, and a second warehouse behind the first.
+      { kind: 'containers', x: 14, z: -37, width: 12.2, depth: 2.5, height: 7.8 },
+      { kind: 'shed', x: 26, z: -62, width: 32, depth: 16, height: 12, colour: 0xc9d3d6 },
+      { kind: 'shed', x: -40, z: -58, width: 22, depth: 14, height: 8, colour: 0xd7c9a8 },
+      // East: a container yard under a second crane.
+      { kind: 'crane', x: 56, z: 2, width: 9, depth: 26, height: 17 },
+      { kind: 'containers', x: 52, z: -4, width: 6.1, depth: 2.5, height: 7.8 },
+      { kind: 'containers', x: 58, z: 6, width: 6.1, depth: 2.5, height: 10.4 },
+      { kind: 'containers', x: 50, z: 14, width: 12.2, depth: 2.5, height: 5.2, turned: true },
+      // South: a row of silos.
+      { kind: 'silo', x: 14, z: 44, width: 24, depth: 6, height: 21 },
+      { kind: 'shed', x: -18, z: 56, width: 20, depth: 12, height: 9, colour: 0xb9c7cf },
+      // West: a long shed past the water tower.
+      { kind: 'shed', x: -62, z: 0, width: 14, depth: 34, height: 11, colour: 0xd9d4c6 },
+      // Far off, through the haze: the rest of the industrial park, a power station's chimneys and low hills.
+      { kind: 'shed', x: -24, z: -118, width: 54, depth: 22, height: 15, colour: 0xc7ccd0 },
+      { kind: 'shed', x: 122, z: 28, width: 24, depth: 46, height: 14, colour: 0xd5d0c4 },
+      { kind: 'shed', x: -118, z: -46, width: 26, depth: 40, height: 12, colour: 0xc9d3d6 },
+      { kind: 'shed', x: -96, z: 92, width: 40, depth: 22, height: 11 },
+      { kind: 'shed', x: 46, z: 118, width: 46, depth: 20, height: 13, colour: 0xd7c9a8 },
+      { kind: 'silo', x: 110, z: -60, width: 6, depth: 22, height: 26 },
+      { kind: 'chimney', x: 96, z: -96, width: 4, depth: 4, height: 48, smoke: true },
+      { kind: 'chimney', x: 104, z: -100, width: 3.4, depth: 3.4, height: 42 },
+      { kind: 'waterTower', x: -110, z: 40, width: 8, depth: 8, height: 26 },
+      { kind: 'crane', x: 0, z: -96, width: 30, depth: 10, height: 24 },
+      { kind: 'powerLine', points: [{ x: -170, z: -80 }, { x: -110, z: -100 }, { x: -50, z: -140 }, { x: 20, z: -150 }, { x: 90, z: -140 }, { x: 150, z: -110 }], height: 26 },
+      { kind: 'hill', x: -40, z: -175, width: 160, depth: 40, height: 14, colour: 0x5f7454 },
+      { kind: 'hill', x: 150, z: 120, width: 120, depth: 50, height: 18, colour: 0x5f7454 },
+      { kind: 'hill', x: -150, z: 120, width: 110, depth: 50, height: 12, colour: 0x66785a },
     ],
     motes: { tint: 0xd8d6cf },
     kickedDust: { tint: 0xb9b7b0, scale: 1 },
