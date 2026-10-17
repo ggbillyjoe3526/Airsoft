@@ -1,13 +1,12 @@
 import * as THREE from 'three';
 import { Sfx, type SfxSetup } from '../audio/sfx';
 import { soundscapeOf } from '../audio/soundscape';
-import type { MotionScale } from '../config/accessibility';
+import { type MotionScale, motionScale } from '../config/accessibility';
 import { FIGURE } from '../config/characters';
 import { impactMaterialAt } from '../audio/soundMaterials';
 import type { Action } from '../config/controls';
 import type { HitConfig } from '../config/hits';
 import { BLOCK_MATERIALS } from '../config/materials';
-import type { CrosshairSettings } from '../config/matchInfo';
 import { BB_VISUALS, DUST_MOTES, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, IMPACT_RINGS, LEAF_FLECKS, type LightingPreset, PROP_BUMP_DUST, type QualitySettings } from '../config/render';
 import type { ImpactMaterial } from '../config/sounds';
 import { BODY, type MovementConfig } from '../config/movement';
@@ -18,6 +17,7 @@ import { leafFloor, leafSurface } from '../map/foliage';
 import type { MapData } from '../map/mapTypes';
 import { aimRaiseTime } from '../sim/aiming';
 import type { WorldQuery } from '../sim/armament';
+import { type HudPrefs, motionReduced } from '../settings/hudPrefs';
 import type { BB } from '../sim/ballistics';
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
@@ -167,7 +167,8 @@ export class CombatPresentation {
     private readonly field: MapData,
     audio: SfxSetup,
     keyName: (action: Action) => string,
-    crosshair: CrosshairSettings,
+    /** The HUD and accessibility preferences (settings/hudPrefs.ts), read by reference: the session says when to show them again (applyPrefs). */
+    private readonly prefs: HudPrefs,
     quality: QualitySettings,
     /** The match's hit rules: a leaning figure's muzzle tilts by their lean angle. */
     private readonly hits: HitConfig,
@@ -192,7 +193,7 @@ export class CombatPresentation {
     this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout, { replica: quality.replicaDetail, hands: quality.handDetail }, paint, arms, renderer.replicaFiles);
     this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
     this.viewmodel.onInspectSound = (cue, replicaId) => this.sfx.inspect(cue, replicaId);
-    this.hud = new Hud(container, crosshair);
+    this.hud = new Hud(container, prefs.crosshair);
     this.vaultPrompt = new VaultPrompt(container, () => keyName('jump'));
     this.quality = quality;
     this.setQuality(quality);
@@ -251,22 +252,23 @@ export class CombatPresentation {
     this.dressing.setMapGroup(group);
   }
 
-  /** Reduced motion changed on Settings → Accessibility: the held replica's bob, sway and kick. */
-  setMotion(scale: MotionScale): void {
+  /**
+   * The HUD and accessibility preferences as they are now (the session calls this when they changed): the crosshair,
+   * the replica panel's BB counts (AC1) and reduced motion.
+   */
+  applyPrefs(): void {
+    const p = this.prefs;
+    this.hud.setCrosshair(p.crosshair);
+    this.hud.setAmmoCounter(p.ammoCounter === 'on');
+    this.setMotion(motionScale(motionReduced(p)));
+  }
+
+  /** Reduced motion on or off: the held replica's bob, sway and kick, the drifting dust and the field's dressing. */
+  private setMotion(scale: MotionScale): void {
     this.viewmodel.setMotion(scale);
     this.motes.setMotion(scale.dust > 0);
     this.dressing.setMotion(scale.dust > 0);
     this.renderer.motion = scale.dust > 0;
-  }
-
-  /** The crosshair changed on Settings → Crosshair. */
-  setCrosshair(crosshair: CrosshairSettings): void {
-    this.hud.setCrosshair(crosshair);
-  }
-
-  /** Settings › HUD › Ammo counter (AC1): the replica panel's BB counts shown, or not. */
-  setAmmoCounter(shown: boolean): void {
-    this.hud.setAmmoCounter(shown);
   }
 
   /** A short line on the HUD (the game's own quality step-down says so, REN-03). */

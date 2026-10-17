@@ -16,7 +16,7 @@ import { gpuTier, probeGpu } from './render/gpuCheck';
 import { CrashScreen } from './ui/crashScreen';
 import { chunkInfo, prefetchWithProgress } from './ui/loadingProgress';
 import { LoadingScreen } from './ui/loadingScreen';
-import { loadCustomQuality, loadSavedQuality } from './ui/menus/savedChoices';
+import { loadCustomQuality, loadSavedQuality } from './settings/savedChoices';
 import { OtherTabNotice } from './ui/otherTabNotice';
 import { startGuardedStorage } from './save/guardedStorage';
 import { SaveManager } from './save/saveManager';

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createArmament, nextFireMode } from '../sim/armament';
 import type { PlayerKit } from '../pool/loadoutModel';
-import { loadMatchRules, loadRuleset } from '../ui/menus/savedChoices';
+import { loadMatchRules, loadRuleset } from '../settings/savedChoices';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
 import { factoryParts } from './attachments';
 import { BOT_GLOW_BBS } from './glowBBs';

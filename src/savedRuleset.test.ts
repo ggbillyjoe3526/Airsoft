@@ -5,7 +5,7 @@ import { DEFAULT_MODE } from './config/modes';
 import { DEFAULT_MAP } from './map/maps';
 import { type NewGamePicks, playedPicks } from './newGamePicks';
 import { SETTINGS_KEY, SETTINGS_VERSION } from './settings/storage';
-import { loadDifficulty, loadMatchRules, loadRuleset } from './ui/menus/savedChoices';
+import { loadDifficulty, loadMatchRules, loadRuleset } from './settings/savedChoices';
 
 /** M39 QA: a Tournament pick saved on an earlier visit plays as Skirmish while Dev content is off (M35), and as Tournament with it on. */
 function storageWith(fields: Record<string, unknown>): Storage {

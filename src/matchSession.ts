@@ -1,4 +1,3 @@
-import type { MinimapTurn } from './config/minimap';
 import type { Group } from 'three';
 import { AdaptiveRun } from './ai/adaptiveRun';
 import { BotController } from './ai/botController';
@@ -10,16 +9,15 @@ import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
 import { bodyPoint, sightConditionsOf } from './ai/perception';
 import { createPing } from './ai/pings';
 import type { SfxSetup } from './audio/sfx';
-import { FULL_MOTION, type MotionScale } from './config/accessibility';
+import { FULL_MOTION, type MotionScale, motionScale } from './config/accessibility';
 import { BALLISTICS, WIND } from './config/ballistics';
 import { CALLOUT_LINES } from './config/calloutLines';
 import { BOT_BEHAVIOUR, BOTS, type BotConfig, botConfig, type Difficulty, difficultyAtLeast } from './config/bots';
 import { EXTRACTION, homeTeamCap } from './config/extraction';
 import { FOOTSTEPS } from './config/footsteps';
-import type { HitConfig, HitMarkerSettings } from './config/hits';
+import type { HitConfig } from './config/hits';
 import { type DevSettings, devCheating } from './config/dev';
 import { MAG_SHARE } from './config/magShare';
-import { type CrosshairSettings, type FeedCorner, type HitFeedMode, type WhatGotYouMode, whatGotYouShown } from './config/matchInfo';
 import { countsForRecords, hitRulesFor, kitUnderRules, type MatchRules, recordsKeyOf, roundRulesFor, type RulesetId, standardRules } from './config/matchRules';
 import type { MatchMode } from './config/modes';
 import { BODY, MOVEMENT } from './config/movement';
@@ -83,6 +81,8 @@ import type { NotCounted } from './ui/recordsView';
 import { pauseText, resultText, type ResultText } from './ui/matchStopText';
 import { rosterNames, rosterTags, statsBlocks, type TeamBlock } from './ui/statsRows';
 import { MagHandoff, putOnLastMag } from './magHandoff';
+import type { Session } from './session';
+import { type HudPrefs, motionReduced } from './settings/hudPrefs';
 
 const PLAYER_ID = 0;
 /** The colour figures glow in someone's torch beam (M33h): the torches' cool white. */
@@ -153,7 +153,8 @@ export interface RunFinds {
  * (Quit, or New Game after it), so the next Play can load another map with another setup.
  * The app around it (renderer, input, menus) outlives it; see Game.
  */
-export class MatchSession {
+export class MatchSession implements Session {
+  readonly kind = 'match';
   readonly state: GameState;
   readonly player: Character;
   readonly combat: CombatPresentation;
@@ -172,11 +173,12 @@ export class MatchSession {
   private readonly physics: PhysicsWorld;
   private readonly nav: NavGrid;
   private readonly bots: BotController;
-  /** What the bots call to their team (CL1): read off them after each tick; shown and heard while `calloutsOn`. */
+  /** What the bots call to their team (CL1): read off them after each tick; shown and heard while Settings › HUD › Callouts is on. */
   private readonly callouts: CalloutDirector;
   /** Your side of the magazine hand-off (MG1): the Mag key, the toss it names, the HUD's line. */
   private readonly mags: MagHandoff;
-  private calloutsOn = true;
+  /** The HUD and accessibility preferences' version this session last showed (syncPrefs). */
+  private prefsSeen = -1;
   /** Your last ping (PG1), and when you placed it: one at a time, at most one per PINGS.minGap. */
   private readonly playerPing = createPing();
   private pingedAt = Number.NEGATIVE_INFINITY;
@@ -243,7 +245,8 @@ export class MatchSession {
     seed: number,
     quality: QualitySettings,
     audio: SfxSetup,
-    crosshair: CrosshairSettings,
+    /** The HUD and accessibility preferences (settings/hudPrefs.ts), read by reference: a change shows as play runs again. */
+    private readonly prefs: HudPrefs,
   ) {
     const map = setup.map;
     this.kit = kitUnderRules(setup.kit, setup.rules);
@@ -347,7 +350,7 @@ export class MatchSession {
     const crowd = figureCrowd(seed, this.state.characters, setup.look);
     // Each character's hit volume takes the shape of the figure it is drawn as (HV1).
     this.state.characters.forEach((c, i) => (c.figure = crowd.robots[i] ? 1 : 0));
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(this.kit, this.lighting.night), seed, kitPaint(this.kit, setup.look), playerArms(crowd, this.state.characters.indexOf(this.player), this.player.team));
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), prefs, quality, this.hits, bbGlowFor(this.kit, this.lighting.night), seed, kitPaint(this.kit, setup.look), playerArms(crowd, this.state.characters.indexOf(this.player), this.player.team));
     this.build.phase('replica and effects');
     // The field's own sounds (M33j): whatever New game's spare time didn't render ahead is finished here (M65, audit
     // AUD-01), so `?perf` shows what was left.
@@ -357,6 +360,8 @@ export class MatchSession {
     this.stats = new MatchStats(this.state.characters);
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), dayColours(setup.teamColours, this.lighting.night), map, renderer.figureModel, quality.figureDetail, this.extraction, crowd, renderer.replicaFiles, renderer.figureRigs);
     this.match.setHitFacts(this.bots.lastHit);
+    // The "what got you" card's Auto follows the opponents' level, not your teammates' (M41).
+    this.match.usePrefs(prefs, setup.difficulty);
     // A rigged figure's BBs leave its own replica's muzzle (BP4).
     this.combat.setRiggedMuzzle((c, out) => this.match.riggedMuzzle(c, out));
     this.match.setRoster(this.identities);
@@ -610,6 +615,7 @@ export class MatchSession {
    * scoreboard key is held.
    */
   draw(dt: number, boardHeld: boolean): void {
+    this.syncPrefs();
     const alpha = stepperAlpha(this.stepper); // frozen while paused, so the view holds still
     // The camera shows where BBs actually go: view pitch plus the replica's recoil kick.
     const pitch = this.input.pitch + this.player.armament.recoil;
@@ -637,10 +643,18 @@ export class MatchSession {
     this.combat.render(!spectating);
   }
 
-  /** Reduced motion turned on or off (also called once as the match is built). */
-  setMotion(scale: MotionScale): void {
-    this.motion = scale;
-    this.combat.setMotion(scale);
+  /**
+   * The HUD and accessibility preferences changed since this session last showed them (or it never has): the
+   * presentations and the session take them all, before play runs again and on each frame drawn (the system's reduce
+   * motion setting can change in play).
+   */
+  private syncPrefs(): void {
+    if (this.prefsSeen === this.prefs.version) return;
+    this.prefsSeen = this.prefs.version;
+    this.motion = motionScale(motionReduced(this.prefs));
+    this.combat.applyPrefs();
+    this.match.applyPrefs();
+    this.mags.setCounts(this.prefs.ammoCounter === 'on');
   }
 
   /**
@@ -667,11 +681,6 @@ export class MatchSession {
     // A WebGL2 renderer after a lost WebGPU device draws no clustered lights: the pools drop their extra lamps (BP3).
     this.daylight.reserveLights(this.torches.reserved);
     this.torches.contextRestored();
-  }
-
-  /** On-screen sound cues turned on or off (also called once as the match is built). */
-  setSoundCues(on: boolean): void {
-    this.match.setSoundCues(on);
   }
 
   /**
@@ -744,55 +753,11 @@ export class MatchSession {
     return matchStanding({ standardRules: this.standardRules, devAssisted: this.devAssisted, devContentUsed: this.setup.devContentUsed });
   }
 
-  /** Settings → HUD → Feed position (Dev 6 playtest item 32). */
-  setFeedCorner(corner: FeedCorner): void {
-    this.match.setFeedCorner(corner);
-  }
-
-  /** Settings → HUD → Hit feed (M24). */
-  setHitFeedMode(mode: HitFeedMode): void {
-    this.match.setHitFeedMode(mode);
-  }
-
-  /** Settings › HUD › Callouts (CL1): your teammates' calls in the feed with their radio clicks, and enemies' clicks. */
-  setCallouts(on: boolean): void {
-    this.calloutsOn = on;
-    if (!on) this.match.clearCallouts();
-  }
-
-  /** Settings › HUD › Ping markers (PG1): yours and your teammates' marks shown, or not (the pings go on). */
-  setPingMarkers(on: boolean): void {
-    this.match.setPingMarkers(on);
-  }
-
-  /** Settings › HUD › Mag hand-off (MG1): its line under the crosshair and the tags on your teammates, or not. */
-  setMagPrompts(on: boolean): void {
-    this.match.setMagPrompts(on);
-  }
-
-  /** Settings › HUD › Ammo counter (AC1): the replica panel's BB counts, and a caught magazine's, shown or not. */
-  setAmmoCounter(shown: boolean): void {
-    this.combat.setAmmoCounter(shown);
-    this.mags.setCounts(shown);
-  }
-
-  /** Settings › HUD › Minimap (M83): turning with the view, or fixed north up. */
-  setMinimapTurn(turn: MinimapTurn): void {
-    this.match.setMinimapRotating(turn === 'rotating');
-  }
-
-  /** Settings › Gameplay › Hit marker (M97): the X when your BB lands, and its look. */
-  setHitMarker(settings: HitMarkerSettings): void {
-    this.match.setHitMarker(settings);
-  }
-
-  /** Settings → HUD → What got you (M41): the card by this match's opponents (Auto: Pro only). */
-  setWhatGotYouMode(mode: WhatGotYouMode): void {
-    this.match.setWhatGotYou(whatGotYouShown(mode, this.setup.difficulty));
-  }
-
   setPlaying(playing: boolean): void {
-    if (playing) this.played = true;
+    if (playing) {
+      this.played = true;
+      this.syncPrefs();
+    }
     this.combat.setPlaying(playing);
     this.match.setPlaying(playing);
   }
@@ -982,7 +947,7 @@ export class MatchSession {
     if (shown || skipTickShown(this.state.events)) {
       this.combat.afterTick();
       this.match.afterTick(this.input.yaw);
-      if (this.calloutsOn) this.sayCallouts();
+      if (this.prefs.callouts === 'on') this.sayCallouts();
     }
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {

@@ -187,7 +187,7 @@ export const QUALITY_FIELDS = Object.keys(QUALITY.high) as readonly (keyof Quali
 
 /**
  * The settings in force for a choice: a preset's row, or (Custom) High's row overlaid with the saved custom fields.
- * The custom fields are trusted: the store's loader (ui/menus/savedChoices.ts loadCustomQuality) has checked them.
+ * The custom fields are trusted: the store's loader (settings/savedChoices.ts loadCustomQuality) has checked them.
  */
 export function resolveQuality(choice: QualityChoice, custom: Partial<QualitySettings>): QualitySettings {
   if (choice !== 'custom') return QUALITY[choice];

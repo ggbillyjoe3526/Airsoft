@@ -1,13 +1,5 @@
-import {
-  DEFAULT_SOUND_CUE_COLOUR,
-  REDUCED_MOTION_CHOICES,
-  SOUND_CUE_CHOICES,
-  SOUND_CUE_COLOURS,
-  SOUND_CUE_SIZE,
-  type SoundCueColour,
-} from '../../config/accessibility';
-import { DEFAULT_REALISTIC_COLOURS, DEFAULT_ROBOTS, type LookSettings, REALISTIC_COLOUR_CHOICES, ROBOT_CHOICES } from '../../config/look';
-import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, defaultTeammateDifficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
+import { DEFAULT_REALISTIC_COLOURS, DEFAULT_ROBOTS, type LookSettings, REALISTIC_COLOUR_CHOICES, ROBOT_CHOICES } from '../config/look';
+import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, defaultTeammateDifficulty, TEAMMATE_DIFFICULTIES } from '../config/bots';
 import {
   AIM_MODES,
   CROUCH_MODES,
@@ -22,7 +14,7 @@ import {
   MOUSE_DPI,
   RAW_INPUT,
   SPRINT_MODES,
-} from '../../config/controls';
+} from '../config/controls';
 import {
   DEFAULT_MATCH_RULES,
   DEFAULT_RULESET,
@@ -40,22 +32,32 @@ import {
   TEAM_SIZE_CHOICES,
   TIME_OUT_CHOICES,
   WINS_NEEDED_CHOICES,
-} from '../../config/matchRules';
-import { DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE, HIT_FEED_MODES, type HitFeedMode, HUD_OPACITY, HUD_SIZE, RECORDS_KEY, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../../config/matchInfo';
-import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
-import { AIMING } from '../../config/optics';
-import { frameRateCapFromSaved, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES } from '../../config/graphics';
-import { FOV_SETTING, type FrameRateCap, type LightingPresetId, QUALITY_CHOICES, type QualityChoice, type QualitySettings, RENDER } from '../../config/render';
-import { DEFAULT_RENDERER, RENDERER_IDS, type RendererChoice } from '../../config/rendererPick';
-import { DEFAULT_WHEEL_SELECT, WHEEL_SELECT_MODES, type WheelSelect } from '../../config/squad';
-import { DEFAULT_TEAM_COLOURS, DEFAULT_TEAM_PICK, TEAM_COLOUR_CHOICES, TEAM_PICKS, type TeamColourSetId, type TeamPickId } from '../../config/teams';
-import { lightingChoices, parseLightingPick } from '../../map/lightingChoice';
-import { DEFAULT_MAP, MAPS, type MapId, mapData, mapLoaded } from '../../map/maps';
-import { DEFAULT_PRACTICE_PLACE, PRACTICE_PLACES, type PracticePlaceId } from '../../map/practicePlaces';
-import { browserStorage, loadSetting, numberIn, oneOf } from '../../settings/storage';
-import { loadChoice } from '../optionPicker';
+} from '../config/matchRules';
+import { RECORDS_KEY } from '../config/matchInfo';
+import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../config/modes';
+import { AIMING } from '../config/optics';
+import { frameRateCapFromSaved, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES } from '../config/graphics';
+import { FOV_SETTING, type FrameRateCap, type LightingPresetId, QUALITY_CHOICES, type QualityChoice, type QualitySettings, RENDER } from '../config/render';
+import { DEFAULT_RENDERER, RENDERER_IDS, type RendererChoice } from '../config/rendererPick';
+import { DEFAULT_WHEEL_SELECT, WHEEL_SELECT_MODES, type WheelSelect } from '../config/squad';
+import { DEFAULT_TEAM_PICK, TEAM_PICKS, type TeamPickId } from '../config/teams';
+import { lightingChoices, parseLightingPick } from '../map/lightingChoice';
+import { DEFAULT_MAP, MAPS, type MapId, mapData, mapLoaded } from '../map/maps';
+import { DEFAULT_PRACTICE_PLACE, PRACTICE_PLACES, type PracticePlaceId } from '../map/practicePlaces';
+import type { PlayerInput } from '../input/playerInput';
+import type { NewGamePicks } from '../newGamePicks';
+import { browserStorage, loadChoice, loadSetting, numberIn, oneOf } from './storage';
 
 /** The choices the menus save in the browser, each read back here with its default. */
+
+/**
+ * New game's picks as saved: the map, the mode, the opponents' and your teammates' difficulty (M20), your team (M98), the
+ * ruleset and the Match pop-up's rules (M39). `Game` holds them and the Match screen changes them.
+ */
+export function loadNewGamePicks(): NewGamePicks {
+  const difficulty = loadDifficulty();
+  return { map: loadMap(), mode: loadMode(), difficulty, teammateDifficulty: loadTeammateDifficulty(difficulty), team: loadTeamPick(), ruleset: loadRuleset(), rules: loadMatchRules() };
+}
 
 /** The opponents' bot difficulty (saved as `difficulty`, the one level every bot had before M20). */
 export function loadDifficulty(): Difficulty {
@@ -112,6 +114,11 @@ function roundTimeIn(raw: unknown): number | undefined {
 
 export function loadMode(): MatchMode {
   return loadChoice('mode', MATCH_MODES, DEFAULT_MODE);
+}
+
+/** Settings › Controls as saved, laid onto the PlayerInput that holds them (the menus' rows change them there). */
+export function loadControls(): Pick<PlayerInput, 'crouchMode' | 'aimMode' | 'sprintMode' | 'invertY' | 'sensitivity' | 'aimSensitivity' | 'wheelSelect'> {
+  return { crouchMode: loadCrouchMode(), aimMode: loadAimMode(), sprintMode: loadSprintMode(), invertY: loadInvertMouse(), sensitivity: loadSensitivity(), aimSensitivity: loadAimSensitivity(), wheelSelect: loadWheelSelect() };
 }
 
 /** The crouch key's behaviour (hold or toggle). */
@@ -226,45 +233,9 @@ export function loadAimSensitivity(): number {
   return loadSetting('aimSensitivity', numberIn(AIMING.minSensitivity, AIMING.maxSensitivity), AIMING.defaultSensitivity);
 }
 
-/**
- * The saved Reduced motion choice (Settings → Accessibility), or null while the player has not picked (audit UI-07):
- * then the system's "reduce motion" setting decides, live (`systemReducedMotionQuery`). Stored as before.
- */
-export function loadReducedMotion(storage = browserStorage()): boolean | null {
-  const saved = loadSetting<'on' | 'off' | null>('reducedMotion', oneOf(REDUCED_MOTION_CHOICES.map((c) => c.id)), null, storage);
-  return saved === null ? null : saved === 'on';
-}
-
-/** The system's "reduce motion" setting (prefers-reduced-motion), which the browser reports; null where it has no media queries. */
-export function systemReducedMotionQuery(): MediaQueryList | null {
-  try {
-    return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)') ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/** Whether motion is reduced: the player's pick, or while they have none the system's setting. */
-export function effectiveReducedMotion(saved: boolean | null, system: boolean): boolean {
-  return saved ?? system;
-}
-
-/**
- * The class #app wears for the HUD's CSS animations (style.css, audit M-03 and UI-07): the player's pick, or none while
- * they have not picked, so the stylesheet's `prefers-reduced-motion` rules follow the system live.
- */
-export function motionClass(saved: boolean | null): 'reduced-motion' | 'full-motion' | null {
-  return saved === null ? null : saved ? 'reduced-motion' : 'full-motion';
-}
-
 /** The Match screen's "Your team" (M98, saved as `playerTeam`: 'alpha' or 'beta'); Alpha until another is picked. */
 export function loadTeamPick(): TeamPickId {
   return loadChoice('playerTeam', TEAM_PICKS, DEFAULT_TEAM_PICK);
-}
-
-/** The team colour set (Settings → Accessibility, M18b). */
-export function loadTeamColours(): TeamColourSetId {
-  return loadChoice('teamColours', TEAM_COLOUR_CHOICES, DEFAULT_TEAM_COLOURS);
 }
 
 /** Settings › Look (G1): robots mixed in with humans (on unless turned off) and Realistic colours (off unless turned on). */
@@ -273,11 +244,6 @@ export function loadLook(): LookSettings {
     robots: loadChoice('robots', ROBOT_CHOICES, DEFAULT_ROBOTS ? 'on' : 'off') === 'on',
     realisticColours: loadChoice('realisticColours', REALISTIC_COLOUR_CHOICES, DEFAULT_REALISTIC_COLOURS ? 'on' : 'off') === 'on',
   };
-}
-
-/** On-screen sound cues (Settings → Accessibility, M18b): off unless the player turned them on. */
-export function loadSoundCues(): boolean {
-  return loadChoice('soundCues', SOUND_CUE_CHOICES, 'off') === 'on';
 }
 
 /** Whether the practice range's timed challenge is on (M93): off until the player turns it on. */
@@ -310,44 +276,6 @@ export function loadMatchStarted(storage = browserStorage()): boolean {
  */
 export function loadTutorialStep(): string | number {
   return loadSetting<string | number>('tutorialStep', (raw) => (typeof raw === 'string' || (typeof raw === 'number' && Number.isInteger(raw) && raw >= 0) ? raw : undefined), '');
-}
-
-/** The sound cues' size (Settings → Accessibility, M24): a scale, 1 = as before. */
-export function loadSoundCueSize(): number {
-  return loadSetting('soundCueSize', numberIn(SOUND_CUE_SIZE.min, SOUND_CUE_SIZE.max), SOUND_CUE_SIZE.default);
-}
-
-/** The sound cues' colour (Settings → Accessibility, M24). */
-export function loadSoundCueColour(): SoundCueColour {
-  return loadChoice('soundCueColour', SOUND_CUE_COLOURS, DEFAULT_SOUND_CUE_COLOUR);
-}
-
-/** The scoreboard's size as picked (Settings → HUD, M24): a scale, 1 = its size before M24. */
-export function loadScoreboardSize(): number {
-  return loadSetting('scoreboardSize', numberIn(SCOREBOARD_SIZE.min, SCOREBOARD_SIZE.max), SCOREBOARD_SIZE.default);
-}
-
-/** Whether the hit feed's lines fade or stay (Settings → HUD, M24). */
-export function loadHitFeedMode(): HitFeedMode {
-  return loadChoice('hitFeed', HIT_FEED_MODES, DEFAULT_HIT_FEED_MODE);
-}
-
-/** Whether the "what got you" card shows after a hit (Settings → HUD, M41): Auto (against Pro), On or Off. */
-export function loadWhatGotYouMode(): WhatGotYouMode {
-  return loadChoice('whatGotYou', WHAT_GOT_YOU_MODES, DEFAULT_WHAT_GOT_YOU_MODE);
-}
-
-/** The HUD's size as picked (Settings → HUD, audit UI-04): a scale, 1 = sized for the screen. */
-export function loadHudSize(): number {
-  return loadSetting('hudSize', numberIn(HUD_SIZE.min, HUD_SIZE.max), HUD_SIZE.default);
-}
-
-/**
- * How opaque the HUD's panels are (Settings → HUD, G4): 0.5 to 1. A save from before it, or one holding anything else
- * (out of range, not a number), reads as the default.
- */
-export function loadHudOpacity(storage = browserStorage()): number {
-  return loadSetting('hudOpacity', numberIn(HUD_OPACITY.min, HUD_OPACITY.max), HUD_OPACITY.default, storage);
 }
 
 /** Raw mouse input (Settings → Controls, audit UI-20): on unless the player turned it off. */

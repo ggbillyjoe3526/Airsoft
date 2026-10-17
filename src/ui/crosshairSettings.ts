@@ -8,7 +8,8 @@ import {
   type CrosshairSettings,
 } from '../config/matchInfo';
 import { HIT_MARKER_CHOICES, HIT_MARKER_COLORS, HIT_MARKER_OUTLINES, HIT_MARKER_RANGES, type HitMarkerSettings } from '../config/hits';
-import { crosshairElement, hexColour, setCrosshairGap, styleCrosshair } from './crosshair';
+import { crosshairElement, setCrosshairGap, styleCrosshair } from './crosshair';
+import { hexColour } from '../settings/hudPrefs';
 import { hitMarkerElement, styleHitMarker } from './hitMarkerLook';
 import { saveSetting, saveSettingSoon } from '../settings/storage';
 import { el, menuRow, rangeControl } from './menus/menuParts';

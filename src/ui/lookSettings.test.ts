@@ -5,7 +5,7 @@ import { SETTINGS_KEY } from '../settings/storage';
 import { MemoryStorage } from '../pool/testStorage';
 import { lookSettings } from './lookSettings';
 import { retroSettings } from './retroSettings';
-import { loadLook } from './menus/savedChoices';
+import { loadLook } from '../settings/savedChoices';
 import { fakeDocument, type FakeElement } from './testSupport';
 
 /** Every element under `node` with the tag, depth first. */

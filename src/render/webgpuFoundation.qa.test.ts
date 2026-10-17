@@ -5,7 +5,7 @@ import { RENDER_BACKEND, type RendererChoice, rendererNote, type RenderBackend, 
 import { QUALITY } from '../config/render';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
 import { parseSaveText, SAVE_FORMAT, saveFileText } from '../save/saveFile';
-import { loadRendererChoice } from '../ui/menus/savedChoices';
+import { loadRendererChoice } from '../settings/savedChoices';
 import { Renderer } from './renderer';
 import { startingRenderer } from './rendererStart';
 import { NodeBackend, type NodeStart } from './webgpu/nodeBackend';

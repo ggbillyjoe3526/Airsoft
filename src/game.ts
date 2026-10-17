@@ -1,40 +1,32 @@
 import { AudioEngine } from './audio/audioEngine';
 import { loadVolumes } from './audio/audioMix';
 import { soundscapeOf } from './audio/soundscape';
-import { motionScale, type SoundCueColour, soundCueCss } from './config/accessibility';
-import type { VolumeChannel } from './config/audio';
 import { type LookSettings, type RetroSettings, retroLookOf } from './config/look';
-import type { Difficulty } from './config/bots';
 import { activeDev, DEV_ACTION_TEXT, DEV_GIFTS, type DevActionId, type DevSettings, devCheating } from './config/dev';
 import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
-import type { MatchRules, RulesetId } from './config/matchRules';
-import { type CrosshairSettings, type FeedCorner, type HitFeedMode, hudInsetX, hudScale, scoreboardScale, type WhatGotYouMode } from './config/matchInfo';
-import { MINIMAP, minimapScale } from './config/minimap';
 import { FULLSCREEN_RELOCK_MS, PAUSE_ESC_GUARD_MS } from './config/controls';
 import { HUD_TEXT } from './config/hudText';
 import { escOpensMenu, escSkips } from './core/escSkip';
 import { CRASH_TEXT } from './config/crash';
 import { LOADING } from './config/loading';
 import { ARMORY_TEXT, BROWSER_NOTES, MENU_TEXT } from './config/menus';
-import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
 import { GRAPHICS_TEXT } from './config/graphics';
 import { FRAME_TIMING, type FrameRateCap, type LightingPresetId, QUALITY, QUALITY_CHOICES, QUALITY_STEP_DOWN, type QualityChoice, type QualityPreset, type QualitySettings } from './config/render';
 import { RANGE_CHALLENGE } from './config/range';
 import { FramePacer } from './core/framePacer';
 import { SIM } from './config/sim';
-import { applyTeamCss, DEFAULT_TEAM_PICK, TEAM_COLOUR_SETS, type TeamColourSetId, teamOfPick, type TeamPickId } from './config/teams';
-import { crashReport, type ReportField, type ReportInfo } from './core/crashReport';
+import { applyTeamCss, DEFAULT_TEAM_PICK, TEAM_COLOUR_SETS, teamOfPick } from './config/teams';
+import { crashReport } from './core/crashReport';
 import type { ErrorLog } from './core/errorLog';
 import { FrameWindow } from './core/frameWindow';
-import { clockText, framesLine, loadLine, memoryLine, playerLine, qualityLine, runReportLine } from './core/reportFields';
 import { KeyBindings } from './input/keyBindings';
 import { Keyboard } from './input/keyboard';
 import { browserKeyboardMap, watchKeyboardLayout } from './input/keyboardLayout';
 import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
-import { lightingPicked, mapUnderLighting, mapUnderPreset, playsAtNight } from './map/lightingChoice';
+import { mapUnderLighting, mapUnderPreset, playsAtNight } from './map/lightingChoice';
 import { allMapsLoaded, loadDevMaps, type MapId, mapData } from './map/maps';
 import type { MapData } from './map/mapTypes';
 import { type PracticePlaceId, practiceMapId } from './map/practicePlaces';
@@ -44,9 +36,9 @@ import { loadBakedLight } from './render/bakedLight';
 import { ModelFiles } from './render/modelFiles';
 import { powerSourceLoader } from './render/powerSourceModels';
 import { FrameTimeWatch, presetBelow, slowFrameMs } from './render/qualityStepDown';
-import { rendererName } from './render/gpuCheck';
 import { Renderer } from './render/renderer';
 import type { RendererBoot } from './render/rendererStart';
+import { debugLines, type GameReadout, reportInfo } from './gameReport';
 import { matchSeed } from './matchFlow';
 import { OnDemand } from './core/onDemand';
 import { nextSessionAction, type SessionAction } from './core/sessionPlan';
@@ -56,13 +48,12 @@ import type { GameState } from './sim/state';
 import { addChallengeRun, loadRecords, noNews, type RecordNews, type Records, saveRecords } from './stats/records';
 import { type NoXp, settleMatch } from './stats/settleMatch';
 import { adaptedPicks, adaptiveNote, adaptiveSetup, settleAdaptive } from './adaptivePicks';
-import { loadCrosshair } from './ui/crosshair';
-import { loadHitMarker } from './ui/hitMarkerLook';
-import { loadAmmoCounter, loadCallouts, loadFeedCorner, loadMagPrompts, loadMinimapTurn, loadPingMarkers } from './ui/hudSettings';
 import { CrashScreen } from './ui/crashScreen';
 import { DebugOverlay } from './ui/debugOverlay';
-import { type FullscreenRelock, fullscreenRelock, hasUserActivation, isFullscreen, onFullscreenChange, toggleFullscreen } from './ui/fullscreen';
+import { onFullscreenChange } from './ui/fullscreen';
+import { FullscreenPlay } from './ui/fullscreenPlay';
 import { GraphicsNotice } from './ui/graphicsNotice';
+import { HudLook } from './ui/hudLook';
 import { PlayPrompt } from './ui/playPrompt';
 import { loadoutTile } from './ui/loadoutChoice';
 import type { ItemRef } from './pool/item';
@@ -77,7 +68,7 @@ import { haulSummary, type XpSummary, xpSummary } from './ui/menus/summaryScreen
 import type { MenuLevel } from './ui/menus/menusOptions';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
 import { carryOverDevRetro, loadRetroSettings } from './settings/retroLook';
-import { browserStorage, flushSettings, SETTINGS_KEY, saveSetting } from './settings/storage';
+import { browserStorage, flushSettings, saveSetting } from './settings/storage';
 import type { SaveManager } from './save/saveManager';
 import { SAVE_TEXT } from './config/save';
 import { screenWhenStopped } from './ui/menus/menuNav';
@@ -85,47 +76,23 @@ import { Menus } from './ui/menus/menus';
 import { followingPictureTarget, ItemPictures, nodePictureTarget } from './render/itemPictures';
 import { recordsView } from './ui/recordsView';
 import {
-  effectiveReducedMotion,
   hasSavedTeammateDifficulty,
-  loadAimMode,
-  loadAimSensitivity,
-  loadCrouchMode,
-  loadDifficulty,
+  loadControls,
   loadFov,
   loadFrameRateCap,
-  loadInvertMouse,
   loadLightingPicks,
-  loadMap,
-  loadPracticePlace,
-  loadMatchRules,
-  loadMode,
-  loadMouseDpi,
-  loadRuleset,
-  loadReducedMotion,
-  loadRendererChoice,
-  loadSensitivity,
-  loadShowFps,
-  loadHitFeedMode,
-  loadHudOpacity,
-  loadHudSize,
-  loadRawInput,
-  loadScoreboardSize,
-  loadSoundCueColour,
   loadLook,
-  loadSoundCues,
-  loadSoundCueSize,
-  loadSprintMode,
-  loadTeammateDifficulty,
-  loadTeamColours,
-  loadTeamPick,
+  loadNewGamePicks,
   loadPracticeChallenge,
+  loadPracticePlace,
+  loadRawInput,
+  loadRendererChoice,
+  loadShowFps,
   loadTutorialDone,
   loadTutorialStep,
-  loadWheelSelect,
-  loadWhatGotYouMode,
-  motionClass,
-  systemReducedMotionQuery,
-} from './ui/menus/savedChoices';
+} from './settings/savedChoices';
+import { type HudPrefKey, type HudPrefs, loadHudPrefs } from './settings/hudPrefs';
+import type { Session } from './session';
 
 /** Where Practice plays (M94): a map, and the course its timed challenge's best is kept under. */
 interface PracticeAt {
@@ -134,10 +101,8 @@ interface PracticeAt {
 }
 
 
-/** Whether `s` is the practice range: the one session that isn't a match (its class arrives on first use, IM1). */
-function isRange(s: MatchSession | RangeSession | null): s is RangeSession {
-  return s !== null && !(s instanceof MatchSession);
-}
+/** The session loaded: both are a Session (session.ts); `kind` tells them apart where only one has the answer. */
+type Loaded = MatchSession | RangeSession;
 
 export interface GameOptions {
   /**
@@ -196,9 +161,8 @@ export class Game {
   private readonly playPrompt: PlayPrompt;
   /** True while the graphics context is lost: nothing can be drawn, so play can't start or resume. */
   private graphicsLost = false;
-  /** The match being played (or paused, or just decided); null on the title and New game screens. */
-  /** The match in play, or the practice range (M21); null on the menus with nothing loaded. */
-  private session: MatchSession | RangeSession | null = null;
+  /** The match in play (or paused, or just decided), or the practice range (M21); null on the menus with nothing loaded. */
+  private session: Loaded | null = null;
   /** The practice range's code (the tutorial's with it), fetched in the background once the title is up (IM1). */
   private readonly rangeCode = new OnDemand<typeof import('./rangeSession')>(() => import('./rangeSession'));
   /** The next Play opens the practice range rather than a match (the title's Practice range button). */
@@ -234,21 +198,12 @@ export class Game {
   /** True once play has begun in the current session (until the player leaves the match). */
   private started = false;
   private unlockedPlay = false;
-  /** New game's choices: the next Play builds the match from them. */
-  private map: MapId;
+  /** New game's choices (settings/savedChoices.ts loadNewGamePicks): the next Play builds the match from them (playedPicks). */
+  private readonly picks: NewGamePicks = loadNewGamePicks();
   /** Where Practice is played (M94): the range or a map, its own pick on the Match screen. */
   private practicePlace: PracticePlaceId = loadPracticePlace();
   /** Each map's Day or Night pick (M34d). */
   private readonly lighting: Partial<Record<MapId, LightingPresetId>>;
-  private mode: MatchMode;
-  /** The opponents' bot difficulty and your bot teammates' (M20). */
-  private difficulty: Difficulty;
-  private teammateDifficulty: Difficulty;
-  /** The Match screen's "Your team" (M98): Alpha or Beta. */
-  private team: TeamPickId;
-  /** The Match pop-up's rules (M20), and its Rules row's ruleset (M39). */
-  private matchRules: MatchRules;
-  private ruleset: RulesetId;
   /** The player's level progress (LV1): XP and what it unlocked; and their loadout built from it (M26b). */
   private readonly progress: Progress;
   private readonly loadout: LoadoutModel;
@@ -257,20 +212,10 @@ export class Game {
    * them). Made suspended at start; the sounds render in the title screen's spare time (audit M-09).
    */
   private readonly audio = new AudioEngine(loadVolumes());
-  /** The crosshair's look (Settings → Crosshair), kept across matches. */
-  private crosshair: CrosshairSettings = loadCrosshair();
-  /** Settings › Gameplay › Hit marker (M97): off unless the player turned it on. */
-  private hitMarker = loadHitMarker();
-  /** Settings › HUD › Minimap (M83): rotating, or fixed north up. */
-  private minimapTurn = loadMinimapTurn();
-  /** Settings › HUD › Callouts (CL1): your bot teammates' calls in a match. */
-  private callouts = loadCallouts();
-  /** Settings › HUD › Ping markers (PG1): your pings and your teammates' marks shown in a match. */
-  private pingMarkers = loadPingMarkers();
-  /** Settings › HUD › Mag hand-off (MG1): its line and tags shown in a match. */
-  private magPrompts = loadMagPrompts();
-  /** Settings › HUD › Ammo counter (AC1): the replica panel's BB counts, in a match and in Practice. */
-  private ammoCounter = loadAmmoCounter();
+  /** Every HUD and accessibility preference (settings/hudPrefs.ts): the menus change it, the sessions read it by reference. */
+  private readonly prefs: HudPrefs = loadHudPrefs();
+  /** The HUD's size, opacity, sound cues and motion classes on the container, from `prefs` (ui/hudLook.ts). */
+  private readonly hudLook: HudLook;
   /** The local records (M19), and what the last match finished changed in them. */
   private readonly records: Records = loadRecords(browserStorage());
   private recordNews: RecordNews = noNews();
@@ -280,42 +225,12 @@ export class Game {
   private noXpReason: NoXp | null = null;
   /** What the last match did to adaptive difficulty (AD1), for its summary, or null when it played a fixed level. */
   private adaptiveLine: string | null = null;
-  /** Reduced motion (Settings → Accessibility), kept across matches; null until the player picks (audit UI-07). */
-  private reducedMotion = loadReducedMotion();
-  /** The system's "reduce motion" setting, watched while the player has not picked (audit UI-07). */
-  private readonly systemMotion = systemReducedMotionQuery();
-  /** The team colours and the on-screen sound cues (Settings → Accessibility, M18b). Colours apply from the next match. */
-  private teamColours: TeamColourSetId = loadTeamColours();
-  private soundCues = loadSoundCues();
   /** Settings › Look (G1): robots and Realistic colours, for the next match or range visit. */
   private look: LookSettings = loadLook();
   /** Settings › Dev › Retro look (M96, back on the Dev tab since the Dev 6 playtest; applies while the Dev tab is shown). */
   private retro: RetroSettings;
-  /** The sound cues' size and colour (Settings → Accessibility) and the scoreboard's size and hit feed (Settings → HUD), M24. */
-  private soundCueSize = loadSoundCueSize();
-  private soundCueColour: SoundCueColour = loadSoundCueColour();
-  private scoreboardSize = loadScoreboardSize();
-  private hitFeedMode: HitFeedMode = loadHitFeedMode();
-  /** Settings → HUD → Feed position (Dev 6 playtest item 32). */
-  private feedCorner: FeedCorner = loadFeedCorner();
-  /** Settings → HUD → What got you (M41): the card after a hit; Auto turns it on against Pro opponents only. */
-  private whatGotYouMode: WhatGotYouMode = loadWhatGotYouMode();
-  /** The HUD's size as picked (Settings → HUD, audit UI-04); the screen's height scales it further (hudScale). */
-  private hudSize = loadHudSize();
-  /** How opaque the HUD's panels are (Settings → HUD, G4). */
-  private hudOpacity = loadHudOpacity();
-  /** When the Fullscreen key was last pressed in play (performance.now()), to take the mouse again (audit UI-19). */
-  private fullscreenKeyAt = Number.NEGATIVE_INFINITY;
-  /** Whether the page was fullscreen as the Fullscreen key was pressed: the change is done once that no longer holds. */
-  private fullscreenAtKey = false;
-  /**
-   * When the lock dropped as fullscreen changed (Firefox): play holds, without the pause menu, until the lock is taken
-   * again (at once, or on `fullscreenchange` if the change isn't done yet), or stops on the menu if it is refused or
-   * hasn't come within FULLSCREEN_RELOCK_MS. -Infinity: not holding.
-   */
-  private fullscreenHoldAt = Number.NEGATIVE_INFINITY;
-  /** The Fullscreen key gave the mouse back so the pause menu can ask for the click fullscreen needs (Firefox, IN1). */
-  private fullscreenByClick = false;
+  /** The Fullscreen key in play and the mouse lock across the change (audit UI-19, IN1). */
+  private readonly fullscreen: FullscreenPlay;
   /** Stop following the page's fullscreen state and the keyboard layout. */
   private readonly unwatchFullscreen: () => void;
   private readonly unwatchLayout: () => void;
@@ -352,6 +267,8 @@ export class Game {
   private readonly frameWindow = new FrameWindow();
   /** When the loop started (performance.now()): the game was ready to play. */
   private readyAt = 0;
+  /** What the debug overlay and the reports read off the game (gameReport.ts), each when asked. */
+  private readonly readout: GameReadout;
   /** Set by dispose(): work still in flight (the dev maps' fetch) then does nothing. */
   private disposed = false;
   /** Play asked for the lock and waits for the browser's answer before building (play). */
@@ -394,18 +311,32 @@ export class Game {
     this.autoQuality = options.automaticQuality;
     this.matchSeed = options.seed;
     this.renderer = new Renderer(container, this.quality, rendering.node);
+    this.readout = {
+      session: () => this.session,
+      seed: () => (this.session?.kind === 'range' ? options.seed : this.matchSeed),
+      mapPick: () => this.playedPicks().map,
+      ruleset: () => this.picks.ruleset,
+      inPlay: () => this.pointer.locked || this.unlockedPlay || this.escSkip,
+      menuScreen: () => this.menus.screen,
+      tickRate: () => this.tickRate,
+      simMs: () => this.simMs,
+      drawMs: () => this.drawMs,
+      frames: () => this.frameWindow.summary(),
+      quality: () => ({ choice: this.qualityChoice, automatic: this.autoQuality, settings: this.quality }),
+      retro: () => retroLookOf(this.retro, this.scripted, this.devEnabled),
+      audioLatencyMs: () => this.audio.latencyMs(),
+      readyAt: () => this.readyAt,
+      dev: () => (this.devEnabled ? this.dev : null),
+      renderer: this.renderer,
+      adapterName: rendering.adapterName,
+      errors: options.errors,
+    };
     this.renderer.setFov(loadFov());
     this.renderer.setToneMapping(this.dev.toneMapping);
-    this.map = loadMap();
     this.lighting = loadLightingPicks();
-    this.mode = loadMode();
-    this.difficulty = loadDifficulty();
-    this.teammateDifficulty = loadTeammateDifficulty();
-    this.team = loadTeamPick();
     // The menus show the team colours of the saved set (the Match screen's Your team), as each match sets them again.
-    applyTeamCss(container, TEAM_COLOUR_SETS[this.teamColours]);
-    this.matchRules = loadMatchRules();
-    this.ruleset = loadRuleset();
+    applyTeamCss(container, TEAM_COLOUR_SETS[this.prefs.teamColours]);
+    this.hudLook = new HudLook(container, this.prefs);
     this.progress = loadProgress(GAME_LEVELS);
     const unlocks = { unlocked: () => this.progress.unlocked, levelOf: (id: string) => GAME_LEVELS.unlockLevel.get(id) };
     this.loadout = new LoadoutModel(GAME_POOL, gameOwnership(GAME_POOL, unlocks, () => this.dev.unlockAllGear, () => this.dev.devContent));
@@ -414,6 +345,8 @@ export class Game {
     this.keyboard = new Keyboard(window, this.bindings);
     // The lock is on the game's container, not the canvas: turning antialiasing on or off replaces the canvas (REN-04).
     this.pointer = new PointerLock(container, this.keyboard);
+    // A crash gives the mouse back for good (FA1).
+    this.fullscreen = new FullscreenPlay(this.pointer, () => this.started && this.session !== null && !this.crashScreen, () => this.unlockedPlay);
     this.pointer.rawInput = loadRawInput();
     // Key names on screen follow the player's keyboard layout where the browser tells it (audit UI-01).
     this.unwatchLayout = watchKeyboardLayout(browserKeyboardMap(), window, (layout) => this.bindings.setLayout(layout));
@@ -423,41 +356,9 @@ export class Game {
     carryOverDevRetro();
     this.retro = loadRetroSettings();
     this.showRetro();
-    this.input.crouchMode = loadCrouchMode();
-    this.input.aimMode = loadAimMode();
-    this.input.sprintMode = loadSprintMode();
-    this.input.invertY = loadInvertMouse();
-    this.input.sensitivity = loadSensitivity();
-    this.input.aimSensitivity = loadAimSensitivity();
-    this.input.wheelSelect = loadWheelSelect();
+    Object.assign(this.input, loadControls());
 
-    this.debug = new DebugOverlay(container, () => {
-      const s = this.session;
-      const p = s?.player;
-      const drawn = this.renderer.stats;
-      return {
-        seed: isRange(s) ? options.seed : this.matchSeed,
-        map: isRange(s) ? 'range' : this.playedPicks().map,
-        tick: s?.state.tick ?? '-',
-        'sim ticks/s': this.tickRate,
-        characters: s?.characterCount ?? 0,
-        pos: p ? `${p.position.x.toFixed(2)}, ${p.position.y.toFixed(2)}, ${p.position.z.toFixed(2)}` : '-',
-        speed: p ? Math.hypot(p.velocity.x, p.velocity.z).toFixed(2) : '-',
-        grounded: String(p?.grounded ?? '-'),
-        'BBs in flight': s?.combat.bbsInFlight ?? 0,
-        'audio latency (ms)': this.audio.latencyMs()?.toFixed(1) ?? '-',
-        quality: this.qualityText(),
-        renderer: this.renderer.backend,
-        'pixel ratio': this.renderer.renderer.getPixelRatio(),
-        'frame ms (sim / draw / GPU)': `${this.simMs.toFixed(1)} / ${this.drawMs.toFixed(1)} / ${Number.isNaN(this.renderer.gpuMs) ? 'n/a' : this.renderer.gpuMs.toFixed(1)}`,
-        antialias: this.antialiasText(),
-        // G5: the post stack's passes in force (none on Low).
-        post: this.renderer.postPasses.join(' ') || 'none',
-        'draw calls': drawn.calls,
-        triangles: drawn.triangles,
-        'programs / geometries / textures': `${drawn.programs} / ${drawn.geometries} / ${drawn.textures}`,
-      };
-    });
+    this.debug = new DebugOverlay(container, () => debugLines(this.readout));
 
     // The menus' pictures of replicas and parts (G3), drawn by the game's renderer (W6; a new one after a lost device),
     // once a match's warm-up compile is done. The power sources' models are Blender files too (RM3), loaded the first time
@@ -472,9 +373,7 @@ export class Game {
     );
     this.menus = new Menus(container, {
       pictures: this.pictures,
-      rules: {
-        raiseTime: ROUNDS.flag.raiseTime,
-      },
+      rules: { raiseTime: ROUNDS.flag.raiseTime },
       bindings: this.bindings,
       loadout: {
         model: this.loadout,
@@ -496,7 +395,7 @@ export class Game {
         if (!this.started) this.practice = this.tutorial = false;
         this.play();
       },
-      onFullscreenPlay: () => this.fullscreenAndPlay(),
+      onFullscreenPlay: () => this.fullscreen.click(() => this.play()),
       onLeaveMatch: () => this.leaveMatch(),
       onRange: () => {
         this.practice = true;
@@ -523,39 +422,25 @@ export class Game {
       // Skip to next round (M83): the skip runs from the next frame of play, so Resume takes the mouse as usual. A skip
       // already begun whose play the browser refused (the mouse lock, just after Esc) is taken up by the next click (BP3).
       onSkipRound: () => {
-        if (this.session instanceof MatchSession && (this.session.skipping || this.session.beginSkip())) this.play();
+        if (this.session?.kind === 'match' && (this.session.skipping || this.session.beginSkip())) this.play();
       },
       onToggleChallenge: () => this.toggleChallenge(),
       onSkipTutorialStep: () => this.skipTutorial(false),
       onSkipTutorial: () => this.skipTutorial(true),
-      map: { initial: this.map, onChange: (m) => ((this.map = m), (this.setupChanged = true), this.prefetchFieldSounds()) },
+      map: { initial: this.picks.map, onChange: (m) => ((this.picks.map = m), (this.setupChanged = true), this.prefetchFieldSounds()) },
       practicePlace: { initial: this.practicePlace, onChange: (p) => (this.practicePlace = p) },
       lighting: { initial: this.lighting, onChange: (m, light) => ((this.lighting[m] = light), (this.setupChanged = true), this.prefetchFieldSounds()) },
       mode: {
-        initial: this.mode,
-        onChange: (m) => ((this.mode = m), (this.setupChanged = true)),
+        initial: this.picks.mode,
+        onChange: (m) => ((this.picks.mode = m), (this.setupChanged = true)),
       },
-      difficulty: { initial: this.difficulty, onChange: (d) => ((this.difficulty = d), (this.setupChanged = true)) },
-      teammateDifficulty: { initial: this.teammateDifficulty, follows: !hasSavedTeammateDifficulty(), onChange: (d) => ((this.teammateDifficulty = d), (this.setupChanged = true)) },
-      team: { initial: this.team, onChange: (t) => ((this.team = t), (this.setupChanged = true)) },
-      matchRules: { initial: this.matchRules, onChange: (m) => ((this.matchRules = m), (this.setupChanged = true)) },
-      ruleset: { initial: this.ruleset, onChange: (r) => ((this.ruleset = r), (this.setupChanged = true)) },
-      controls: {
-        sensitivity: { initial: this.input.sensitivity, onChange: (v) => (this.input.sensitivity = v) },
-        aimSensitivity: { initial: this.input.aimSensitivity, onChange: (v) => (this.input.aimSensitivity = v) },
-        dpi: { initial: loadMouseDpi() },
-        invertMouse: { initial: this.input.invertY, onChange: (on) => (this.input.invertY = on) },
-        rawInput: {
-          initial: this.pointer.rawInput,
-          onChange: (on) => (this.pointer.rawInput = on),
-          status: () => this.pointer.rawStatus,
-          watch: (fn) => this.pointer.onRawStatus(fn),
-        },
-        crouch: { initial: this.input.crouchMode, onChange: (m) => (this.input.crouchMode = m) },
-        aim: { initial: this.input.aimMode, onChange: (m) => (this.input.aimMode = m) },
-        sprint: { initial: this.input.sprintMode, onChange: (m) => (this.input.sprintMode = m) },
-        wheelSelect: { initial: this.input.wheelSelect, onChange: (m) => (this.input.wheelSelect = m) },
-      },
+      difficulty: { initial: this.picks.difficulty, onChange: (d) => ((this.picks.difficulty = d), (this.setupChanged = true)) },
+      teammateDifficulty: { initial: this.picks.teammateDifficulty, follows: !hasSavedTeammateDifficulty(), onChange: (d) => ((this.picks.teammateDifficulty = d), (this.setupChanged = true)) },
+      team: { initial: this.picks.team ?? DEFAULT_TEAM_PICK, onChange: (t) => ((this.picks.team = t), (this.setupChanged = true)) },
+      matchRules: { initial: this.picks.rules, onChange: (m) => ((this.picks.rules = m), (this.setupChanged = true)) },
+      ruleset: { initial: this.picks.ruleset, onChange: (r) => ((this.picks.ruleset = r), (this.setupChanged = true)) },
+      // Settings › Controls change the input and the pointer lock that hold them.
+      controls: { input: this.input, pointer: this.pointer },
       fov: { initial: this.renderer.fov, onChange: (v) => this.renderer.setFov(v) },
       graphics: {
         quality: {
@@ -568,46 +453,12 @@ export class Game {
         showFps: { initial: loadShowFps(), onChange: (on) => this.debug.setFpsReadout(on) },
         renderer: (row) => this.rendering.fillRow(row, this.renderer),
       },
-      audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
-      crosshair: {
-        initial: this.crosshair,
-        onChange: (c) => this.changeCrosshair(c),
-        hitMarker: { initial: this.hitMarker, onChange: (m) => ((this.hitMarker = m), this.session instanceof MatchSession && this.session.setHitMarker(m)) },
-      },
-      accessibility: {
-        reducedMotion: { initial: this.motionReduced(), onChange: (on) => this.changeReducedMotion(on), follow: (show) => (this.showSystemMotion = show) },
-        // The figures are built with their colours, so a new set shows from the next match.
-        // On the range they show from Resume (it's rebuilt where you stood, as after a loadout change).
-        teamColours: {
-          initial: this.teamColours,
-          onChange: (set) => {
-            this.teamColours = set;
-            this.setupChanged = this.loadoutChanged = true;
-            // The menus' team swatches (the Match screen's Your team) follow at once; a match loaded keeps its own until the next.
-            if (!this.session) applyTeamCss(this.container, TEAM_COLOUR_SETS[set]);
-          },
-        },
-        soundCues: { initial: this.soundCues, onChange: (on) => this.changeSoundCues(on) },
-        soundCueSize: { initial: this.soundCueSize, onChange: (v) => ((this.soundCueSize = v), this.showHudLook()) },
-        soundCueColour: { initial: this.soundCueColour, onChange: (c) => ((this.soundCueColour = c), this.showHudLook()) },
-      },
+      audio: { initial: this.audio.volumes, onChange: (channel, v) => this.audio.setVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
+      prefs: { values: this.prefs, onChange: (key) => this.prefChanged(key), followMotion: this.hudLook.follow },
       // Built into the figures and replicas, so a change shows from the next match (on the range, from Resume).
       look: {
         initial: this.look,
         onChange: (look) => ((this.look = look), (this.setupChanged = this.loadoutChanged = true)),
-      },
-      hud: {
-        hudSize: { initial: this.hudSize, onChange: (v) => ((this.hudSize = v), this.showHudLook()) },
-        scoreboardSize: { initial: this.scoreboardSize, onChange: (v) => ((this.scoreboardSize = v), this.showHudLook()) },
-        hudOpacity: { initial: this.hudOpacity, onChange: (v) => ((this.hudOpacity = v), this.showHudLook()) },
-        hitFeed: { initial: this.hitFeedMode, onChange: (m) => this.changeHitFeed(m) },
-        feedCorner: { initial: this.feedCorner, onChange: (c) => ((this.feedCorner = c), this.session instanceof MatchSession && this.session.setFeedCorner(c)) },
-        whatGotYou: { initial: this.whatGotYouMode, onChange: (m) => this.changeWhatGotYou(m) },
-        minimapTurn: { initial: this.minimapTurn, onChange: (t) => ((this.minimapTurn = t), this.session?.setMinimapTurn(t)) },
-        callouts: { initial: this.callouts, onChange: (m) => ((this.callouts = m), this.session instanceof MatchSession && this.session.setCallouts(m === 'on')) },
-        pingMarkers: { initial: this.pingMarkers, onChange: (m) => ((this.pingMarkers = m), this.session instanceof MatchSession && this.session.setPingMarkers(m === 'on')) },
-        magPrompts: { initial: this.magPrompts, onChange: (m) => ((this.magPrompts = m), this.session instanceof MatchSession && this.session.setMagPrompts(m === 'on')) },
-        ammoCounter: { initial: this.ammoCounter, onChange: (m) => ((this.ammoCounter = m), this.session?.setAmmoCounter(m === 'on')) },
       },
       dev: {
         initial: this.devPicked,
@@ -628,18 +479,14 @@ export class Game {
         devContent: () => this.dev.devContent,
         devContentUsed: () => this.devContentUsed(this.playedPicks()),
         adaptive: () => adaptiveNote(this.dev.adaptiveDifficulty, this.playedPicks(), this.dev.devContent),
-        diagnostics: () => this.reportInfo('Airsoft diagnostics'),
+        diagnostics: () => reportInfo(this.readout, 'Airsoft diagnostics'),
         actions: (id) => this.devAction(id),
       },
       save: options.save,
     });
     this.menus.showTitle();
-    this.showHudLook();
-    window.addEventListener('resize', this.showHudLook);
     this.debug.setVisible(this.dev.showDebug);
     this.debug.setFpsReadout(loadShowFps());
-    this.showMotion();
-    this.systemMotion?.addEventListener('change', this.systemMotionChanged);
     this.showTitleWarning();
     this.unwatchSave = options.save.onChange(() => this.showTitleWarning());
     this.graphicsNotice = new GraphicsNotice(container, BROWSER_NOTES.graphicsLost);
@@ -662,25 +509,23 @@ export class Game {
         if (!this.askingLock) this.resume();
       } else if (this.escSkipDrop(released)) {
         this.startEscSkip();
-      } else if (!released && this.fullscreenRelock() !== 'none') {
+      } else if (!released && this.fullscreen.relock() !== 'none') {
         // The lock dropped as fullscreen changes (Firefox): play holds, without the pause menu, while it is taken again.
-        this.fullscreenHoldAt = performance.now();
-        this.relockAfterFullscreen();
+        this.fullscreen.hold();
       } else {
         this.pause();
-        if (released && this.fullscreenByClick) this.menus.askFullscreenClick();
-        this.fullscreenByClick = false;
-        this.relockAfterFullscreen();
+        if (this.fullscreen.takeByClick() && released) this.menus.askFullscreenClick();
+        this.fullscreen.takeAgain();
       }
     });
-    this.unwatchFullscreen = onFullscreenChange(() => this.relockAfterFullscreen());
+    this.unwatchFullscreen = onFullscreenChange(() => this.fullscreen.takeAgain());
     // Slider changes wait a moment before they are written (settings/storage.ts saveSettingSoon): write them as the page goes.
     window.addEventListener('pagehide', this.flushSettings);
     // Refused while the round skips without the mouse: the prompt over the field says so, not the hidden menus.
     // Refused while play held for fullscreen: the pause menu, asking for the click (IN1).
     this.pointer.onError(() => {
       if (this.escSkip) return this.playPrompt.show(MENU_TEXT.lockRefused);
-      if (this.holdingForFullscreen) this.pause();
+      if (this.fullscreen.holding) this.pause();
       this.menus.lockRefused();
     });
     this.audio.warmUp();
@@ -726,12 +571,12 @@ export class Game {
   /** The mouse lock dropped (not the game's own release): whether it was Esc to skip the round (core/escSkip.ts). */
   private escSkipDrop(released: boolean): boolean {
     const s = this.session;
-    if (!this.started || !(s instanceof MatchSession) || this.graphicsLost || this.yielded || this.askingLock) return false;
+    if (!this.started || s?.kind !== 'match' || this.graphicsLost || this.yielded || this.askingLock) return false;
     return escSkips({
       released,
       skippable: s.skipping || s.skipOffer !== null,
       focused: document.visibilityState === 'visible' && document.hasFocus(),
-      msSinceFullscreenKey: performance.now() - this.fullscreenKeyAt,
+      msSinceFullscreenKey: this.fullscreen.sinceKey(performance.now()),
       fullscreenWindowMs: FULLSCREEN_RELOCK_MS,
     });
   }
@@ -742,7 +587,7 @@ export class Game {
    */
   private startEscSkip(): void {
     const s = this.session;
-    if (s instanceof MatchSession && !s.skipping) s.beginSkip();
+    if (s?.kind === 'match' && !s.skipping) s.beginSkip();
     this.escSkip = true;
     this.escSkipAt = performance.now();
     this.keyboard.capturing = false;
@@ -771,53 +616,6 @@ export class Game {
     this.endEscSkip();
     this.pause();
   };
-
-  /**
-   * The page entered or left fullscreen, or the mouse lock dropped: just after the Fullscreen key in play, the lock is
-   * taken again once the change is done, so the key doesn't stop the match on the pause menu (audit UI-19, IN1; Resume
-   * follows the lock as usual).
-   */
-  private relockAfterFullscreen(): void {
-    if (this.fullscreenRelock() !== 'take') return;
-    this.fullscreenKeyAt = Number.NEGATIVE_INFINITY;
-    void this.pointer.request();
-  }
-
-  /**
-   * The Fullscreen key in play. Where the key brings no user activation (Firefox), entering fullscreen would be refused:
-   * the mouse is given back and the pause menu asks for a click instead (fullscreenAndPlay). Leaving needs none.
-   */
-  private fullscreenKey(now: number): void {
-    this.fullscreenKeyAt = now;
-    this.fullscreenAtKey = isFullscreen();
-    if (!this.fullscreenAtKey && !hasUserActivation() && this.pointer.locked) {
-      this.fullscreenByClick = true;
-      this.pointer.release();
-      return;
-    }
-    toggleFullscreen();
-  }
-
-  /**
-   * The click the pause menu asked for after the Fullscreen key (Firefox, IN1): the page goes fullscreen within it, and
-   * the lock is taken once it is (relockAfterFullscreen; Firefox grants it to a fullscreen page without a click).
-   */
-  private fullscreenAndPlay(): void {
-    if (isFullscreen()) return this.play();
-    this.fullscreenKeyAt = performance.now();
-    this.fullscreenAtKey = false;
-    toggleFullscreen();
-  }
-
-  private fullscreenRelock(): FullscreenRelock {
-    const inMatch = this.started && this.session !== null && !this.crashScreen; // a crash gives the mouse back for good (FA1)
-    const changed = isFullscreen() !== this.fullscreenAtKey;
-    return fullscreenRelock(performance.now() - this.fullscreenKeyAt, FULLSCREEN_RELOCK_MS, inMatch, this.pointer.locked, this.unlockedPlay, changed);
-  }
-
-  private get holdingForFullscreen(): boolean {
-    return this.fullscreenHoldAt !== Number.NEGATIVE_INFINITY;
-  }
 
   /**
    * The graphics context was lost (true) or is back (false) (M18b, audit W-01). While it's gone the match pauses
@@ -875,54 +673,20 @@ export class Game {
       this.pause();
     } else if (this.pointer.locked) {
       this.pointer.release();
-    } else if (this.holdingForFullscreen) {
+    } else if (this.fullscreen.holding) {
       this.pause();
     }
   }
 
-  /** A volume slider moved on Settings → Audio: the shared bus eases to it (the match loaded and every later one). */
-  private changeVolume(channel: VolumeChannel, position: number): void {
-    this.audio.setVolume(channel, position);
-  }
-
-  /** The crosshair changed on Settings → Crosshair: kept for the next match and applied to the one loaded. */
-  private changeCrosshair(crosshair: CrosshairSettings): void {
-    this.crosshair = crosshair;
-    this.session?.combat.setCrosshair(crosshair);
-  }
-
-  /** Reduced motion turned on or off: kept for the next match and applied to the one loaded. */
-  private changeReducedMotion(on: boolean): void {
-    this.reducedMotion = on;
-    this.session?.setMotion(motionScale(on));
-    this.showMotion();
-  }
-
-  /** Whether motion is reduced now: the player's pick, else the system's setting (audit UI-07). */
-  private motionReduced(): boolean {
-    return effectiveReducedMotion(this.reducedMotion, this.systemMotion?.matches ?? false);
-  }
-
   /**
-   * Reduced motion for the HUD's CSS animations (style.css, audit M-03): `reduced-motion` calms them; `full-motion`
-   * marks an explicit Off, so the stylesheet's `prefers-reduced-motion` fallback doesn't override the player's choice.
-   * Neither class before the player picks (audit UI-07), so that fallback follows the system live.
+   * A HUD or accessibility preference changed (the session reads it as play runs again): the HUD's look, or the team
+   * colours, built into the figures, so from the next match (the range's Resume); the menus' swatches follow at once.
    */
-  private showMotion(): void {
-    const cls = motionClass(this.reducedMotion);
-    this.container.classList.toggle('reduced-motion', cls === 'reduced-motion');
-    this.container.classList.toggle('full-motion', cls === 'full-motion');
+  private prefChanged(key: HudPrefKey): void {
+    if (key !== 'teamColours') return this.hudLook.show();
+    this.setupChanged = this.loadoutChanged = true;
+    if (!this.session) applyTeamCss(this.container, TEAM_COLOUR_SETS[this.prefs.teamColours]);
   }
-
-  /** Shows a value on Settings › Accessibility's Reduced motion picker without saving it (BP2). */
-  private showSystemMotion: ((on: boolean) => void) | null = null;
-
-  /** The system's setting changed while the page is open: the 3D motion and the picker follow it, until the player picks. */
-  private readonly systemMotionChanged = (): void => {
-    if (this.reducedMotion !== null) return;
-    this.session?.setMotion(motionScale(this.motionReduced()));
-    this.showSystemMotion?.(this.motionReduced());
-  };
 
   /**
    * New quality settings (Settings → Graphics, or the game's own step-down when `automatic`): applied at once to the
@@ -945,15 +709,15 @@ export class Game {
    * pick is in force; a step decided mid-round waits for the round to end (a new preset compiles new pipelines, a
    * hitch nobody wants mid-fight), then applies, unsaved, with a line on the HUD.
    */
-  private watchFrameTimes(s: MatchSession | RangeSession, frameSeconds: number): void {
+  private watchFrameTimes(s: Loaded, frameSeconds: number): void {
     if (!this.autoQuality || this.steppedDown) return;
     // A skipped round (M83) spends each frame simulating on purpose: its frames say nothing about the graphics.
-    if (s instanceof MatchSession && s.skipping) return this.frameWatch.reset();
+    if (s.kind === 'match' && s.skipping) return this.frameWatch.reset();
     if (this.stepDownTo === null) {
       const below = presetBelow(this.qualityChoice);
       if (below && this.frameWatch.add(frameSeconds * 1000, slowFrameMs(this.frameRateCap))) this.stepDownTo = below;
     }
-    if (this.stepDownTo === null || (s instanceof MatchSession && s.state.round.phase === 'live')) return;
+    if (this.stepDownTo === null || (s.kind === 'match' && s.state.round.phase === 'live')) return;
     const preset = this.stepDownTo;
     this.stepDownTo = null;
     this.steppedDown = true;
@@ -962,57 +726,6 @@ export class Game {
     const label = QUALITY_CHOICES.find((c) => c.id === preset)!.label;
     s.combat.showNotice(GRAPHICS_TEXT.steppedDown(label), QUALITY_STEP_DOWN.noticeSeconds);
   }
-
-  /** The debug overlay's quality line: the choice, and the render scale, pixel ratio and shadow map in force. */
-  private qualityText(): string {
-    return qualityLine(this.qualityChoice, this.autoQuality, this.quality);
-  }
-
-  /** The debug overlay's antialiasing line (REN-21): asked for, given, and the samples per pixel. */
-  private antialiasText(): string {
-    return `${this.quality.antialias ? 'on' : 'off'} asked, ${this.renderer.antialiased ? 'on' : 'off'} given (${this.renderer.samples} samples)`;
-  }
-
-  /** On-screen sound cues turned on or off: kept for the next match and applied to the one loaded. */
-  private changeSoundCues(on: boolean): void {
-    this.soundCues = on;
-    // The range has nobody else to hear, so only a match takes them.
-    if (this.session instanceof MatchSession) this.session.setSoundCues(on);
-  }
-
-  /** Hit feed lines fade or stay (Settings → HUD, M24): kept for the next match and applied to the one loaded. */
-  private changeHitFeed(mode: HitFeedMode): void {
-    this.hitFeedMode = mode;
-    if (this.session instanceof MatchSession) this.session.setHitFeedMode(mode);
-  }
-
-  /** The "what got you" card on, off or by difficulty (Settings → HUD, M41): kept for the next match and applied to the one loaded. */
-  private changeWhatGotYou(mode: WhatGotYouMode): void {
-    this.whatGotYouMode = mode;
-    if (this.session instanceof MatchSession) this.session.setWhatGotYouMode(mode);
-  }
-
-  /**
-   * The HUD's look from the settings (M24), as CSS variables on the game's container (style.css): the HUD's size (audit
-   * UI-04) and the minimap's (held back in a narrow window to clear the score bar, UX1), its panels' opacity (G4), the
-   * sound cues' size and colour, and the scoreboard's size (held back in a narrow window so the hit feed and the minimap
-   * keep their room). Again on resize.
-   */
-  private readonly showHudLook = (): void => {
-    const style = this.container.style;
-    const width = this.container.clientWidth || window.innerWidth;
-    const height = this.container.clientHeight || window.innerHeight;
-    const hud = hudScale(this.hudSize, height);
-    const minimap = minimapScale(hud, width, height);
-    style.setProperty('--hud-scale', String(hud));
-    style.setProperty('--minimap-scale', minimap.toFixed(3));
-    style.setProperty('--hud-opacity', String(this.hudOpacity));
-    style.setProperty('--cue-scale', String(this.soundCueSize));
-    style.setProperty('--cue-colour', soundCueCss(this.soundCueColour));
-    // The scoreboard grows with the HUD, still only as far as leaves the hit feed its room and clears the minimap.
-    const minimapEdge = hudInsetX(width, height) + MINIMAP.size * minimap;
-    style.setProperty('--sb-scale', scoreboardScale(this.scoreboardSize * hud, width, minimapEdge).toFixed(3));
-  };
 
   /** A Dev setting changed, or the Dev tab was shown or hidden (M24): what applies now goes to the game and the session. */
   private applyDev(): void {
@@ -1057,7 +770,7 @@ export class Game {
       this.menus.refresh();
       return DEV_ACTION_TEXT.done;
     }
-    if (id === 'endRound') return this.session instanceof MatchSession && this.session.endRoundNow() ? DEV_ACTION_TEXT.done : DEV_ACTION_TEXT.noRound;
+    if (id === 'endRound') return this.session?.kind === 'match' && this.session.endRoundNow() ? DEV_ACTION_TEXT.done : DEV_ACTION_TEXT.noRound;
     this.options.save.deleteSave();
     return DEV_ACTION_TEXT.done;
   }
@@ -1081,10 +794,7 @@ export class Game {
 
   /** New game's picks as they play now (M35: a dev pick plays as its list's default while Dev content is off). */
   private playedPicks(): NewGamePicks {
-    return playedPicks(
-      { map: this.map, mode: this.mode, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, team: this.team, ruleset: this.ruleset, rules: this.matchRules },
-      this.dev.devContent,
-    );
+    return playedPicks(this.picks, this.dev.devContent);
   }
 
   /** Every item in the Loadout: each gear slot's replica and what is fitted to it (null for an empty slot). */
@@ -1111,12 +821,6 @@ export class Game {
     return { level: s.level, into: s.into, next: s.next, toNext: s.next === null ? '' : ARMORY_TEXT.toNext(s.next - s.into, s.level + 1) };
   }
 
-  /** A new session takes the Dev settings in force (M24). */
-  private applyDevTo(session: MatchSession | RangeSession): void {
-    session.combat.setBbPaths(this.dev.showBbPaths);
-    session.setDevCheats(this.dev);
-  }
-
   /** The simulation state of the match in play (null with no match loaded). For the console in dev builds. */
   get state(): GameState | null {
     return this.session?.state ?? null;
@@ -1138,8 +842,7 @@ export class Game {
     this.unwatchSave();
     // The audio engine's single blocked-context slot; the pointer's, the renderer's and the keyboard's own dispose() below clear theirs.
     this.audio.onBlocked = null;
-    window.removeEventListener('resize', this.showHudLook);
-    this.systemMotion?.removeEventListener('change', this.systemMotionChanged);
+    this.hudLook.dispose();
     window.removeEventListener('pagehide', this.flushSettings);
     this.unwatchFullscreen();
     this.unwatchLayout();
@@ -1174,8 +877,8 @@ export class Game {
       graphicsLost: this.graphicsLost,
       started: this.started,
       practice: this.practice,
-      loaded: s instanceof MatchSession ? 'match' : s ? 'range' : null,
-      matchOver: s instanceof MatchSession && s.state.round.phase === 'matchOver',
+      loaded: s?.kind ?? null,
+      matchOver: s?.kind === 'match' && s.state.round.phase === 'matchOver',
       setupChanged: this.setupChanged,
       loadoutChanged: this.loadoutChanged,
     });
@@ -1209,12 +912,12 @@ export class Game {
   }
 
   /** Builds or reuses the session `action` asks for (`s`, the session when Play was pressed) and unlocks its audio. */
-  private enter(action: Exclude<SessionAction, 'none'>, s: MatchSession | RangeSession | null): void {
+  private enter(action: Exclude<SessionAction, 'none'>, s: Loaded | null): void {
     if (action === 'buildRange') {
       // The tutorial resumes at the step it was left at (audit POOL-14), always on the range; Practice on its place (M94).
       if (this.tutorial) this.openRange(undefined, loadTutorialStep());
       else this.openRange(undefined, undefined, this.practicePlaceToPlay());
-    } else if (action === 'rebuildRange' && isRange(s)) {
+    } else if (action === 'rebuildRange' && s?.kind === 'range') {
       // Back from the Loadout on the range's pause menu: the range (or the map, M94) again, with the new kit, where you
       // stood (and at the same tutorial step).
       this.openRange(s.pose, s.tutorialStep, { map: s.practiceMap, course: s.course });
@@ -1240,26 +943,13 @@ export class Game {
         kit: this.loadout.kit(),
         devContent: this.dev.devContent,
         devContentUsed: this.devContentUsed(picks),
-        teamColours: TEAM_COLOUR_SETS[this.teamColours],
+        teamColours: TEAM_COLOUR_SETS[this.prefs.teamColours],
         playerTeam: teamOfPick(picks.team ?? DEFAULT_TEAM_PICK),
         look: this.look,
         ...(adaptive ? { adaptive } : {}),
-      }, this.matchSeed, this.quality, this.audio, this.crosshair);
+      }, this.matchSeed, this.quality, this.audio, this.prefs);
       if (this.options.perfLog) console.info(this.session.build.line());
-      this.steppedDown = false;
-      this.session.setMotion(motionScale(this.motionReduced()));
-      this.session.setSoundCues(this.soundCues);
-      this.session.setHitFeedMode(this.hitFeedMode);
-      this.session.setFeedCorner(this.feedCorner);
-      this.session.setWhatGotYouMode(this.whatGotYouMode);
-      this.session.setHitMarker(this.hitMarker);
-      this.session.setMinimapTurn(this.minimapTurn);
-      this.session.setCallouts(this.callouts === 'on');
-      this.session.setPingMarkers(this.pingMarkers === 'on');
-      this.session.setMagPrompts(this.magPrompts === 'on');
-      this.session.setAmmoCounter(this.ammoCounter === 'on');
-      this.applyDevTo(this.session);
-      applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
+      this.setUp(this.session);
     }
     this.session!.combat.unlockAudio();
     if (this.options.allowUnlocked) {
@@ -1290,30 +980,33 @@ export class Game {
     this.loadoutChanged = false;
     this.session = new code.RangeSession(this.renderer, this.container, this.input, {
       kit: this.loadout.kit(),
-      teamColours: TEAM_COLOUR_SETS[this.teamColours],
+      teamColours: TEAM_COLOUR_SETS[this.prefs.teamColours],
       look: this.look,
       levelling: !this.dev.unlockAllGear,
       ...(place ? { map: place.map, course: place.course } : {}),
       challenge: loadPracticeChallenge(),
       challengeBest: this.records.bestChallenge[course] ?? 0,
-    }, this.options.seed, this.quality, this.audio, this.crosshair, pose, tutorialFrom);
-    this.session.setMinimapTurn(this.minimapTurn);
-    this.session.setAmmoCounter(this.ammoCounter === 'on');
+    }, this.options.seed, this.quality, this.audio, this.prefs, pose, tutorialFrom);
     this.session.onTutorialStep = (step) => saveSetting('tutorialStep', step);
     // A timed challenge run that beats the best is kept at once (M93), like a match's records, and as with a match's,
     // never one played with Dev help (BP5).
     this.session.onChallengeRun = (run) => {
       if (!run.helped && addChallengeRun(this.records, course, run.hits)) saveRecords(this.records, browserStorage());
     };
+    this.setUp(this.session);
+  }
+
+  /** A session just built: the Dev settings in force (M24), its team colours. */
+  private setUp(session: Session): void {
+    session.combat.setBbPaths(this.dev.showBbPaths);
+    session.setDevCheats(this.dev);
     this.steppedDown = false;
-    this.session.setMotion(motionScale(this.motionReduced()));
-    this.applyDevTo(this.session);
-    applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
+    applyTeamCss(this.container, TEAM_COLOUR_SETS[this.prefs.teamColours]);
   }
 
   private resume(): void {
     this.endEscSkip();
-    this.fullscreenHoldAt = Number.NEGATIVE_INFINITY;
+    this.fullscreen.stopHolding();
     const s = this.session;
     // A mouse lock granted after the graphics context was lost (the lock was still pending): nothing can be drawn.
     if (this.graphicsLost) {
@@ -1325,7 +1018,7 @@ export class Game {
       this.pointer.release();
       return;
     }
-    if (s instanceof MatchSession && !this.matchCounted) {
+    if (s?.kind === 'match' && !this.matchCounted) {
       this.matchCounted = true;
       this.matchesPlayed++;
     }
@@ -1357,11 +1050,11 @@ export class Game {
     this.session?.dispose();
     this.session = null;
     // Team colours changed from the pause menu waited for the match to end; the menus' swatches take them now (BP3).
-    applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
+    applyTeamCss(this.container, TEAM_COLOUR_SETS[this.prefs.teamColours]);
   }
 
   private pause(): void {
-    this.fullscreenHoldAt = Number.NEGATIVE_INFINITY;
+    this.fullscreen.stopHolding();
     this.keyboard.capturing = false;
     this.keyboard.releaseAll();
     this.input.clearLatches();
@@ -1370,13 +1063,13 @@ export class Game {
     const screen = screenWhenStopped(this.started, r?.phase === 'matchOver');
     const loadout = this.loadoutDue;
     this.loadoutDue = false;
-    if (this.started && isRange(s)) {
+    if (this.started && s?.kind === 'range') {
       // The tutorial just played to its end (M80): its pop-up, practice on or go to the menu, over the pause menu.
       if (s.takeTutorialComplete()) this.menus.showTutorialComplete(s.status, this.options.seed);
       // The Loadout key (M95): the Loadout over the pause menu, the slot of the replica in hand picked.
       else if (loadout) this.menus.showPracticeLoadout(s.status, this.options.seed, s.coaching, this.inHand(s), s.challengeOffer);
       else this.menus.showPause(s.status, this.options.seed, true, s.coaching, null, s.challengeOffer, this.inHand(s));
-    } else if (!this.started || !(s instanceof MatchSession) || !r) {
+    } else if (!this.started || s?.kind !== 'match' || !r) {
       // Play never began (a lock that came late, after Back, and was given straight back): the menus are still up on
       // whichever screen the player went to, so they stay there.
     } else if (screen === 'result') {
@@ -1403,7 +1096,7 @@ export class Game {
   /** The range's pause menu (the tutorial's, with its coaching), when the range is what's loaded. */
   private showRangePause(): void {
     const s = this.session;
-    if (isRange(s)) this.menus.showPause(s.status, this.options.seed, true, s.coaching, null, s.challengeOffer, this.inHand(s));
+    if (s?.kind === 'range') this.menus.showPause(s.status, this.options.seed, true, s.coaching, null, s.challengeOffer, this.inHand(s));
   }
 
   /** The gear slot of the replica in your hands on the range (M95): its Loadout picks that slot. */
@@ -1421,7 +1114,7 @@ export class Game {
   /** The range's pause menu's Timed challenge (M93): switched, remembered for the next visit, and the menu says so. */
   private toggleChallenge(): void {
     const s = this.session;
-    if (!isRange(s) || s.challengeOffer === null) return;
+    if (s?.kind !== 'range' || s.challengeOffer === null) return;
     const on = !s.challengeOffer;
     s.setChallenge(on);
     saveSetting('practiceChallenge', on);
@@ -1431,7 +1124,7 @@ export class Game {
   /** The pause menu's Skip step or Skip tutorial (audit POOL-14): the range carries on, the pause menu says where. */
   private skipTutorial(all: boolean): void {
     const s = this.session;
-    if (!isRange(s)) return;
+    if (s?.kind !== 'range') return;
     if (all) s.endTutorial();
     else s.skipTutorialStep();
     this.takeTutorialFinished(s);
@@ -1483,96 +1176,9 @@ export class Game {
     }
   }
 
-  /**
-   * The game's state for a crash or diagnostics report (audit CORE-04, CORE-32), read defensively: it may run after an
-   * error left things half-done, so each value falls back to '-' rather than throwing.
-   */
-  private reportFields(): ReportField[] {
-    const read = <T>(f: () => T): T | '-' => {
-      try {
-        return f();
-      } catch {
-        return '-';
-      }
-    };
-    const s = this.session;
-    const range = isRange(s);
-    const match = s instanceof MatchSession ? s : null;
-    const r = match?.state.round;
-    const stats = this.renderer.stats;
-    return [
-      // When, in what language, and how long the page has been open (IM7).
-      ['Time', read(() => `${new Date().toISOString()}, page open ${clockText(performance.now() / 1000)}`)],
-      ['Language', read(() => navigator.language)],
-      ['Seed', range ? this.options.seed : this.matchSeed],
-      ['Map', read(() => (range ? 'range' : match ? match.setup.map.name : '-'))],
-      ['Mode', read(() => (match ? `${match.mode}, ${match.setup.difficulty} (teammates ${match.setup.teammateDifficulty})` : range ? 'practice' : '-'))],
-      // The ruleset, the light the map plays under and the run's state (audit CORE-02): where most new crashes come from.
-      ['Rules', read(() => (match ? match.setup.ruleset : this.ruleset))],
-      ['Lighting', read(() => (match ? lightingPicked(match.setup.map) : '-'))],
-      ['Round', read(() => (r ? `${r.number} (${r.phase}), score ${r.score[0]}–${r.score[1]}, draws ${r.draws}` : '-'))],
-      ...(match?.mode === 'extraction' && r ? [['Run', read(() => runReportLine(r.run))] as const] : []),
-      ['Tick', read(() => s?.state.tick ?? '-')],
-      ['Match time', read(() => (s ? clockText(s.state.time) : '-'))],
-      ['Screen', read(() => ((this.pointer.locked || this.unlockedPlay || this.escSkip) && s ? 'in play' : `menus: ${this.menus.screen}`))],
-      // Where the player is, looks and what they're doing (IM7): a thread can go to the spot.
-      ['Player', read(() => (s ? playerLine(s.player) : '-'))],
-      ['Frames', read(() => framesLine(this.frameWindow.summary(), this.simMs, this.drawMs))],
-      ['Quality', read(() => this.qualityText())],
-      ['Retro pixels', read(() => {
-        const look = retroLookOf(this.retro, this.scripted, this.devEnabled);
-        return look ? `${look.pixelSize} px, ${look.levels} levels` : 'off';
-      })],
-      ['Post', read(() => this.renderer.postPasses.join(' ') || 'none')],
-      ['Pixel ratio', read(() => this.renderer.renderer.getPixelRatio())],
-      ['Renderer', this.renderer.backend],
-      ['GPU', read(() => {
-        const gl = this.renderer.webglContext;
-        return gl ? rendererName(gl) : this.rendering.adapterName || '-';
-      })],
-      ['Window', `${window.innerWidth} × ${window.innerHeight} at ${window.devicePixelRatio}`],
-      ['Sim ticks/s', this.tickRate],
-      ['Draw calls / triangles', read(() => `${stats.calls} / ${stats.triangles}`)],
-      ['Memory', read(() => memoryLine((performance as Performance & { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }).memory, stats))],
-      ['Load', read(() => loadLine(performance.getEntriesByType('resource') as PerformanceResourceTiming[], mainScriptUrl(), pageLoadedAt(), this.readyAt))],
-      ['Dev settings', this.devEnabled ? JSON.stringify(this.dev) : 'off'],
-      // Pending slider writes (FA5's saveSettingSoon) go first, so the stored settings are the ones in use.
-      ['Settings', read(() => {
-        flushSettings();
-        return browserStorage()?.getItem(SETTINGS_KEY) ?? '-';
-      })],
-    ];
-  }
-
-  /**
-   * A report (audit CORE-04, CORE-32, IM7): the build and browser, the game's state, `error` for a crash, and the console's
-   * recent errors and the session's recent events. Never throws: whatever can't be read is left out.
-   */
-  private reportInfo(title: string, error?: unknown): ReportInfo {
-    const guarded = <T>(f: () => T, none: T): T => {
-      try {
-        return f();
-      } catch {
-        return none;
-      }
-    };
-    const s = this.session;
-    return {
-      title,
-      build: __BUILD_VERSION__.label,
-      userAgent: navigator.userAgent,
-      fields: guarded(() => this.reportFields(), []),
-      error,
-      lists: [
-        { label: 'Recent errors', entries: guarded(() => this.options.errors.lines(), []) },
-        { label: 'Recent events', entries: guarded(() => (s ? s.eventLog.lines(s.state.tick, s.state.characters, s.player.id) : []), []) },
-      ],
-    };
-  }
-
   /** The diagnostics report as text (Settings → Dev → Diagnostics; audit CORE-32): the crash report's, with no error. */
   diagnostics(): string {
-    return crashReport(this.reportInfo('Airsoft diagnostics'));
+    return crashReport(reportInfo(this.readout, 'Airsoft diagnostics'));
   }
 
   /**
@@ -1582,7 +1188,7 @@ export class Game {
    */
   crash(error: unknown): void {
     // The report first, so its recent errors are the ones before this.
-    const report = this.reportInfo('Airsoft crash report', error);
+    const report = reportInfo(this.readout, 'Airsoft crash report', error);
     console.error(error);
     if (this.crashScreen) {
       this.crashScreen.append(report);
@@ -1628,37 +1234,28 @@ export class Game {
     this.lastTime = now;
 
     const s = this.session;
-    // Held for fullscreen and the lock never came back (fullscreenHoldAt): the pause menu, as for any other drop.
-    if (this.holdingForFullscreen && performance.now() - this.fullscreenHoldAt > FULLSCREEN_RELOCK_MS) this.pause();
+    // Held for fullscreen and the lock never came back: the pause menu, as for any other drop.
+    if (this.fullscreen.holdRanOut(performance.now())) this.pause();
     const running = (this.pointer.locked || this.unlockedPlay || this.escSkip) && s !== null;
     if (running) {
       // Only while playing: on the pause screen F3 belongs to the browser (find bar).
       if (this.keyboard.wasPressed('debugOverlay')) this.debug.toggle();
       if (this.keyboard.wasPressed('debugBbPaths')) s.combat.toggleBbPaths();
       // Still within the key press's user activation, which the browser needs for fullscreen (and to take the mouse again).
-      if (this.keyboard.wasPressed('fullscreen')) this.fullscreenKey(now);
+      if (this.keyboard.wasPressed('fullscreen')) this.fullscreen.key(now);
       // The Dev settings' Game speed (M24) runs the simulation slower or faster than the clock.
       const simStart = performance.now();
       // Esc skipped the round without the mouse (core/escSkip.ts): once the next round is up it waits for the click that
       // takes the mouse again, or it would start without you; a match decided plays on to its result screen.
-      const held = this.escSkip && s instanceof MatchSession && !s.skipping && s.state.round.phase !== 'matchOver';
+      const held = this.escSkip && s.kind === 'match' && !s.skipping && s.state.round.phase !== 'matchOver';
       if (!held) this.ticksThisSecond += s.advance(dt * this.dev.gameSpeed);
       this.simMs += (performance.now() - simStart - this.simMs) * FRAME_TIMING.smoothing;
-      if (s instanceof MatchSession) this.settleMatch(s);
-      if (isRange(s)) this.takeTutorialFinished(s);
-      // A little after the match is decided, give the mouse back and show the result screen.
+      if (s.kind === 'match') this.settleMatch(s);
+      if (s.kind === 'range') this.takeTutorialFinished(s);
+      // A little after the match is decided (or the tutorial's end on the range), play stops for the result screen.
       if (s.takeResultDue()) {
-        if (this.unlockedPlay) {
-          this.unlockedPlay = false;
-          this.pointer.setUnlockedButtons(false);
-          this.pause();
-        } else if (this.escSkip) {
-          this.endEscSkip();
-          this.pause();
-        } else {
-          this.pointer.release();
-        }
-      } else if (isRange(s) && this.keyboard.wasPressed('loadout')) {
+        this.stopPlay();
+      } else if (s.kind === 'range' && this.keyboard.wasPressed('loadout')) {
         // Practice only (M95): the Loadout straight from play. In a match the key does nothing, as the loadout changes
         // only between matches (owner, 2026-10-03).
         this.openPracticeLoadout();
@@ -1690,15 +1287,4 @@ export class Game {
     }
     this.debug.frame(frameSeconds);
   }
-}
-
-/** The page's own script (index.html's module), as Resource Timing names it: the main file of a load line (IM7). */
-function mainScriptUrl(): string {
-  return document.querySelector<HTMLScriptElement>('script[type="module"][src]')?.src ?? '';
-}
-
-/** When the page finished loading (ms after it opened), or 0 if the browser doesn't say. */
-function pageLoadedAt(): number {
-  const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-  return nav?.loadEventEnd ?? 0;
 }

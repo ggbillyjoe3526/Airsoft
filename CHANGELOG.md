@@ -105,6 +105,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **DX4** · Developer-only: each pull request builds the game once for all its checks, the slow test jobs finish together, a code formatter is set up, and the quick test run drops its three slowest files to the full run
 - **PF4** · Developer-only: the perf harness measures the same stretch of play every run, so its triangle counts stop swinging between runs
 - **DX7** · Developer-only: bot code and settings split by concern; six data tables move to a data folder, and bad rows show in Settings › Dev
+- **DX5** · Developer-only: one object holds all HUD and accessibility settings; match and range share one session; settings helpers move; game file trimmed
 
 ## 0.1 Dev 6 · 2026-10-16
 

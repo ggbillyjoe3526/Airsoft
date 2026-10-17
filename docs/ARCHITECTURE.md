@@ -34,7 +34,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 
 | Folder | What it owns | Key files |
 |---|---|---|
-| `src/` (root) | The app that outlives matches; one match or range session at a time | `main.ts`, `game.ts`, `matchSession.ts`, `rangeSession.ts`, `matchFlow.ts`, `newGamePicks.ts` |
+| `src/` (root) | The app that outlives matches; one match or range session at a time | `main.ts`, `game.ts`, `session.ts`, `matchSession.ts`, `rangeSession.ts`, `matchFlow.ts`, `newGamePicks.ts` |
 | `src/sim/` | Gameplay rules, pure, fixed 60 Hz | `simulation.ts`, `state.ts`, `commands.ts`, `armament.ts`, `ballistics.ts`, `round.ts` |
 | `src/ai/` | Bots: senses, hearing, round plans, decisions, cover, squad orders, Extraction roles | `botController.ts`, `hearing.ts`, `roundPlanner.ts`, `botBrain.ts`, `bot.ts`, `perception.ts`, `cover.ts`, `squadOrders.ts` |
 | `src/nav/` | The layered walkability grid, A* routes, walk-off fields, vault links | `navGrid.ts`, `vaultLinks.ts` |
@@ -51,7 +51,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/content/` | The content checks: rules, compatibility, spec test and balance run for a new replica, part, map, mode or skin | `gameContent.ts`, `replicaChecks.ts`, `partChecks.ts`, `mapChecks.ts`, `modeChecks.ts`, `skinChecks.ts`, `specSheet.ts`, `report/` |
 | `src/stats/` | Match stats, local records, settling a finished match | `matchStats.ts`, `records.ts`, `settleMatch.ts` |
 | `src/save/` | The save system: guarded storage, file format, migrations, tab lock | `saveFile.ts`, `stores.ts`, `guardedStorage.ts`, `saveManager.ts`, `tabLock.ts` |
-| `src/settings/` | The saved settings object and the Dev settings' saved values | `storage.ts`, `dev.ts` |
+| `src/settings/` | The saved settings object, the typed loaders of every setting, the HUD and accessibility preferences, the Dev settings' saved values | `storage.ts`, `savedChoices.ts`, `hudPrefs.ts`, `dev.ts` |
 | `src/tutorial/` | The tutorial tracker | `tutorial.ts` |
 | `src/assets/` | Bundled fonts and the optional character model | `fonts/`, `models/characters/` |
 | `data/` | Hand-edited tables the game and its tests read (DX7): `pool.md` (assets and Extraction's cases), `stats.md` (replica and part numbers), `levels.md` (levels and XP), `bots.md` (bot names and personalities), `bot-kits.md` (the bots' kits), `callouts.md` (the bots' callouts). A row the game can't read is left out and listed in the console and in Settings › Dev › Data tables (`config/dataTables.ts`) | read by `pool/poolFile.ts`, `config/statsFile.ts`, `progress/levels.ts`, `config/botsFile.ts`, `pool/botKit.ts`, `config/calloutsFile.ts` |
@@ -86,6 +86,12 @@ The root files in more detail:
   the tutorial) or on any map (M94), whose targets stand where the other team's bots would play
   (`map/practiceSpots.ts`, kinds by `map/practiceLayout.ts`). Changing the loadout from its pause menu, or from the
   Loadout key in play (M95), rebuilds it where you stood, the same slot in your hands (`RangePose`).
+- **`Session`** (`session.ts`, DX5) is what `Game` asks of either session (advance, draw, pause, quality, Dev
+  settings, the result's timing, dispose); `kind` (`'match'` or `'range'`) tells them apart where only one has the
+  answer. Both read the HUD and accessibility preferences (`settings/hudPrefs.ts` `HudPrefs`) by reference and show a
+  change as play runs again (their `syncPrefs`, on `setPlaying(true)` and each frame drawn), so `Game` forwards none.
+- **`gameReport.ts`** (DX5) is the debug overlay's lines and the crash and diagnostics reports' fields, read off the
+  game through `GameReadout` (`Game.readout`) only when asked.
 
 ## Map data
 

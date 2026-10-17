@@ -124,7 +124,7 @@ export const DEFAULT_MATCH_RULES: MatchRules = {
   ...SKIRMISH_SWITCHES,
 };
 
-/** The Custom switches' choices (M39), each saved under its own setting (ui/menus/savedChoices.ts). */
+/** The Custom switches' choices (M39), each saved under its own setting (settings/savedChoices.ts). */
 export const OVERTIME_CHOICES: readonly MatchChoice<Switch>[] = [
   { id: 'off', label: 'Off', blurb: 'The first team to the rounds to win takes the match.' },
   { id: 'on', label: 'On', blurb: 'Level one round short of the win, play on until one team is two rounds ahead.' },

@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { SETTINGS_KEY, SETTINGS_VERSION } from '../../settings/storage';
-import { graphicsKey, GRAPHICS_ROWS, storedValue } from '../../config/graphics';
-import { HUD_OPACITY } from '../../config/matchInfo';
-import { QUALITY, qualityChoiceOf, resolveQuality } from '../../config/render';
-import { parseSaveText, SAVE_FORMAT, saveFileText } from '../../save/saveFile';
-import { RENDER_BACKEND } from '../../config/renderBackend';
-import { effectiveReducedMotion, loadCustomQuality, loadFrameRateCap, loadHudOpacity, loadReducedMotion, loadRendererChoice, motionClass } from './savedChoices';
+import { SETTINGS_KEY, SETTINGS_VERSION } from './storage';
+import { graphicsKey, GRAPHICS_ROWS, storedValue } from '../config/graphics';
+import { HUD_OPACITY } from '../config/matchInfo';
+import { QUALITY, qualityChoiceOf, resolveQuality } from '../config/render';
+import { parseSaveText, SAVE_FORMAT, saveFileText } from '../save/saveFile';
+import { RENDER_BACKEND } from '../config/renderBackend';
+import { loadCustomQuality, loadFrameRateCap, loadRendererChoice } from './savedChoices';
+import { effectiveReducedMotion, loadHudOpacity, loadReducedMotion, motionClass } from './hudPrefs';
 
 function storageWith(fields: Record<string, unknown>): Storage {
   return storageHolding({ [SETTINGS_KEY]: JSON.stringify({ version: SETTINGS_VERSION, ...fields }) });
