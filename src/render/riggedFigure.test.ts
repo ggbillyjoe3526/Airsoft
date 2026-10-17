@@ -221,7 +221,7 @@ describe('your own figure, first person to spectating (MV2)', () => {
     expect(f.root.position.x).toBeCloseTo(3, 6);
     expect(f.root.position.z).toBeCloseTo(-4, 6);
     expect(drawn().length).toBe(0);
-    // Vaulting, crouched, hit: still nothing in view.
+    // Vaulting, crouched, looking straight down: still nothing in view.
     c.vault.active = true;
     c.crouchAmount = c.prevCrouchAmount = 1;
     c.pitch = c.prevPitch = -1.4;

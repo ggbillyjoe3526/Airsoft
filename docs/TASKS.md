@@ -27,32 +27,6 @@ below. The item numbers are his. Where an older block overlaps one of these, the
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
 
-## MV2 · Holster run, wrist pose, no own body in view (Beta 1 playtest items 18, 21, 24)
-tier: core
-perf: required
-touches: src/config/movement.ts, src/render/replicaModels.ts, src/render/handModels.ts, src/config/figureRig.ts, src/render/figureRig.ts, src/render/riggedFigure.ts, src/render/characterRenderer.ts, src/render/matchPresentation.ts, tools/blender/bot-figure/README.md
-contract: none
-William, 2026-10-17:
-  - 18: "holster run is working but i think i want to make it a little faster."
-  - 21: "thumb is in the correct position but wrist is not in a natural position. it looks like the arm is too high and
-    the wrist is bent downwards. the wrist should be the opposite and be slightly bent upwards. it should look like a
-    natural position to hold a gun."
-  - 24: "body does appear when looking down but doesn't look good. remove it. the player should not be able to look
-    down to see their body."
-acceptance:
-  1. Holstered run: default `MOVEMENT.holsterRunSpeed` 5.0 → 5.4 m/s, still under the 6.3 m/s sprint (MV1's DECISIONS
-     line updated). Bots' holstered running moves the same way; headless balance guards still pass.
-  2. Wrist: on the Blender replicas' first-person hand poses (`FILE_HANDS`), the forearm sits lower and the wrist bends
-     slightly up, as a natural grip on a rifle and a pistol, hip and aim, through a reload; the thumb stays where it is
-     and no hand part goes deeper into a replica than today (under 2 mm, `fileHandPoses.test.ts`). Before and after
-     pictures for both replicas go to William.
-  3. Own body: your own figure is never drawn in first person at any pitch, vault included; its shadow may stay. The
-     unused look-down angles in `FIGURE_RIG.firstPerson` go. DECISIONS records the ruling (it replaces BD1's "drawn
-     while the bottom of your view reaches it").
-  4. Spectating and third-person views of other players are unchanged; perf budgets hold (it should save triangles).
-status: open
-attempts: 0
-
 ## BL1 · Attack / Defend: fewer attacker wins, more rounds won at the pole (after playtest)
 tier: core
 perf: skip
