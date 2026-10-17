@@ -44,6 +44,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **KI2** · Unused mode pictures are gone from the download, about 51 KB smaller
 - **RV2** · Tone mapping leaves Graphics: everyone plays with Neutral colours; Neutral, AgX and ACES are a Dev setting that applies at once, and a pick made on the old row becomes the Dev pick
 - **RV1** · Extraction has no Supply weekends or dated events like the Halloween run; its Mode card shows no event and cases always hold the usual loot
+- **UI2** · Match rule options are only as wide as their words, sit closer to their names, and the round-time slider is shorter
+- **UI2** · Replica panel is narrower with a smaller picture; a three-digit magazine count keeps the fire modes on one line
 
 ### Fixed
 - **MV1** · The first switch to your other replica in a match no longer stutters; every carried replica is ready before the round
