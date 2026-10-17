@@ -471,7 +471,8 @@ Defend. Pro pays XP ×2 but counts for nothing while it is dev content.
   1920×1080; a button lifts when pointed at; Tab shows an orange focus ring; with reduced motion no fades.
 - [ ] **Window sizes (UX1).** At 4K with 100 % Windows scaling the menus are about 1.5× their 1080p size, and the
   saved loadouts' menu opens at the pointer. At 1280×720 the top bar, heading and main button always show; the long
-  list scrolls, fading at its foot. At 900×600 Start match is in sight.
+  list scrolls, fading at its foot (Settings › Gameplay and Controls scroll a long way, even at 4K: tell me if that
+  grates). At 900×600 Start match is in sight.
 - [ ] **The loading screen** (`npm run build`, `npm run preview`, DevTools › Network › Slow 4G, cache off).
 
 ## HUD and match info

@@ -22,7 +22,6 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 **The owner's Dev 6 playtest list (2026-10-16).** These are his 34 items, taken in Beta 1 on his word, small
 additions included (`docs/DECISIONS.md`). Seven threads build them, one block each, and they come before the blocks
 below. The item numbers are his. Where an older block overlaps one of these, the owner's item wins:
-- UX1 overlaps MR1 and HD1.
 - RV2 overlaps ST1.
 - AX1's kit colours overlap MR1's colour tab.
 
@@ -168,19 +167,6 @@ acceptance:
   2. The owner's ruling (2026-10-16): maxed-out settings aim at a PC built for 4K at 240 Hz. `perf-budget.json` gains a desktop frame-time line for Ultra at 3840×2160. The first guess is p95 ≤ 4.2 ms and p99 ≤ 6 ms. `desktop` joins `frameTimeGatedEnvs` for Ultra only.
   3. The record lists any map or mode over the line on the baseline, with its top causes. Fixes are their own tasks.
   4. Draw-call and triangle lines change only with an owner decision line (DECISIONS).
-status: open
-attempts: 0
-
-## UX1 · Menus at 4K and small windows; HUD clashes at 1280 px
-tier: ui
-perf: skip
-touches: src/ui/menus/, src/config/menus.ts, src/config/minimap.ts, src/ui/minimap.ts, src/game.ts, src/style.css, src/ui/hud.css, src/ui/hudCss/, src/ui/flagMarker.ts, src/ui/holdMarker.ts, src/render/viewmodel.ts
-contract: none
-acceptance:
-  1. Menu type and controls scale from the window height, as `hudScale` does (DECISIONS: a Beta task). At 3840×2160 and 100 % OS scaling, body text is about 1.5×; 1280×720 is unchanged.
-  2. Menu scrolling is measured again at 1280×720 (the row predates M100), and no main menu page scrolls there. New game fits at 900×600.
-  3. Edge markers pointing almost the same way don't overlap, and the Attack / Defend pole marker at the screen's edge shows which way to turn.
-  4. At 1280×720 the held pistol's grip clears the ammo panel, and at HUD size 120 % or more the widest score bar clears the minimap.
 status: open
 attempts: 0
 
