@@ -547,9 +547,11 @@ Settings opens on Display, with groups down the left (Display, Graphics, Gamepla
 - [ ] **Your keyboard layout** (Chrome or Edge, AZERTY or QWERTZ). Move forward shows as Z (AZERTY) and the order
   wheel as W or Y; the tutorial and reload hint use the same letters.
 - [ ] **Display.** Field of view starts at 90° (120° shows more at the sides, 80° less). Fullscreen (or F10) goes
-  fullscreen and back with play carrying on; Esc leaves it and pauses.
+  fullscreen and back with play carrying on; Esc leaves it and pauses. No Tone mapping row here or in Graphics.
 - [ ] **Dev group.** Debug info, BB paths, Game speed (25 % to 200 %), Bottomless magazines and Ghost (BBs pass
   through you) change play; with any on, the summary says Dev settings kept the match out of your records.
+- [ ] **Settings › Dev › Tone mapping** (RV2). Neutral by default; AgX and ACES change the colours at once. Untick the
+  Dev settings box and the colours go back to Neutral at once; a match played with AgX still counts.
 - [ ] **Dev playtesting aids** (M90). **+500 XP**, **Level up** and **Reset level** change your level at once and
   survive a reload. **Time of day** plays the map under the other light; **Bots hold fire**.
 - [ ] **Settings › Dev › Retro look** (M96, back on the Dev tab since ST1). Off by default; On gives chunky pixels and
