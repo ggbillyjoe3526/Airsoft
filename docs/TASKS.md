@@ -174,7 +174,7 @@ attempts: 0
 ## UX1 · Menus at 4K and small windows; HUD clashes at 1280 px
 tier: ui
 perf: skip
-touches: src/ui/menus/menus.css, src/ui/menus/css/, src/style.css, src/ui/hud.css, src/ui/hudCss/, src/ui/flagMarker.ts, src/ui/holdMarker.ts, src/render/viewmodel.ts
+touches: src/ui/menus/, src/config/menus.ts, src/config/minimap.ts, src/ui/minimap.ts, src/game.ts, src/style.css, src/ui/hud.css, src/ui/hudCss/, src/ui/flagMarker.ts, src/ui/holdMarker.ts, src/render/viewmodel.ts
 contract: none
 acceptance:
   1. Menu type and controls scale from the window height, as `hudScale` does (DECISIONS: a Beta task). At 3840×2160 and 100 % OS scaling, body text is about 1.5×; 1280×720 is unchanged.
