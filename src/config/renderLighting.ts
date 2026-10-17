@@ -119,7 +119,7 @@ export const ENVIRONMENT = {
   skyHeightSegments: 16,
 } as const;
 
-/** Tone mapping (Settings → Graphics; not part of a preset, audit section 5 F2): how bright colours are rolled off. */
+/** Tone mapping (Settings › Dev since RV2, else Neutral; audit section 5 F2): how bright colours are rolled off. */
 export type ToneMappingId = 'aces' | 'agx' | 'neutral';
 
 /**

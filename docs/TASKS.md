@@ -150,7 +150,7 @@ attempts: 0
 ## RV2 · Tone mapping leaves Graphics (feature triage, 2026-10-05)
 tier: ui
 perf: skip
-touches: src/ui/graphicsSettings.ts, src/ui/menus/settingsScreen.ts, src/ui/menus/savedChoices.ts, src/config/graphics.ts, src/config/dev.ts, src/config/menus.ts, src/settings/storage.ts, src/settings/dev.ts, src/render/renderer.ts, src/game.ts
+touches: src/ui/graphicsSettings.ts, src/ui/menus/settingsScreen.ts, src/ui/menus/savedChoices.ts, src/config/graphics.ts, src/config/dev.ts, src/config/menus.ts, src/settings/storage.ts, src/settings/dev.ts, src/render/renderer.ts, src/config/renderLighting.ts, src/game.ts
 contract: none
 acceptance:
   1. Settings › Graphics has no Tone mapping row, and everyone gets Neutral (today's default).

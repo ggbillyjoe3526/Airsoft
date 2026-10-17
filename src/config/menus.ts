@@ -172,7 +172,7 @@ export type SettingsTab = 'graphics' | 'display' | 'audio' | 'controls' | 'gamep
 
 export const SETTINGS_TABS: readonly { id: SettingsTab; label: string; blurb: string; hidden?: boolean }[] = [
   // William's order (Dev 6 playtest, 2026-10-16); the first is the group Settings opens on.
-  { id: 'display', label: 'Display', blurb: 'Screen, field of view, tone' },
+  { id: 'display', label: 'Display', blurb: 'Screen, field of view, FPS' },
   { id: 'graphics', label: 'Graphics', blurb: 'Quality, effects, frame rate' },
   { id: 'gameplay', label: 'Gameplay', blurb: 'Crosshair, HUD, hit feed' },
   /** Robots (graphics overhaul G1). */
