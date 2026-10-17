@@ -100,11 +100,12 @@ export function baselineFileName(env, run, budgetPreset) {
  * The budget for a map on a preset and a back end: the preset's lines, then the map's own (`maps.<map>.<preset>`), then
  * the back end's for the preset (`backends.<backend>.presets.<preset>`), then its for the map
  * (`backends.<backend>.maps.<map>.<preset>`), then the environment's for the preset (`envs.<env>.<preset>`, PF3: the
- * desktop's Ultra frame times at 4K); a later line wins.
+ * desktop's Ultra frame times at 4K), then the environment's for the back end (`envs.<env>.backends.<backend>.<preset>`,
+ * PF3: WebGL2's own desktop line); a later line wins.
  */
 export function budgetFor(budgets, map, preset, backend = 'webgl', env = undefined) {
   const own = budgets.backends?.[backend];
-  return { ...(budgets.presets?.[preset] ?? {}), ...(budgets.maps?.[map]?.[preset] ?? {}), ...(own?.presets?.[preset] ?? {}), ...(own?.maps?.[map]?.[preset] ?? {}), ...((env && budgets.envs?.[env]?.[preset]) ?? {}) };
+  return { ...(budgets.presets?.[preset] ?? {}), ...(budgets.maps?.[map]?.[preset] ?? {}), ...(own?.presets?.[preset] ?? {}), ...(own?.maps?.[map]?.[preset] ?? {}), ...((env && budgets.envs?.[env]?.[preset]) ?? {}), ...((env && budgets.envs?.[env]?.backends?.[backend]?.[preset]) ?? {}) };
 }
 
 /**

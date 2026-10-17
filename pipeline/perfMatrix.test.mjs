@@ -187,6 +187,10 @@ describe('the desktop\'s Ultra line (PF3)', () => {
   it('adds an environment\'s lines over every other, only in that environment', () => {
     const b = { presets: { ultra: { p95Ms: 14, drawCalls: 150 } }, backends: { webgpu: { presets: { ultra: { drawCalls: 160 } } } }, envs: { desktop: { ultra: { p95Ms: 4.2 } } } };
     expect(budgetFor(b, 'depot', 'ultra', 'webgpu', 'desktop')).toEqual({ p95Ms: 4.2, drawCalls: 160 });
+    const both = { presets: { ultra: { p95Ms: 14 } }, envs: { desktop: { ultra: { p95Ms: 6.5 }, backends: { webgl: { ultra: { p95Ms: 7.2 } } } } } };
+    expect(budgetFor(both, 'depot', 'ultra', 'webgl', 'desktop')).toEqual({ p95Ms: 7.2 });
+    expect(budgetFor(both, 'depot', 'ultra', 'webgpu', 'desktop')).toEqual({ p95Ms: 6.5 });
+    expect(budgetFor(both, 'depot', 'ultra', 'webgl', 'laptop')).toEqual({ p95Ms: 14 });
     expect(budgetFor(b, 'depot', 'ultra', 'webgpu', 'laptop')).toEqual({ p95Ms: 14, drawCalls: 160 });
     expect(budgetFor(b, 'depot', 'ultra', 'webgpu')).toEqual({ p95Ms: 14, drawCalls: 160 });
     expect(budgetFor(b, 'depot', 'high', 'webgl', 'desktop')).toEqual({});

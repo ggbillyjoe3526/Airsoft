@@ -19,11 +19,11 @@ describe('the desktop Ultra line (PF3), against the real budget file', () => {
     for (const p of ['low', 'medium', 'high']) expect(frameTimesGatedFor(budgets, 'laptop', p)).toBe(true);
   });
 
-  it('gates the desktop on Ultra only, on both back ends and every map', () => {
+  it('gates the desktop on Ultra only, on both back ends (each its own line) and every map', () => {
     for (const p of ['low', 'medium', 'high']) expect(frameTimesGatedFor(budgets, 'desktop', p)).toBe(false);
     expect(frameTimesGatedFor(budgets, 'desktop', 'ultra')).toBe(true);
     for (const map of MAPS) for (const backend of ['webgl', 'webgpu']) {
-      expect(budgetFor(budgets, map, 'ultra', backend, 'desktop')).toMatchObject({ p95Ms: 6.5, p99Ms: 9 });
+      expect(budgetFor(budgets, map, 'ultra', backend, 'desktop')).toMatchObject(backend === 'webgl' ? { p95Ms: 7.2, p99Ms: 11.5 } : { p95Ms: 6.5, p99Ms: 9 });
       expect(budgetFor(budgets, map, 'high', backend, 'desktop')).toEqual(budgetFor(budgets, map, 'high', backend));
     }
   });

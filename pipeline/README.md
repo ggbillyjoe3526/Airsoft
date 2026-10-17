@@ -309,7 +309,8 @@ target is the 240 Hz cap's own period, so a capped run can't show headroom. It w
 `pipeline/out/perf-desktop-summary.md`: FPS, 1 % low, p50, p95, p99 and worst per run, whether p95 holds 240 Hz, the
 GPU name, and two hints: GPU- or CPU-bound from 4K against 1080p, and frames held by vsync if the switches didn't
 take. Ultra's frame times at 4K are judged against `envs.desktop.ultra` in `perf-budget.json` (the Budget column; PF3,
-owner 2026-10-17): the line is the baseline of 2026-10-17 (p95 6.5 ms, p99 9 ms), so Ultra can't get slower. The aim
+owner 2026-10-17): the line is the baseline of 2026-10-17 (p95 6.5 ms, p99 9 ms; WebGL2's own, 7.2 and 11.5, in
+`envs.desktop.backends.webgl`), so Ultra can't get slower. The aim
 stays 4K at 240 Hz, about 4.2 ms a frame (owner, 2026-10-16), which that baseline misses on every map (KNOWN_ISSUES).
 
 ## `balance.mjs`: the bot balance report

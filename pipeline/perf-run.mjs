@@ -339,6 +339,13 @@ async function measure(preset) {
     return name;
   });
   await page.close();
+  if (!sample.frames) {
+    // The match ended before the window drew a frame (`matchEnded` with nothing kept): no numbers to write.
+    console.error(`perf: the match ended before the window measured a frame (map ${options.map}, mode ${options.mode}, preset ${preset}); no file written`);
+    await browser.close();
+    server.kill();
+    process.exit(1);
+  }
   return { env: options.env, backend, map: options.map, mode: options.mode, preset, cpu: options.cpu, vsync, gpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: `${options.viewport}@1`, metrics: sample, errors };
 }
 

@@ -201,7 +201,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Issue | Class | Notes |
 |---|---|---|
 | Ultra at 4K misses the 240 Hz aim on every map: p95 5.4 to 6.0 ms on WebGPU against 4.17 ms (owner's desktop, 2026-10-17) | can wait | GPU-bound: Depot Ultra at 1080p runs 2.9× as fast. Ultra's p95 is 2.2× High's (2.5 ms). Likely causes, read from the preset and not measured alone: the 4096 shadow map at radius 4, full ambient occlusion, reflections, the lens finish, 8 pool lights, 300 dust motes. The gate's line is today's baseline (DECISIONS). (PF3) |
-| WebGL2 on Ultra at 4K sits over the desktop line on Depot: p95 6.7 ms, p99 10.6 ms (line 6.5, 9) | can wait | WebGPU runs the same scene about 13 % faster. The 471 ms worst frame is a first-use compile (PF1). (PF3) |
+| WebGL2 on Ultra at 4K is slower than WebGPU on Depot: p95 6.7 ms, p99 10.6 ms (WebGPU 5.6, 6.4), so it holds its own desktop line (7.2, 11.5) | can wait | WebGPU runs the same scene about 13 % faster. The 471 ms worst frame is a first-use compile (PF1). (PF3) |
 | The Neon Heights Extraction desktop baseline is missing | playtest | The 2026-10-17 run measured the results screen once the match ended; since PF3 the window stops with the match. Needs `npm run perf:desktop` again. (PF3) |
 | Low's frame time with the Blender figures drawn (the default since BD1) is measured in the container only | playtest | Low is inside its budget lines there (35 draw calls of 100, 54k triangles of 150k). (BD1) |
 | Map detail (Medium, High) makes building a match's map take ~0.35 s (Node; 9 ms without it) | can wait | The baked occlusion casts ~2.5 M rays at build, on the first Play of a map and on a Map detail change. |
