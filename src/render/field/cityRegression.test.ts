@@ -271,23 +271,24 @@ const PINNED = {
   // bushes, and the cabin's roof, Woodland's one finished block (cladding, the city's engine feature, M34f). WL2: both
   // re-pinned for the fort hut's roof on taller walls (cladding), the fort's lower outer walls, the lone oak gone, and
   // every boulder taken out for log piles and fallen trunks (bark, stone: the pebbles and fire rings are what's left of
-  // it; canopy; foliage: the bushes fill the boulders' old spots in the same number).
+  // it; canopy; foliage: the bushes fill the boulders' old spots in the same number). WL3: both re-pinned for West Hill,
+  // the meadow swell and the dry ravine (the ground and everything on it moves, and the trees and bushes fall anew).
   woodlandDetail: [
-    "map-bark v27048 i63060 2fd9cd43/e339154e/9cc2c2f7",
-    "map-canopy v31428 i0 bd13720f/811c9dc5/c8382a34",
+    "map-bark v27184 i63348 ae60a8ec/257cec39/44a207eb",
+    "map-canopy v31428 i0 271c4bdb/811c9dc5/b5a3d039",
     "map-cladding v144 i192 9218a64d/ad29be65/757be29d",
-    "map-foliage v16800 i0 819fd41e/811c9dc5/5d0ab568",
-    "map-planks v6500 i12600 27873f91/9f349b8d/5691af2a",
-    "map-stone v4590 i4590 4b0c4698/4df851f7/3ecb5b8f",
-    "map-terrain v9801 i57600 4e80f9d2/006bce1d/4298d710",
+    "map-foliage v16800 i0 160f986a/811c9dc5/5d0ab568",
+    "map-planks v6500 i12600 416d341d/22b821b5/67cc32ab",
+    "map-stone v6120 i6120 4cdb8d3c/a9beaeba/a460afed",
+    "map-terrain v9801 i57600 0ad21929/006bce1d/7158a89c",
   ],
   woodlandPlain: [
-    "map-bark v18984 i47940 aabad60f/36629624/c94b5edf",
-    "map-canopy v31428 i0 bd13720f/811c9dc5/c8382a34",
+    "map-bark v19120 i48228 14269e8c/72d9a067/f2eb906e",
+    "map-canopy v31428 i0 271c4bdb/811c9dc5/b5a3d039",
     "map-cladding v72 i96 d7488e59/17877439/521c38c1",
-    "map-foliage v16800 i0 819fd41e/811c9dc5/5d0ab568",
-    "map-planks v1600 i3000 b1e0a709/eef7627d/cbf74e3d",
-    "map-stone v4590 i4590 4b0c4698/4df851f7/3ecb5b8f",
-    "map-terrain v9801 i57600 4e80f9d2/006bce1d/4298d710",
+    "map-foliage v16800 i0 160f986a/811c9dc5/5d0ab568",
+    "map-planks v1600 i3000 f9162e6d/d30ba2bd/e81b2fb5",
+    "map-stone v6120 i6120 4cdb8d3c/a9beaeba/a460afed",
+    "map-terrain v9801 i57600 0ad21929/006bce1d/7158a89c",
   ],
 } as const;

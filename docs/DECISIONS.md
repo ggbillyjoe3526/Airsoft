@@ -299,6 +299,12 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   item 30 and his tweaks: "completely remove all boulders. I hate them.").** Logs give the cover instead: log piles on
   the fort's climbs, fallen trunks on the meadow. The fort's outer walls are 1.5 m (at 1.2 m Hard attackers won 76 % of
   Attack / Defend); the hut is 3 m under the cabin's grey tin roof, which he picked over roofing the whole fort (WL2).
+- **Woodland's West Hill, a meadow swell and a dry ravine (owner, 2026-10-17: "a small hill (enough to stop the other
+  side immediately seeing them)… one side of the map should have a more significant elevation change"; he picked "Land
+  first" on the concept).** The West Rise's crest is 3.4 m at its middle and 2.2 m at its ends. One 0.6 m swell sits on
+  the meadow; the concept's second, at (66, 37), tipped Pro Elimination to 37.5 % for the west end. The south creek is a
+  dry ravine 2.2 m deep from plan x 40 east, easing to 1 m by the hill, so no slope passes a ramp's. The stream in its
+  bed is a later step (WL3).
 - **Neon Heights is the third field: a vertical futuristic city with Day and Night (owner, 2026-10-04).** 46 × 30 m,
   three playable floors, roofs not playable, stairs only, open windows with a 1.2 m sill, 4v4, both modes, Night first.
 - **Bushes hide you and stop BBs, but not people (2026-10-15, FO1; Claude's defaults; replaces "Bushes hide but BBs
