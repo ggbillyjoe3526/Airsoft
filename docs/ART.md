@@ -49,12 +49,12 @@ every quality level, and a night map's sky changes everything at once.
 
 ## Where it lives in the code
 
-- **Light.** `render/lighting.ts` (sun, sky fill), `render/replicaSheen.ts` (the environment map from the sky,
+- **Light.** `render/light/lighting.ts` (sun, sky fill), `render/replicas/replicaSheen.ts` (the environment map from the sky,
   Environment lighting), `render/renderer.ts` (tone mapping, Neutral by default).
-- **Site surfaces.** `render/proceduralTextures.ts` (the canvases), `render/surfaceNormals.ts` (their normal maps),
-  `render/mapMeshes.ts` and `render/cuboidMesh.ts` (bevels, edge highlight, grime band, ground variation),
-  `render/vertexOcclusion.ts` (the baked corner shade), `render/mapDecals.ts` (stencils, chevrons, the roundel,
+- **Site surfaces.** `render/field/proceduralTextures.ts` (the canvases), `render/field/surfaceNormals.ts` (their normal maps),
+  `render/field/mapMeshes.ts` and `render/field/cuboidMesh.ts` (bevels, edge highlight, grime band, ground variation),
+  `render/field/vertexOcclusion.ts` (the baked corner shade), `render/field/mapDecals.ts` (stencils, chevrons, the roundel,
   SAFE ZONE).
 - **Painted steel.** The dock's tread plate with Environment lighting, the flagpole, the range plates and hardware.
-- **The world round the field.** `render/atmosphere.ts` (sky, trees, shrubs, clouds, the sun's disc).
+- **The world round the field.** `render/light/atmosphere.ts` (sky, trees, shrubs, clouds, the sun's disc).
 - **Figures, replicas, hands and effects** follow the same families (FA8).

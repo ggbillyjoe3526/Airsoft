@@ -31,13 +31,13 @@ import {
   vec4,
 } from 'three/tsl';
 import { FIXTURES, TORCH_BEAMS } from '../../config/render';
-import { PHASE } from '../lightFixtures';
+import { PHASE } from '../light/lightFixtures';
 import { nodePatchOf, patchUniforms, type PointKind } from '../nodePatch';
 import { everyDraw, objectFloat } from './twinUniforms';
 
 /**
  * The node materials of the world's shader-moved effects (WebGPU overhaul W2; their node patches, W6b): the fires'
- * flames (render/lightFixtures.ts), the chimney smoke and the vents' steam (render/smokePlumes.ts), and the materials of
+ * flames (render/light/lightFixtures.ts), the chimney smoke and the vents' steam (render/dressing/smokePlumes.ts), and the materials of
  * the point sprites that stand in for the stars, embers, fireflies and dust motes (render/webgpu/pointSprites.ts: WebGPU
  * draws a point one pixel wide, so a sized point is a quad per point). Each reads its config's numbers (rounded as the
  * WebGL path's GLSL wrote them, so the pictures stay those it drew) and its patch's own uniforms: the fixtures' clock,
@@ -194,7 +194,7 @@ export function spriteTwin(points: THREE.Points, kind: PointKind, buffers: Share
 
 
 /**
- * The torch beam (M91, render/torchBeams.ts beamMaterial): its strength scaled by how squarely the view crosses the
+ * The torch beam (M91, render/light/torchBeams.ts beamMaterial): its strength scaled by how squarely the view crosses the
  * cone's side, to TORCH_BEAMS.coneEdge (through the middle of the beam the path through its haze is longest, at its
  * edges nothing, so the cone has no edge line), and faded out within `coneNear` of the eyes. Additive, as the plain
  * material says: the opacity scales what it adds.

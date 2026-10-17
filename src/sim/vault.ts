@@ -21,6 +21,11 @@ import { type Vec3, vec3 } from './vec';
 export interface VaultState {
   /** Vaulting now: the body follows the path below, not its command. */
   active: boolean;
+  /**
+   * A Jump press now would vault (DX6): the simulation's answer each tick for a character in play (stepVaultReady),
+   * which the vault prompt reads, so nothing outside the simulation casts rays for it. False out of play.
+   */
+  ready: boolean;
   /** Seconds since the vault began. */
   time: number;
   /** Where it began (the feet), and the way it goes (a unit vector on the ground plane). */
@@ -69,6 +74,7 @@ export interface VaultPresses {
 export function createVaultState(): VaultState {
   return {
     active: false,
+    ready: false,
     time: 0,
     startX: 0,
     startY: 0,
@@ -306,6 +312,15 @@ export function findVault(c: Character, cmd: PlayerCommand, cfg: MovementConfig,
 }
 
 /**
+ * The tick's answer to whether a Jump press would vault now, into `c.vault.ready` (DX6; false out of play): asked after
+ * the character's move with the tick's command, as a press next tick would be. The vault it finds goes into `scratch`,
+ * never into `c.vault`. Level rays only, read-only, so the simulation stays deterministic.
+ */
+export function stepVaultReady(c: Character, cmd: PlayerCommand, inPlay: boolean, cfg: MovementConfig, body: BodyConfig, query: WorldQuery, scratch: VaultState): void {
+  c.vault.ready = inPlay && findVault(c, cmd, cfg, body, query, scratch);
+}
+
+/**
  * A Jump press (or one still buffered, MovementConfig.jumpBuffer) at an obstacle `c` can vault starts the vault, before
  * the movement step would make it a jump: it takes the press, the jump's cooldown and a vault footstep (hands and boots
  * on the obstacle, the loudest step a bot hears: BotConfig.footstepHearingVault). Returns whether it started. Call for
@@ -385,6 +400,7 @@ export function stepVault(c: Character, cmd: PlayerCommand, cfg: MovementConfig,
 /** Ends a vault at once (a respawn, or a rescue back into the level). */
 export function cancelVault(c: Character): void {
   c.vault.active = false;
+  c.vault.ready = false;
   c.vault.time = 0;
   dropVaultPresses(c.vault.held);
 }

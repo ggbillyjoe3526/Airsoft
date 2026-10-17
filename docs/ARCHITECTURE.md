@@ -41,7 +41,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/physics/` | Rapier: level collision and the character mover | `physicsWorld.ts` |
 | `src/map/` | Map data (blocks, spawns, lanes, flag, Extraction) and map helpers | `mapTypes.ts`, `maps.ts`, `depot.ts`, `woodland.ts`, `neonHeights.ts`, `range.ts` |
 | `src/input/` | Keyboard, pointer lock, key bindings, order wheel; builds the player's command | `playerInput.ts`, `keyBindings.ts`, `keyboard.ts`, `pointerLock.ts` |
-| `src/render/` | Three.js: field meshes, figures, replicas, lighting, effects, post stack, cameras | `renderer.ts`, `matchPresentation.ts`, `combatPresentation.ts`, `mapMeshes.ts`, `characterRenderer.ts`, `viewmodel.ts` |
+| `src/render/` | Three.js, by subfolder (DX6): `field/` (with `mapPieces/`), `dressing/`, `light/`, `figures/`, `replicas/`, `effects/`, `match/`, `post/`, `webgpu/` | `renderer.ts`, `match/matchPresentation.ts`, `match/combatPresentation.ts`, `field/mapMeshes.ts`, `figures/characterRenderer.ts`, `replicas/viewmodel.ts` |
 | `src/audio/` | Web Audio: synthesised sounds, mix, 3D positioning, ambience | `audioEngine.ts`, `sfx.ts`, `dsp.ts`, `soundBank.ts`, `audioMix.ts` |
 | `src/ui/` | DOM HUD, overlays and settings tabs; the menus in `ui/menus/` | `hud.ts`, `scoreboard.ts`, `minimap.ts`, `debugOverlay.ts`, `menus/menus.ts` |
 | `src/config/` | Every tunable number and data table | `replicas.ts`, `bots.ts`, `hits.ts`, `render.ts`, `controls.ts`, `dev.ts` |
@@ -122,7 +122,7 @@ Maps are plain data (`map/mapTypes.ts`). One source builds both the Rapier colli
 - **Look-only data.** `signs`, `decor`, `dressing` and `bakedLight` are drawn but never read by physics, nav, cover or
   sight.
   - **`dressing`** (`MapDressing`) is a map's set dressing, in a file of its own per map (`map/depotDressing.ts`,
-    `map/woodlandDressing.ts`, `map/neonHeightsDressing.ts`). `render/mapDressing.ts` turns it into a placement the
+    `map/woodlandDressing.ts`, `map/neonHeightsDressing.ts`). `render/dressing/mapDressing.ts` turns it into a placement the
     same way every time from `dressing.seed`; `config/dressing.ts` holds the sizes, colours and what each part costs.
     The fields: `clutter` (dirt, junk and litter along block feet, `mix` picking the yard's or the street's kinds),
     `marks` (logos and wall sprays), `posters`, `puddles` (`mud` for a mud patch), `woods` (leaf litter and fallen
@@ -171,8 +171,9 @@ request. Each entry says where the contract lives, what it holds today and what 
     `caseOpened` and `caseDropped` report the cases; `returned` reports an opponent back in a wave; `torch` reports a
     weapon light switched on or off.
   - `Character.vault` holds a vault over a low obstacle (`sim/vault.ts`, M102): its plan and how far through it is,
-    and the one-shot presses made during it (`held`, BP5: reload, slot, holster, fire selector, torch, magazine, hop-up), kept
-    for the first command after it. A `footstep` of kind `vault` reports one starting (the loudest step: bots hear it
+    whether a Jump press would vault now (`ready`, the tick's answer the vault prompt reads, DX6), and the one-shot
+    presses made during it (`held`, BP5: reload, slot, holster, fire selector, torch, magazine, hop-up), kept for the
+    first command after it. A `footstep` of kind `vault` reports one starting (the loudest step: bots hear it
     from `footstepHearingVault`).
   - `GameState.magTosses` holds the magazines in the air (MG1, `sim/magShare.ts`; MAG_SHARE.maxTosses slots, made
     once): who threw it to whom, the catcher's loadout slot, its BBs, the replica it came from, its age and flight and
@@ -205,7 +206,7 @@ request. Each entry says where the contract lives, what it holds today and what 
 
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`). The fixed 60 Hz step and the order of its
   phases (a parked out-of-play character goes straight to the elimination step); randomness only from `state.rng`.
-  Per character: aim, move, walk cycle, lean, accuracy, then footsteps, replicas, the torch and a magazine toss
+  Per character: aim, move, walk cycle, lean, accuracy, the vault answer (`stepVaultReady`, DX6), then footsteps, replicas, the torch and a magazine toss
   (MG1, while the round is live); then BBs, the magazines in the air (they land or are lost) and the round. A character
   in play whose move ran hard into a noisy prop knocks it right after the move (`stepPropBump`, NP1; not during a
   vault), and a BB stopped on a ringing prop rings it in the BB step (`ringProp`, through `stepBBs`' `noise` context,
@@ -420,8 +421,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   - `overtimeFlag` (OT1): Elimination's overtime flag spot (see Map data › Overtime flag).
 
   Pinned by the content toolkit's map checks on every map (`content/mapChecks.test.ts`), `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
-  `render/depotLook.test.ts` (a map using none of the woodland look's fields, M33i, builds as before),
-  `render/cityLook.test.ts` and `map/neonHeightsArt.test.ts` (Neon Heights' boxes, materials and floors).
+  `render/field/depotLook.test.ts` (a map using none of the woodland look's fields, M33i, builds as before),
+  `render/field/cityLook.test.ts` and `map/neonHeightsArt.test.ts` (Neon Heights' boxes, materials and floors).
 
 ## Working notes
 

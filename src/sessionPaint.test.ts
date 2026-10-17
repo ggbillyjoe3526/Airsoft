@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
  * pinned at the source (G1 acceptance 3 and 4): each passes `kitPaint(kit, look)` to CombatPresentation, which gives it
  * to the Viewmodel (viewmodel.test.ts checks the paint reaches the colours), and Game passes its Look settings to both.
  */
-const sources = import.meta.glob<string>(['./matchSession.ts', './rangeSession.ts', './game.ts', './render/combatPresentation.ts'], { query: '?raw', import: 'default', eager: true });
+const sources = import.meta.glob<string>(['./matchSession.ts', './rangeSession.ts', './game.ts', './render/match/combatPresentation.ts'], { query: '?raw', import: 'default', eager: true });
 const source = (file: string): string => sources[file]!;
 
 describe('the sessions pass the paint through (G1)', () => {
@@ -19,7 +19,7 @@ describe('the sessions pass the paint through (G1)', () => {
   });
 
   it('the combat presentation gives its paint to the viewmodel', () => {
-    expect(source('./render/combatPresentation.ts')).toMatch(/new Viewmodel\([^;]*\bpaint[,)]/); // G7: the arms follow the paint
+    expect(source('./render/match/combatPresentation.ts')).toMatch(/new Viewmodel\([^;]*\bpaint[,)]/); // G7: the arms follow the paint
   });
 
   it('Game hands the Look settings it loaded to both the match and the range', () => {

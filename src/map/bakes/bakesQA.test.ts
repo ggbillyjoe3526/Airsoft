@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { bakeHash, bakeInputs, bakeProbes } from '../../render/lightBake';
-import { decodeProbeFile, encodeProbeFile, fromBase64, toBase64 } from '../../render/probeFile';
+import { bakeHash, bakeInputs, bakeProbes } from '../../render/light/lightBake';
+import { decodeProbeFile, encodeProbeFile, fromBase64, toBase64 } from '../../render/light/probeFile';
 import { DEPOT } from '../depot';
 import type { MapBlock, MapData } from '../mapTypes';
 import { BAKE_COMMAND, BAKE_FILES } from './files';

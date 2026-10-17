@@ -1,7 +1,7 @@
 import type { GlowStrip, MapBlock, MapDressing } from './mapTypes';
 
 /**
- * Depot's set dressing (G8, MapData.dressing; render/mapDressing.ts places it): a worked yard of grey concrete and
+ * Depot's set dressing (G8, MapData.dressing; render/dressing/mapDressing.ts places it): a worked yard of grey concrete and
  * rubble, junk against the block feet, puddles in the open, a few shipping-line logos, sprays and warning signs, glow
  * strips high on the walls, and an industrial skyline beyond them with two smoking chimneys. World coordinates (the
  * map's, after depot.ts mirrors its plan). Look only: nothing here is read by play.
@@ -69,7 +69,7 @@ export function depotDressing(blocks: readonly MapBlock[]): MapDressing {
       { kind: 'chimney', x: -30, z: 47, width: 2.6, depth: 2.6, height: 28, smoke: true },
       { kind: 'powerLine', points: [{ x: -62, z: 40 }, { x: -22, z: 42 }, { x: 18, z: 44 }, { x: 58, z: 41 }], height: 14 },
       // MS1: the rest of the estate, only what shows over the walls (nothing under about 5 m does, from anywhere a
-      // player can stand: render/skylineSeen.test.ts).
+      // player can stand: render/dressing/skylineSeen.test.ts).
       // North: the crane over its container stacks, and a second warehouse behind the first.
       { kind: 'containers', x: 14, z: -37, width: 12.2, depth: 2.5, height: 7.8 },
       { kind: 'shed', x: 26, z: -62, width: 32, depth: 16, height: 12, colour: 0xc9d3d6 },

@@ -37,7 +37,7 @@ const VISIBLE_AT_DPR_1: readonly (keyof QualitySettings)[] = QUALITY_FIELDS.filt
 const NATURE_SURFACES = 4;
 /** The city's surfaces (M34f): five finishes and glass. */
 const CITY_SURFACES = 6;
-/** The texture library's own surfaces (G6, render/textureLibrary.ts) no map draws yet: painted steel, for G8 and G9. */
+/** The texture library's own surfaces (G6, render/field/textureLibrary.ts) no map draws yet: painted steel, for G8 and G9. */
 const LIBRARY_SURFACES = 1;
 
 describe('render quality presets (final alpha audit section 4)', () => {

@@ -50,7 +50,7 @@ export const GPU_GRASS = {
  * Tree stand-ins beyond the fence (compute/forestStandIns.ts, forestAtlas.ts): `share` of the map's trees on each
  * preset, stood at least `fence` m outside the field's bounds (behind a treeline there, so none is seen up close), out to `reach` m from its middle, never within `apart`
  * m of each other, on the skyline's hills where they stand on one. Each is a picture of one of the game's own tree
- * shapes (the detailed ring's pines and broadleaves, render/atmosphere.ts), taken from `views` sides into an atlas of
+ * shapes (the detailed ring's pines and broadleaves, render/light/atmosphere.ts), taken from `views` sides into an atlas of
  * `tile`-pixel squares (colour and normals, so the scene's lights shade them as they would the shapes), `height` m tall
  * (the ring's range), drawn turned to the camera, the two nearest views blended. Culled on the GPU by the view and by
  * `drawTo` m.

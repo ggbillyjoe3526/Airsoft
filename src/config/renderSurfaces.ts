@@ -5,7 +5,7 @@ import type { TextureSize } from './renderQuality';
 // config/render.ts in G5, which re-exports every name here: import from there.
 
 /**
- * The ground of a map with terrain (M33c, render/terrainMeshes.ts): greybox grass, a darker green low down to a lighter
+ * The ground of a map with terrain (M33c, render/field/terrainMeshes.ts): greybox grass, a darker green low down to a lighter
  * one at the top of the terrain, each vertex varied by up to `jitter` either way. The art pass gives it a texture.
  */
 export const TERRAIN_LOOK = {
@@ -15,7 +15,7 @@ export const TERRAIN_LOOK = {
 } as const;
 
 /**
- * Bushes (M33e, render/foliageMeshes.ts): greybox clumps of leaves, a dark green that varies from vertex to vertex, each
+ * Bushes (M33e, render/field/foliageMeshes.ts): greybox clumps of leaves, a dark green that varies from vertex to vertex, each
  * vertex pushed in or out by up to `lump` of the radius so no two bushes have the same outline. `detail` is the
  * icosphere's subdivision (1: 80 triangles a bush). The art pass gives them leaves.
  */
@@ -38,7 +38,7 @@ export const FOLIAGE_LOOK = {
 } as const;
 
 /**
- * A map's ground surfaces drawn (M33i, MapData.ground; render/terrainMeshes.ts): each surface's colour (sRGB; grass keeps
+ * A map's ground surfaces drawn (M33i, MapData.ground; render/field/terrainMeshes.ts): each surface's colour (sRGB; grass keeps
  * TERRAIN_LOOK's low-to-high greens), the edge between two surfaces blended over the cells within `blend` cells of a
  * vertex, ground under the trees `underTreeShade` darker again (the baked dark under the pines, CS-style), and the
  * greyscale `groundDetail` tile over it all. `cell` (m) is the ground grid's (map/groundSurfaces.ts), which footsteps
@@ -49,7 +49,7 @@ export const GROUND_LOOK = {
   cell: 1,
   // Trampled earth at the fires, tracks and fort is a light, dry dirt, lighter than the leaf litter, which is darker
   // again under the trees. By moonlight they read dim but brown since M52 (the night preset's light, audit REN-02;
-  // render/nightSwatch.test.ts); the spawns stay on grass, which reads best.
+  // render/light/nightSwatch.test.ts); the spawns stay on grass, which reads best.
   colours: { leaves: 0x55482f, earth: 0x927d60, gravel: 0x857f72, wood: 0x76603f },
   blend: 1,
   underTreeShade: 0.72,
@@ -57,7 +57,7 @@ export const GROUND_LOOK = {
 } as const;
 
 /**
- * The woods' shapes (M33i, render/natureShapes.ts): what Woodland's trees, logs and boulders are drawn as, each inside its
+ * The woods' shapes (M33i, render/field/natureShapes.ts): what Woodland's trees, logs and boulders are drawn as, each inside its
  * block (what collides), never more than `maxGap` m short of any point of its box (a BB can stop that far from what you
  * see; the owner's 8 cm). Every preset draws the same shapes (fair silhouettes for all).
  * - `trunk`: an eight-sided post, its corners cut `chamfer` m along each side, lit as if round (normals point out from
@@ -78,7 +78,7 @@ export const NATURE_SHAPES = {
 } as const;
 
 /**
- * Tree crowns (M33i, render/canopyMeshes.ts): one merged mesh over a map's `tree` blocks. A trunk `broadFrom` m across
+ * Tree crowns (M33i, render/field/canopyMeshes.ts): one merged mesh over a map's `tree` blocks. A trunk `broadFrom` m across
  * or more gets a broadleaf crown of `broad.lumps` lumps (icospheres of `broad.detail`, radius `broad.radius` of the
  * trunk's height, centred at least `broad.lift` of it up, the side lumps `broad.spread` of the radius out); thinner ones
  * a pine: a crown from `pine.apexAbove` m over the trunk's top down `pine.depth` of its height, as stacked
@@ -95,7 +95,7 @@ export const CANOPY = {
     apexAbove: 1.3,
     depth: 0.7,
     // MS1: three tiers of branches (were two plain six-sided cones), each a star of branch tips `notch` deep, drooping:
-    // 54 triangles a pine (were 12), which keeps Woodland's Low under its 56k triangles (render/mapMeshes.test.ts).
+    // 54 triangles a pine (were 12), which keeps Woodland's Low under its 56k triangles (render/field/mapMeshes.test.ts).
     tiers: [
       { from: 0, to: 0.5, radius: 1.85 },
       { from: 0.3, to: 0.78, radius: 1.35 },
@@ -113,12 +113,12 @@ export const CANOPY = {
 } as const;
 
 /**
- * What gives a map's light (M33i, MapLight.kind; render/lightFixtures.ts and the map's meshes). A fire: `stones` stones
+ * What gives a map's light (M33i, MapLight.kind; render/light/lightFixtures.ts and the map's meshes). A fire: `stones` stones
  * round a ring `ringRadius` m out, `logs` charred logs crossed over it, and `flames.cards` crossed additive flame cards;
  * a lantern: a housing `size` m (w, h) with glowing panes, on a bracket to a block within `bracketReach` m, else on a
  * post `post` m square. Fires and panes flicker in the vertex shader (no CPU work on the mesh): the brightness times
  * 1 + `amount` × a weighted sum of sines at `rates` (rad/s), the same as the real pool light's on Medium and High
- * (render/lightPools.ts flicker). Embers: `perFire` sparks rising `rise` m over `life` s, drifting up to `spread` m,
+ * (render/light/lightPools.ts flicker). Embers: `perFire` sparks rising `rise` m over `life` s, drifting up to `spread` m,
  * `size` m across, one draw for every fire, where dust motes are on (Medium, High).
  */
 export const FIXTURES = {
@@ -169,7 +169,7 @@ export const FIXTURES = {
 } as const;
 
 /**
- * The night sky (M33i, render/nightSky.ts), on any preset whose `nightSky` asks for it, on every quality: `stars` points
+ * The night sky (M33i, render/light/nightSky.ts), on any preset whose `nightSky` asks for it, on every quality: `stars` points
  * (the preset's count) on a sphere `radius` m round the camera, `starSize` px, above `minElevation` rad and fading towards
  * the horizon until `fadeTo` rad, from a fixed seed; the moon a crisp disc where the key light comes from with a soft halo
  * round it. Unfogged (they are the sky), no depth writes, drawn after the field and before the clouds. Both follow the
@@ -186,33 +186,33 @@ export const NIGHT_SKY = {
   haloSegments: 32,
 } as const;
 
-/** The surface textures every map's set has (render/proceduralTextures.ts), drawn on canvases at the title screen. */
+/** The surface textures every map's set has (render/field/proceduralTextures.ts), drawn on canvases at the title screen. */
 export type CoreSurfaceId = 'concrete' | 'blockWall' | 'crate' | 'corrugated' | 'steelPlate' | 'barrier' | 'sandbag' | 'gabion';
 
 /**
  * The woods' surfaces (M33i): bark, weathered fence boards, stone with lichen and a greyscale ground tile. Drawn only
- * when a map that uses them loads (render/mapMeshes.ts texturesFor), so Depot's textures and GPU memory are as before.
+ * when a map that uses them loads (render/field/mapMeshes.ts texturesFor), so Depot's textures and GPU memory are as before.
  */
 export type NatureSurfaceId = 'bark' | 'planks' | 'stone' | 'groundDetail';
 
 /**
- * The city's surfaces (M34f, render/cityTextures.ts): the block finishes (MapBlock.finish: painted plaster, metal
+ * The city's surfaces (M34f, render/field/cityTextures.ts): the block finishes (MapBlock.finish: painted plaster, metal
  * cladding, tiles, asphalt, paving) and glass for the city props' windows and screens. Drawn only when a map that uses
  * them loads, as the woods' are.
  */
 export type CitySurfaceId = BlockFinish | 'glass';
 
 /**
- * The texture library's own surfaces (G6, render/textureLibrary.ts): worn paint on steel for the set dressing to come
+ * The texture library's own surfaces (G6, render/field/textureLibrary.ts): worn paint on steel for the set dressing to come
  * (G8, G9). Drawn only when a map uses it, as the woods' and the city's are.
  */
 export type LibrarySurfaceId = 'paint';
 
-/** Every surface texture (render/proceduralTextures.ts). */
+/** Every surface texture (render/field/proceduralTextures.ts). */
 export type SurfaceTextureId = CoreSurfaceId | NatureSurfaceId | CitySurfaceId | LibrarySurfaceId;
 
 /**
- * The look of the field's surfaces and props (M14, render/proceduralTextures.ts and render/mapMeshes.ts). Everything
+ * The look of the field's surfaces and props (M14, render/field/proceduralTextures.ts and render/field/mapMeshes.ts). Everything
  * here is drawing only: blocks collide, cover and steer bots exactly as their data says.
  */
 export const SURFACES = {
@@ -249,7 +249,7 @@ export const SURFACES = {
   wallCoping: { height: 0.08, overhang: 0.025 },
   pallet: { height: 0.14, deck: 0.025, runner: 0.1, inset: 0.03, shade: 0.85 },
   /**
-   * The site props (M25b, render/mapMeshes.ts), in metres; colours are sRGB hex. Every piece stays inside its block.
+   * The site props (M25b, render/field/mapPieces/propPieces.ts), in metres; colours are sRGB hex. Every piece stays inside its block.
    */
   siteProps: {
     toilet: { skid: 0.08, inset: 0.04, roof: 0.14, doorWidth: 0.78, doorHeight: 1.95, latchDepth: 0.015, latchFromEdge: 0.1, latchSize: 0.08, latchY: [1.0, 1.1] },
@@ -278,7 +278,7 @@ export const SURFACES = {
   },
   /**
    * Normal maps (QualitySettings.normalMaps, audit section 5 F4): each texture's brightness read as height and turned
-   * into a normal map (render/surfaceNormals.ts heightToNormal). The slope scale per surface, for the original
+   * into a normal map (render/field/surfaceNormals.ts heightToNormal). The slope scale per surface, for the original
    * 256-pixel drawing (the maps at other sizes are scaled to match, so relief reads the same at any texture size).
    */
   normalStrength: { concrete: 1.4, blockWall: 1.8, crate: 2, corrugated: 3.2, steelPlate: 2.8, barrier: 1, sandbag: 2.6, gabion: 2.6, paint: 1, bark: 2.8, planks: 2, stone: 2, groundDetail: 1.2, plaster: 0.6, cladding: 1.8, tiles: 1.6, asphalt: 1.6, paving: 1.8, glass: 0.4 } satisfies Record<SurfaceTextureId, number>,
@@ -286,10 +286,10 @@ export const SURFACES = {
    * The most pixels a side each of these surfaces is drawn at, whatever the quality's textureSize (M78, owner decision
    * 9 on audit REN-11): the city's flat finishes (even paint and render, plain seams and slabs, glass) gain nothing from
    * High's and Ultra's 1024² but four times the memory, so they stay at Medium's 512² (Neon Heights High: about 21 MB
-   * less). Every surface not named here follows textureSize (render/proceduralTextures.ts drawnSize).
+   * less). Every surface not named here follows textureSize (render/field/proceduralTextures.ts drawnSize).
    */
   maxSize: { plaster: 512, cladding: 512, asphalt: 512, paving: 512, glass: 512 } satisfies Partial<Record<SurfaceTextureId, TextureSize>>,
-  /** The largest normal map (pixels a side): High's 1024² pictures are scaled down to it first (render/surfaceNormals.ts). */
+  /** The largest normal map (pixels a side): High's 1024² pictures are scaled down to it first (render/field/surfaceNormals.ts). */
   normalMapMaxSize: 512,
   /**
    * At `fromSize` pixels and up (High's 1024), each texture gets a pixel-fine grain (brightness ± `amount` of 255) and
@@ -299,7 +299,7 @@ export const SURFACES = {
   /** Steel tread plate under environment lighting (row 16): painted steel that picks up the sky (art bible). */
   steelSheen: { metalness: 0.6, roughness: 0.45 },
   /**
-   * Baked vertex occlusion (F3, render/vertexOcclusion.ts; with map detail): each vertex casts a fixed fan of rays
+   * Baked vertex occlusion (F3, render/field/vertexOcclusion.ts; with map detail): each vertex casts a fixed fan of rays
    * `reach` metres out and darkens by up to `strength` by how much is blocked (nearer blocks count more), so corners,
    * the floor along a wall's foot and under the dock's lip sit in a soft shade. Faces are cut into `cell`-metre tiles so
    * the shade has vertices to land on (`coarseCell` for kinds that ask for it: Woodland's boundary fences, M33i); rays
@@ -331,7 +331,7 @@ export const SURFACES = {
     skipHeap: { heap: 0.12, blocks: 3, size: 0.3 },
   },
   /**
-   * Painted signs and stencils (with map detail, render/mapDecals.ts): one texture of `atlasSize` pixels holding every
+   * Painted signs and stencils (with map detail, render/field/mapDecals.ts): one texture of `atlasSize` pixels holding every
    * sign, drawn on quads `offset` metres off the face they're painted on. Container bay numbers on the long sides of
    * each container (`stencilHeight` tall at `stencilY` up), a roundel and a "SAFE ZONE" board on the field's long
    * perimeter walls, hazard chevrons on barriers' long faces.
@@ -358,7 +358,7 @@ export const SURFACES = {
 } as const;
 
 /**
- * The city props (M34f, render/cityProps.ts; BlockKind in map/mapTypes.ts), in metres; colours are sRGB hex. Every
+ * The city props (M34f, render/field/mapPieces/cityProps.ts; BlockKind in map/mapTypes.ts), in metres; colours are sRGB hex. Every
  * piece stays inside its block, and a face is never set in from it by more than `inset` (what you see is what stops
  * you and your BBs). A row of arcade cabinets is cut into cabinets about `cabinet.width` wide, each with a screen and
  * a marquee on both long faces in one of `cabinet.hues`; a vending machine has its product window on both long faces;

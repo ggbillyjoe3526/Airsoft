@@ -9,7 +9,7 @@ import { createCommand } from './commands';
 import type { GameEvent } from './events';
 import { buildLevelRay, castLevelRay } from './levelRay';
 import { type CharacterMover, createMovementScratch } from './movement';
-import { createVaultState, findVault, planVault, stepVault, tryVault, vaultProgress, vaultWay } from './vault';
+import { cancelVault, createVaultState, findVault, planVault, stepVault, stepVaultReady, tryVault, vaultProgress, vaultWay } from './vault';
 import { vec3 } from './vec';
 
 const DT = 1 / 60;
@@ -202,6 +202,25 @@ describe('findVault and tryVault', () => {
     back.yaw = Math.PI;
     expect(findVault(turned, back, MOVEMENT, BODY, query, out)).toBe(false);
     expect(findVault(standing(), cmd, MOVEMENT, BODY, query, out)).toBe(true);
+  });
+
+  it("answers for the tick whether a press would vault (DX6): into the character's vault, the plan into the scratch", () => {
+    const c = standing();
+    const cmd = createCommand();
+    const scratch = createVaultState();
+    stepVaultReady(c, cmd, true, MOVEMENT, BODY, query, scratch);
+    expect(c.vault.ready).toBe(true);
+    expect(scratch.topY).toBeGreaterThan(0);
+    expect(c.vault).toEqual({ ...createVaultState(), ready: true }); // nothing planned into the character's own
+    stepVaultReady(c, cmd, false, MOVEMENT, BODY, query, scratch);
+    expect(c.vault.ready).toBe(false); // out of play
+    const turned = createCommand();
+    turned.yaw = Math.PI;
+    stepVaultReady(c, cmd, true, MOVEMENT, BODY, query, scratch);
+    cancelVault(c);
+    expect(c.vault.ready).toBe(false); // a respawn clears it
+    stepVaultReady(c, turned, true, MOVEMENT, BODY, query, scratch);
+    expect(c.vault.ready).toBe(false); // facing away
   });
 });
 

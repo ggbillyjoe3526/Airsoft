@@ -11,7 +11,7 @@ import type { Terrain } from './terrain';
  * Visual family of a greybox block. Every kind collides as a solid box, except `ramp`: a wedge whose top
  * slopes up along `rise`. Only the tops of floors and ramps are walkable (see map/surfaces.ts).
  *
- * The site props (M25b) are drawn as more than a box (render/mapMeshes.ts), always inside their bounds, so what
+ * The site props (M25b) are drawn as more than a box (render/field/mapMeshes.ts), always inside their bounds, so what
  * you see is what stops you and your BBs:
  * - full height (2.4 m): `toilet` (a portable site toilet), `rack` (pallet racking loaded with stock, or shelving
  *   indoors), `gabion` (a wire-mesh barrier filled with sand), `wrapped` (a pallet load shrink-wrapped in film);
@@ -20,7 +20,7 @@ import type { Terrain } from './terrain';
  * The woods (M33, Woodland): `tree` (a trunk; canopies come with Woodland's look), `boulder`, `log` (fallen trees,
  * log piles, log walls and the cabin) and `fence` (the field's edge).
  *
- * The city (M34f, render/cityProps.ts), solid to their bounds like the rest: `cabinet` (a row of arcade cabinets back
+ * The city (M34f, render/field/mapPieces/cityProps.ts), solid to their bounds like the rest: `cabinet` (a row of arcade cabinets back
  * to back), `vending` (a vending machine, its front on both long sides), `stall` (a market stall, cart or shrine: a
  * counter under an awning), `planter` (a timber planter, crouch height), `booth` (a phone booth or kiosk: glass in a
  * frame) and `van` (a parked van).
@@ -140,29 +140,29 @@ export interface MapData {
    */
   lights?: readonly MapLight[];
   /**
-   * Signs and windows on the walls (M34e, render/mapSigns.ts): flat panels that glow by Night and are painted boards
+   * Signs and windows on the walls (M34e, render/field/mapSigns.ts): flat panels that glow by Night and are painted boards
    * and dark glass by Day. Presentation only: they light nobody for the bots (light pools do). Absent: none.
    */
   signs?: readonly MapSign[];
   /**
-   * Look-only blocks (M34f, render/mapMeshes.ts): drawn as blocks are (kind, finish, paint), never collided, walked,
+   * Look-only blocks (M34f, render/field/mapMeshes.ts): drawn as blocks are (kind, finish, paint), never collided, walked,
    * seen through, heard or mapped; play reads `blocks` only. For a surface laid on a floor, such as a road on a street's
    * slab, a few millimetres proud of it, so the floor under it stays one block and plays as it did. Absent: none.
    */
   decor?: readonly MapBlock[];
   /**
    * Boxes on the walls kept clear of the painted signs and the dressing's marks (M81): what another renderer draws on a
-   * wall (the practice range's distance boards, render/rangeTargetsRenderer.ts). Look only, never collided. Absent: none.
+   * wall (the practice range's distance boards, render/match/rangeTargetsRenderer.ts). Look only, never collided. Absent: none.
    */
   keepClear?: readonly { center: Vec3; size: Vec3 }[];
   /**
-   * Baked bounce light (G6, render/bakedLight.ts): the map ships a probe file (src/map/bakes/, written by
+   * Baked bounce light (G6, render/light/bakedLight.ts): the map ships a probe file (src/map/bakes/, written by
    * `node pipeline/bake-light.mjs`) and is drawn with it under the bake's lighting preset (config/bake.ts). Look only.
    * Absent: no baked light (the night maps, lit by their own lamps).
    */
   bakedLight?: { file: BakeFileId };
   /**
-   * How the map is lit (M33f, render/lightingPreset.ts): the lighting presets it can be played under, the first by
+   * How the map is lit (M33f, render/light/lightingPreset.ts): the lighting presets it can be played under, the first by
    * default (later a match-start choice picks among them, M34), and `moonOver`, a world point (x, z) the key light is
    * turned towards from the field's centre (keeping its height), so a low moon rims that hill's top. `overrides` tweaks a
    * preset's values for this map only. Absent: day.
@@ -185,7 +185,7 @@ export interface MapData {
    */
   extraction?: ExtractionData;
   /**
-   * Set dressing (G8, render/mapDressing.ts): dirt, junk, puddles, marks, glow strips, the skyline round the field and
+   * Set dressing (G8, render/dressing/mapDressing.ts): dirt, junk, puddles, marks, glow strips, the skyline round the field and
    * its smoke, the motes' tint and the dust feet kick up. Look only: nothing in it collides, is walked on, hides anyone
    * or is read by play (physics, nav, cover, sight and sound read `blocks`). Absent: none, the map draws as before.
    */
@@ -360,14 +360,14 @@ export interface MapDressing {
   /** Dust kicked up by sprinting and landing feet (Impact grit): its colour (sRGB) and size (1: DRESSING.kickedDust). */
   kickedDust?: { tint: number; scale: number };
   /**
-   * G9, a wooded map's floor on its terrain (map detail; render/woodsDressing.ts): `leaves`, the chance each square of
+   * G9, a wooded map's floor on its terrain (map detail; render/dressing/woodsDressing.ts): `leaves`, the chance each square of
    * ground near a trunk, log, boulder or the fence gets a drift of leaf litter; `fallen`, the chance each slot along
    * the foot of one gets a fallen branch or a short log (low, against its face, out of every lane and passage).
    */
   woods?: { leaves: number; fallen: number };
   /** G9: moss on the hard cover's tops and shaded sides (boulders, logs, trunks; map detail): its colour and share. */
   moss?: { colour: number; share: number };
-  /** G9: the chance each 4 m bay of street-level wall gets a few pasted posters (map detail; render/streetDressing.ts). */
+  /** G9: the chance each 4 m bay of street-level wall gets a few pasted posters (map detail; render/dressing/streetDressing.ts). */
   posters?: number;
   /** G9: neon signs on the walls (map detail): lit tubes on a dark plate; a few flicker now and then (never under Reduced motion). */
   neon?: readonly NeonSign[];
@@ -398,7 +398,7 @@ export type JunkMix = 'yard' | 'street';
 /**
  * G9: a neon sign (MapDressing.neon): `text` in tube letters (neonDressing.ts) or an `emblem`, `size` m tall,
  * its middle at `centre` on a wall facing `facing`, in `colour`. `flicker` 1-3 puts it on one of three flicker
- * channels (render/neonDressing.ts neonFlicker); absent, it burns steady.
+ * channels (render/dressing/neonDressing.ts neonFlicker); absent, it burns steady.
  */
 export interface NeonSign {
   centre: Vec3;

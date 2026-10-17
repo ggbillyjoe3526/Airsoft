@@ -32,9 +32,9 @@ import type { MapData } from './map/mapTypes';
 import { type PracticePlaceId, practiceMapId } from './map/practicePlaces';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
-import { loadBakedLight } from './render/bakedLight';
-import { ModelFiles } from './render/modelFiles';
-import { powerSourceLoader } from './render/powerSourceModels';
+import { loadBakedLight } from './render/light/bakedLight';
+import { ModelFiles } from './render/figures/modelFiles';
+import { powerSourceLoader } from './render/replicas/powerSourceModels';
 import { FrameTimeWatch, presetBelow, slowFrameMs } from './render/qualityStepDown';
 import { Renderer } from './render/renderer';
 import type { RendererBoot } from './render/rendererStart';
@@ -73,7 +73,7 @@ import type { SaveManager } from './save/saveManager';
 import { SAVE_TEXT } from './config/save';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
-import { followingPictureTarget, ItemPictures, nodePictureTarget } from './render/itemPictures';
+import { followingPictureTarget, ItemPictures, nodePictureTarget } from './render/replicas/itemPictures';
 import { recordsView } from './ui/recordsView';
 import {
   hasSavedTeammateDifficulty,

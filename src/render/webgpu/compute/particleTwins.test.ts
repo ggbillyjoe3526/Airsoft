@@ -4,11 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DRESSING } from '../../../config/dressing';
 import { DUST_MOTES, IMPACT_GRIT, IMPACT_PUFFS } from '../../../config/render';
 import { buildTerrain } from '../../../map/terrain';
-import { DustMotes } from '../../dustMotes';
-import { Fireflies } from '../../fireflies';
-import { ImpactGrit } from '../../impactGrit';
-import { ImpactPuffs } from '../../impactPuffs';
-import { SmokePlumes } from '../../smokePlumes';
+import { DustMotes } from '../../effects/dustMotes';
+import { Fireflies } from '../../dressing/fireflies';
+import { ImpactGrit } from '../../effects/impactGrit';
+import { ImpactPuffs } from '../../effects/impactPuffs';
+import { SmokePlumes } from '../../dressing/smokePlumes';
 import { ParticleTwins } from './particleTwins';
 
 /**

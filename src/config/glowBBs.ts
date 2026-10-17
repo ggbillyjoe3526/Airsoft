@@ -1,6 +1,6 @@
 /**
  * Glowing BBs (M33b, owner, 2026-10-04): an option on each replica's Customise screen, beside its BB weight. Glowing
- * BBs show where every shot goes (green, larger, a longer streak: render/bbRenderer.ts); they fly like any other BB.
+ * BBs show where every shot goes (green, larger, a longer streak: render/effects/bbRenderer.ts); they fly like any other BB.
  * By default they are loaded on night fields only (owner: "default for a night map"), and the player can have them on
  * every field or never.
  */

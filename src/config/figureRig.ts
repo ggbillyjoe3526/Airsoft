@@ -59,7 +59,7 @@ export const FIGURE_RIG = {
   lodGive: 0.5,
   /**
    * The layer of a figure's shadow twin (BD1): the body at its coarsest level of detail, in one draw, seen only by the
-   * shadow-casting lights' cameras (their `shadow.camera.layers`, render/lighting.ts and render/torchBeams.ts), never by
+   * shadow-casting lights' cameras (their `shadow.camera.layers`, render/light/lighting.ts and render/light/torchBeams.ts), never by
    * the view. The body's own materials would cost a shadow draw each.
    */
   shadowLayer: 2,
@@ -106,7 +106,7 @@ export const FIGURE_RIG = {
 /**
  * Each figure's hit shape (HV1; owner, 2026-10-16: "fit to each figure"; config/hits.ts FigureHitShape): its points on
  * its own bones, so the volume follows the figure through every clip. Fitted to the drawn figure on every pose by
- * render/riggedHitVolume.test.ts, which holds each to M85's bar (at most 4 % of the drawn body missed and 3 % of the
+ * render/figures/riggedHitVolume.test.ts, which holds each to M85's bar (at most 4 % of the drawn body missed and 3 % of the
  * volume thin air); the human's covers all four heads, with and without the pack.
  */
 export const FIGURE_HIT_SHAPES: Readonly<Record<FigureRigKind, FigureHitShape>> = {
