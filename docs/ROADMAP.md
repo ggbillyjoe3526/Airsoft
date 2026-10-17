@@ -86,10 +86,10 @@ began:
   (W-07), if playtesting shows it frozen.
 - **UX/QoL, polish and accessibility.**
 - **Removals** (feature triage, 2026-10-05): small tasks, no pool item ID changes.
-  - **Supply weekends and dated events** (M49) come out: calendar pressure suits online games, not an offline one.
-    Their table in `pool.md` goes with care (the tests read it).
+  - **Supply weekends and dated events** (M49) come out: calendar pressure suits online games, not an offline one
+    (done 2026-10-17; `docs/records/RV1.md`).
   - **The Tone mapping choice** leaves Graphics: the best-looking one becomes everyone's, and the switch moves to the
-    Dev tab.
+    Dev tab. Done (RV2, 2026-10-17).
 - **Small additions, now placed elsewhere** (owner, 2026-10-06; they were the 2026-10-04 picks and the 2026-10-05
   triage's Beta list):
   - **Saved loadouts** (0.1 Dev 6): several named loadouts (such as "CQB" and "Long range") to switch between, picked

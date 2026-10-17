@@ -96,8 +96,6 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Extraction on Woodland (15 min against 4 to 7, the locker in the cabin or the fort, home team keeps 30 m from the
   insertion at the start) and Neon Heights (10 min against 3 to 6, the locker on Level 2, exits on the street) (M48,
   M72)
-- Extraction supply events: a Supply weekend every Friday to Sunday (+25 % FC, +50 % parts) and dated events from
-  pool.md (Halloween night run 2026), by the device's clock; the Play screen says which is on under Extraction (M49)
 - 3v3 by default with a round clock; first to 5 rounds wins; a whistle starts each round (Phase 1)
 - Teams: Alpha (blue) and Beta (orange); Your team on the Match screen picks your side, and an Extraction run is always Alpha (M98)
 - Custom matches: rounds to win, round time, 1v1 to 3v3 (to 5v5 on maps with room, M33d), friendly fire, ricochets; only
@@ -183,7 +181,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   realistic colours (Black, Wolf Grey, Ranger Green, Tan) per replica (G3, RM3, MR1)
 - Error screen on a crash with the seed, a report, a note box, Reload, Copy Report and Report a Bug buttons; Play Again starts a new match with
   its own seed (FA1, IM7)
-- Settings groups, opening on Display: Display (fullscreen, field of view, tone mapping, show FPS), Graphics (quality presets with
+- Settings groups, opening on Display: Display (fullscreen, field of view, show FPS), Graphics (quality presets with
   Custom option, frame-rate limit), Gameplay (crosshair, hit marker, HUD), Looks (Robots), Audio, Controls (every action rebindable,
   mouse buttons and mouse wheel), Accessibility, Save file, Dev; a search box and a note on every row
   (M15, M18a, M19, M24, FA2, FA5, G1, G3, M96, M97)
@@ -198,7 +196,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - A hidden Dev group (tick Dev settings under the list): debug info, BB paths, game speed, bottomless magazines, ghost,
   Disable levelling (unlocks every item; a cheat with no XP and no records), +500 XP, Level up and Reset level buttons,
   free case openings, time of day, bots hold fire, spectate any bot, bot intentions, adaptive difficulty, end the round now, reset the save,
-  Diagnostics Copy and Report a Bug, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42, M83, M90, IM7)
+  Diagnostics Copy and Report a Bug, Dev content switch, Retro pixels, tone mapping (Neutral, AgX or ACES; applies at once, Neutral when off)
+  (M24, M26d, FA1, M35, M42, M83, M90, IM7, RV2)
 - The build's version on the title screen (M24)
 - Screens fetched on first use: the Loadout, Armory and Settings, and the range, load in the background after the title; a failed download says so and tries again (IM1)
 
@@ -256,8 +255,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   reflections in puddles and glass, film grain and lens fringe on Ultra; each a Custom row; Low draws none (G5)
 - Custom graphics option: pick a preset and modify any row (shadows, shadow detail, softness, range, render scale, edge
   smoothing, surface relief (Normal or Bump), texture detail, dust and more); Custom is saved (FA2, FA7)
-- Graphics settings: frame-rate limit (Unlimited, 30, 60, 120, 144, 240), show FPS counter and tone mapping choice
-  (Neutral, AgX, ACES); the first run picks a preset from the graphics card (Medium for integrated, High for discrete)
+- Graphics settings: frame-rate limit (Unlimited, 30, 60, 120, 144, 240) and show FPS counter; the first run picks a
+  preset from the graphics card (Medium for integrated, High for discrete)
   (FA2, FA7, G5)
 - Raised dock and ramps cast shadows; BB streaks consistent on any screen; replica sheen now on Medium and preserved
   across preset switches; contact shadows under every player on all presets (FA3, FA7)

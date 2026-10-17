@@ -21,10 +21,11 @@ export function loadDevEnabled(storage = browserStorage()): boolean {
 }
 
 /**
- * A Dev switch saved under an earlier name, read while nothing is saved under its own: Dev content (M35) grew out of the
- * Woodland thread's "Access maps in development" (M33d, `dev.mapsInDevelopment`).
+ * A Dev setting saved under an earlier name, read while nothing is saved under its own: Dev content (M35) grew out of the
+ * Woodland thread's "Access maps in development" (M33d, `dev.mapsInDevelopment`); Tone mapping was a Graphics row until
+ * RV2, so a pick made there comes back when the Dev tab is shown.
  */
-const EARLIER_FIELDS: Partial<Record<keyof DevSettings, SettingField>> = { devContent: 'dev.mapsInDevelopment' };
+const EARLIER_FIELDS: Partial<Record<keyof DevSettings, SettingField>> = { devContent: 'dev.mapsInDevelopment', toneMapping: 'toneMapping' };
 
 /** Every Dev setting as saved, each falling back to its default. */
 export function loadDevSettings(storage = browserStorage()): DevSettings {
@@ -36,7 +37,10 @@ export function loadDevSettings(storage = browserStorage()): DevSettings {
       d[e.id] = loadSetting(devField(e.id), onOff, earlier ? loadSetting(earlier, onOff, plain, storage) : plain, storage) === 'on';
     } else if (e.kind === 'choice') {
       // A choice saves its option's id (M90: Time of day); one this build doesn't list reads as the default.
-      const picked = loadSetting<string>(devField(e.id), oneOf(e.choices.map((c) => c.id)), DEV_DEFAULTS[e.id], storage);
+      const valid = oneOf(e.choices.map((c) => c.id));
+      const earlier = EARLIER_FIELDS[e.id];
+      const plain = earlier ? loadSetting<string>(earlier, valid, DEV_DEFAULTS[e.id], storage) : DEV_DEFAULTS[e.id];
+      const picked = loadSetting<string>(devField(e.id), valid, plain, storage);
       (d as Record<typeof e.id, string>)[e.id] = picked;
     } else d[e.id] = loadSetting(devField(e.id), numberIn(e.min, e.max), DEV_DEFAULTS[e.id], storage);
   }

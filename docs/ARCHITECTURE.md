@@ -330,10 +330,6 @@ request. Each entry says where the contract lives, what it holds today and what 
   - A Caches table (`| Case | Key | Per run | Open s | Heard m | XP | BB resupply % |`, read as `Pool.caseKinds`). A
     case holds XP (a range) or a BB resupply, never parts (`CaseFind { xp, resupply }`). The Key is what map data's
     case spots name. A missing or unreadable table falls back to the shipped rows.
-  - A Supply events table (`| Supply event | Key | When | XP % |`, read as `Pool.supplyEvents` by
-    `pool/supplyEvents.ts`). When is two weekdays or two dates; the first row that applies wins; `MatchSetup.supply`
-    carries it into `rollRunCases(pool, spots, seed, event?)`. No table means no events. XP % is 0 or 10 to 1000, and
-    a missing column is reported once, at the header.
   - A Lights table: category `light`, slot `light`, Fits by tag like the other parts.
   - Every shipped ID is pinned to its asset in `pool/pool.test.ts` (IDs are save keys).
 

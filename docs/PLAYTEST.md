@@ -60,8 +60,8 @@ What changed in 0.1 Beta 1, from your Dev 6 playtest. Each line points to the se
   and commit the `pipeline/baseline/laptop*.json` files it writes.
 - **Desktop Ultra baseline.** On your desktop run `npm run perf:desktop` (about 15 minutes; leave the window alone) and
   send the thread `pipeline/out/perf-desktop-summary.md` and `pipeline/baseline/desktop*.json`.
-- **Save in Edge** (automated tests run Chromium, and Firefox on CI; not Edge itself or Windows), and playing
-  Woodland and Neon Heights, which stay dev content until you make each public.
+- **Playing Woodland and Neon Heights**, which stay dev content until you make each public. (Save in Edge: done
+  2026-10-17, [Save](#save).)
 
 ## Movement
 
@@ -434,8 +434,6 @@ Neon Heights). A run gives no XP while it is dev content.
   feeling unfair?
 - [ ] **By level and map.** The home team is the map's base plus your squad, one more on Pro: Easy lets you out with
   three cases most runs, Normal about a third, Hard rarely, Pro hardly ever.
-- [ ] **Supply events.** From Friday to Sunday the Mode card says "Supply weekend" (+25 % XP); 30 October to 1
-  November 2026 names the Halloween night run (+50 %).
 
 ## Pro difficulty (dev content)
 
@@ -548,11 +546,11 @@ Settings opens on Display, with groups down the left (Display, Graphics, Gamepla
 - [ ] **Your keyboard layout** (Chrome or Edge, AZERTY or QWERTZ). Move forward shows as Z (AZERTY) and the order
   wheel as W or Y; the tutorial and reload hint use the same letters.
 - [ ] **Display.** Field of view starts at 90° (120° shows more at the sides, 80° less). Fullscreen (or F10) goes
-  fullscreen and back with play carrying on; Esc leaves it and pauses. In Firefox, F10 a few seconds after your last
-  click or shot pauses on "Click anywhere to go fullscreen" (on the way out "Click anywhere to resume"): one click
-  carries on.
+  fullscreen and back with play carrying on; Esc leaves it and pauses. No Tone mapping row here or in Graphics.
 - [ ] **Dev group.** Debug info, BB paths, Game speed (25 % to 200 %), Bottomless magazines and Ghost (BBs pass
   through you) change play; with any on, the summary says Dev settings kept the match out of your records.
+- [ ] **Settings › Dev › Tone mapping** (RV2). Neutral by default; AgX and ACES change the colours at once. Untick the
+  Dev settings box and the colours go back to Neutral at once; a match played with AgX still counts.
 - [ ] **Dev playtesting aids** (M90). **+500 XP**, **Level up** and **Reset level** change your level at once and
   survive a reload. **Time of day** plays the map under the other light; **Bots hold fire**.
 - [ ] **Settings › Dev › Retro look** (M96, back on the Dev tab since ST1). Off by default; On gives chunky pixels and
@@ -620,18 +618,21 @@ Settings › Graphics › Quality: Low, Medium, High, Ultra or Custom.
 
 Settings › Save file. Everything saves as it changes; nothing to press.
 
-- [ ] **Saved automatically.** Change the field of view: "Last saved just now"; reload and your settings, Loadout,
+- [x] **Saved automatically.** Change the field of view: "Last saved just now"; reload and your settings, Loadout,
   level and records are as you left them.
-- [ ] **Download and load.** `airsoft-save-<today>.json` is readable JSON. In a private window Load file (or drag it
+- [x] **Download and load.** `airsoft-save-<today>.json` is readable JSON. In a private window Load file (or drag it
   on) shows both saves side by side; Replace reloads with yours; Undo brings back what was there.
 - [ ] **An edited file.** Change `xp` in a download and load it: the pop-up warns and the button reads Load anyway; any
   other file says "That file isn't an Airsoft save".
 - [ ] **Mid-match.** Download works; Load, Restore, Undo and Delete are greyed with "Leave the match to load a save."
 - [ ] **Restore points and Delete.** One restore point per day you play (three at most), with the same pop-up and an
   Undo.
-- [ ] **Two tabs.** A second tab shows "Airsoft is open in another tab" and waits; Play here moves the game to it with
-  nothing lost. **Protect:** Chrome and Edge answer at once, Firefox asks; once allowed it reads Protected.
-- [ ] **Firefox and Edge.** Download, Load (button and drag and drop), the two-tab notice and Protect once in each.
+- [x] **Two tabs.** A second tab shows "Airsoft is open in another tab" and waits; Play here moves the game to it with
+  nothing lost. **Protect:** Chrome and Edge answer at once (often "said no for now"); once allowed it reads Protected.
+- [x] **Edge.** Download, Load (button and drag and drop), the two-tab notice and Protect once. William, Edge 155,
+  Dev 6 build, 2026-10-17: everything kept after a browser restart, a private window started fresh, Protect said
+  "no for now". Firefox: the cloud harness (`/mnt/project-files/playtest/firefox-harness/`) runs the save tests
+  there; nobody checks it by hand.
 
 ## Browsers and builds
 
@@ -639,18 +640,18 @@ You play in Chrome (2026-10-17, no Firefox installed): skip the Firefox lines. C
 save tests in Firefox on every pull request, and IN1 checked mouse lock, F10 and the raw input line in Firefox 136 in
 the cloud.
 
-- [ ] **Firefox and Edge, production build** (`npm run build`, `npm run preview`). It boots to the title with no
+- [ ] **Edge, production build** (`npm run build`, `npm run preview`). It boots to the title with no
   console errors; Play takes the mouse, Esc pauses and Resume takes it back; the back and forward side buttons don't
   leave the page. `npm run dev` still boots.
 - [ ] **Chrome, production build.** Mouse look is smooth with no jump on the first move after Play or Resume.
-- [ ] **Esc on the pause screen** (Chrome, Edge, Firefox). Esc is no click, so the browser usually won't give the mouse
+- [ ] **Esc on the pause screen** (Chrome, Edge). Esc is no click, so the browser usually won't give the mouse
   back: the menu says "Click anywhere to resume" in large type, and one click anywhere on it carries on. A click within
   a second of the first Esc gets "needs a moment, click again" in Chrome. Esc again and Resume still work.
 - [ ] **Tabbing away.** Switching tab, Alt+Tab, clicking a window on a second screen or opening an overlay mid-round
   pauses the match and nothing happened while you were away; away while running forward, you stand still on Resume.
 - [ ] **Hardware acceleration off** (restart the browser): the title warns the game will run slowly and where to turn
-  it on. **Sound blocked** (Firefox › Autoplay › Block Audio and Video): a line under Resume says so. **JavaScript
-  off:** the loading page says the game needs it.
+  it on. **Sound blocked** (Firefox only, so unchecked for now: Autoplay › Block Audio and Video): a line under Resume
+  says so. **JavaScript off:** the loading page says the game needs it.
 - [ ] **A crash** (dev server, mouse locked; console `airsoft.session.advance = () => { throw new Error('test') }`):
   the game stops, the cursor returns, "Something went wrong" shows the seed, Copy Report copies it and Reload starts
   again.

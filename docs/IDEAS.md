@@ -57,7 +57,7 @@ these again unless the owner brings them up:
 - Free-for-all.
 - The overshooting rule (bots never overshoot).
 - Tracer BBs as their own option (glowing BBs do it).
-- Supply weekends and dated events.
+- Supply weekends and dated events (M49 built them; RV1 took them out).
 - VIP escort.
 - Hostage rescue.
 - A referee NPC (the whistles cover it).

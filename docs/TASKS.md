@@ -23,7 +23,6 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 additions included (`docs/DECISIONS.md`). Seven threads build them, one block each, and they come before the blocks
 below. The item numbers are his. Where an older block overlaps one of these, the owner's item wins:
 - UX1 overlaps MR1 and HD1.
-- RV2 overlaps ST1.
 - AX1's kit colours overlap MR1's colour tab.
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
@@ -118,29 +117,6 @@ acceptance:
   1. Kit looks read as a weekend airsoft site, not a military unit: at most two of the six looks wear plate carriers, and at least two vests are in a civilian colour. Team armbands still read first.
   2. High contrast's orange figures meet the colour test's contrast bar in Depot's shaded corners (measured, not judged by eye).
   3. Exit rings and markers stay apart from the orange team under the deuteranopia check in `colourVision.test.ts`.
-status: open
-attempts: 0
-
-## RV1 · Remove supply weekends and dated events (feature triage, 2026-10-05)
-tier: core
-perf: skip
-touches: src/pool/supplyEvents.ts, src/pool/supplyEvents.test.ts, src/pool/supplyEvents.edge.test.ts, src/pool/caches.ts, src/pool/pool.ts, src/game.ts, src/matchSession.ts, pool.md, docs/IDEAS.md
-contract: none
-acceptance:
-  1. No supply weekend or dated event shows anywhere, and their code and their table in `pool.md` are gone.
-  2. No pool item ID changes, and an existing save loads unchanged.
-  3. The KNOWN_ISSUES row about IDEAS and M49 closes.
-status: open
-attempts: 0
-
-## RV2 · Tone mapping leaves Graphics (feature triage, 2026-10-05)
-tier: ui
-perf: skip
-touches: src/ui/graphicsSettings.ts, src/ui/menus/settingsScreen.ts, src/ui/devSettings.ts, src/config/graphics.ts, src/config/dev.ts, src/settings/storage.ts, src/game.ts
-contract: none
-acceptance:
-  1. Settings › Graphics has no Tone mapping row, and everyone gets Neutral (today's default).
-  2. The choice moves to Settings › Dev. With Dev settings off, a save holding another tone mapping plays as Neutral.
 status: open
 attempts: 0
 
