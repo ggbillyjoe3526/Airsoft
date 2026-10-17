@@ -56,13 +56,20 @@ export function watchScroll(root: HTMLElement): () => void {
     box.classList.toggle('more-below', moreBelow(box.scrollTop, box.clientHeight, box.scrollHeight));
   };
   const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => update());
+  // Each box is observed once: observing one again resets its last size, which would fire the observer again.
+  const watched = new WeakSet<Element>();
+  const watch = (box: Element): void => {
+    if (!observer || watched.has(box)) return;
+    watched.add(box);
+    observer.observe(box);
+  };
   // The scrolling parts are found again each time: the Customise view builds its own when it opens.
   const update = (): void => {
     mark(root);
     for (const box of root.querySelectorAll?.('.menu-scroll') ?? []) {
       mark(box);
-      observer?.observe(box);
-      for (const child of box.children) observer?.observe(child);
+      watch(box);
+      for (const child of box.children) watch(child);
     }
   };
   // Scroll doesn't bubble: caught on its way down, it names the part that scrolled.
@@ -74,8 +81,8 @@ export function watchScroll(root: HTMLElement): () => void {
   root.addEventListener('scroll', onScroll, { passive: true, capture: true });
   const stopScroll = (): void => root.removeEventListener('scroll', onScroll, { capture: true });
   if (!observer) return stopScroll;
-  observer.observe(root);
-  for (const child of root.children) observer.observe(child);
+  watch(root);
+  for (const child of root.children) watch(child);
   return () => {
     stopScroll();
     observer.disconnect();

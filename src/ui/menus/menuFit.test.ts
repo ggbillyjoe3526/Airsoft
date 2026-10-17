@@ -134,6 +134,8 @@ describe('watchScroll\'s scrolling parts (UX1 acceptance 2)', () => {
     resized();
     expect(later.toggle).toHaveBeenCalledWith('more-below', true);
     expect(observed).toContain(later);
+    resized();
+    expect(observed.filter((t) => t === later), 'observed once, so the observer does not fire itself again').toHaveLength(1);
   });
 });
 
