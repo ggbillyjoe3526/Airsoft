@@ -18,6 +18,11 @@ export interface PostFrame {
   night: boolean;
   /** Frames drawn since the stack was made: the grain's seed. */
   index: number;
+  /**
+   * The warm-up's compile or draws (PF1), never shown: a pass that draws only sometimes (the shafts, while the sun or
+   * moon is on screen) draws anyway, so its pipelines are built before the round.
+   */
+  warming: boolean;
 }
 
 /** What a pass and the stack draw with: the node renderer (WebGPU overhaul W4). */

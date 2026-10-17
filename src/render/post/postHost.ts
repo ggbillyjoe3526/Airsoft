@@ -64,6 +64,15 @@ export class PostHost {
     stack.setReflectiveSurfaces(this.reflective);
   }
 
+  /**
+   * The warm-up's draws (PF1) are under way (`on`): every pass draws, the shafts with the sun off screen too. Once they
+   * are done, the stack forgets the temporal history they leave (they are never shown).
+   */
+  warming(on: boolean): void {
+    this.stack?.setWarming(on);
+    if (!on) this.stack?.reset();
+  }
+
   /** The scene changed (a session's build or its light, a quality change, a new device): look for reflective meshes again. */
   rescan(): void {
     this.reflectiveDirty = true;

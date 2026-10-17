@@ -140,7 +140,12 @@ export class NodePostStack extends PostChain<NodeRenderer, NodeTarget> implement
       },
       set: (target, key, value) => Reflect.set(target, key, value),
     });
-    this.draw(compiling, scene, camera);
+    this.setWarming(true);
+    try {
+      this.draw(compiling, scene, camera);
+    } finally {
+      this.setWarming(false);
+    }
     this.reset();
     return Promise.all(pending).then(() => undefined);
   }

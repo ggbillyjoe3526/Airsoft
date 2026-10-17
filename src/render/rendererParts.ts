@@ -62,6 +62,37 @@ export function warmSurfacesInIdle<Id>(ids: readonly Id[], draw: (id: Id) => THR
 }
 
 /**
+ * Puts in place what a session's warm-up should draw that its first frame wouldn't (every carried replica shown, every
+ * figure fading: PF1), runs `run`, then puts it all back. `run` is synchronous.
+ */
+export type WarmStage = (run: () => void) => void;
+
+/** A WarmStage that changes nothing. */
+export const unstaged: WarmStage = (run) => run();
+
+/**
+ * Runs `run` (the warm-up's compile or its draw) with frustum culling off for everything under `roots`, then puts each
+ * flag back (PF1). Three compiles and draws only what is in view, so without it a material first seen as you turn, or a
+ * shadow caster first inside the sun's shadow box, built its pipelines mid-round.
+ */
+export function withEverythingInView(roots: readonly THREE.Object3D[], run: () => void): void {
+  const culled: THREE.Object3D[] = [];
+  for (const root of roots) {
+    root.traverse((o) => {
+      if (o.frustumCulled) {
+        o.frustumCulled = false;
+        culled.push(o);
+      }
+    });
+  }
+  try {
+    run();
+  } finally {
+    for (const o of culled) o.frustumCulled = true;
+  }
+}
+
+/**
  * Runs `run` (the warm-up compile) with each of `hidden` shown, with its hidden ancestors, and every mesh under them
  * drawn wherever it stands (frustum culling off), then puts every flag back as it was (KI1). Three's compile gathers
  * what it compiles before its first wait, so the overtime flag, a tossed magazine or a scope's eyepiece, hidden at a

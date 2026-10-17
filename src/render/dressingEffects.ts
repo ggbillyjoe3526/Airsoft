@@ -125,6 +125,11 @@ export class DressingEffects {
     }
   }
 
+  /** What is hidden now but shows mid-match, for the warm-up (PF1): the kicked dust, hidden until something kicks it. */
+  warmTargets(): THREE.Object3D[] {
+    return this.dust && this.dustOn ? [this.dust.object] : [];
+  }
+
   /** A plume pool in the scene, with the motion and night it should already have. */
   private addPlume(plume: SmokePlumes): SmokePlumes {
     plume.setMotion(this.motion);

@@ -40,6 +40,7 @@ import { OwnShotStarts } from './ownShotStarts';
 import { ImpactPuffs } from './impactPuffs';
 import { LeafFlecks } from './leafFlecks';
 import type { Renderer } from './renderer';
+import { unstaged, type WarmStage } from './rendererParts';
 import { SprintCarry, Viewmodel } from './viewmodel';
 import type { ReplicaPaint } from '../config/schemes';
 import { type ArmStyle, HUMAN_ARMS } from './replicaModels';
@@ -492,14 +493,16 @@ export class CombatPresentation {
   }
 
   /**
-   * Compiles the world's and every carried replica's shaders before the first frame (M63, audit REN-06:
-   * Renderer.warmShaders), the replicas not in hand too, so a first switch to one is not where it compiles (Dev 6 note
-   * 26), with what is hidden now but shows mid-session (KI1): `hidden` (the session's: the overtime flag), a tossed
-   * magazine and the scopes' eyepiece masks.
+   * Warms the world's and every carried replica's pipelines before the round (M63, audit REN-06: Renderer.warmShaders),
+   * the replicas not in hand too, so a first switch to one is not where they build (Dev 6 note 26, MV1), with what is
+   * hidden now but shows mid-session (KI1): `hidden` (the session's: the overtime flag), a tossed magazine and the
+   * scopes' eyepiece masks, and the kicked dust (PF1); `poses`, the session's ways of drawing its figures, and `hold`
+   * if it waits (PF1). Settles once the warm-up's draws are done.
    */
-  warmShaders(hidden: readonly THREE.Object3D[] = []): void {
-    const shown = [...hidden, ...this.magTosses.warmTargets(), ...this.viewmodel.warmTargets()];
-    this.viewmodel.withEverySlotShown(() => this.renderer.warmShaders(this.overlay, shown));
+  warmShaders(hidden: readonly THREE.Object3D[] = [], poses: readonly WarmStage[] = [unstaged], hold = false): Promise<void> {
+    const shown = [...hidden, ...this.magTosses.warmTargets(), ...this.viewmodel.warmTargets(), ...this.dressing.warmTargets()];
+    const everySlot = poses.map((pose): WarmStage => (run) => this.viewmodel.withEverySlotShown(() => pose(run)));
+    return this.renderer.warmShaders(this.overlay, shown, everySlot, hold);
   }
 
   /** Draws the frame; the held replica only when the camera is in first person. */

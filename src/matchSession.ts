@@ -378,9 +378,20 @@ export class MatchSession implements Session {
     renderer.scene.add(this.contact.object);
     input.ordersEnabled = true;
     this.build.phase('figures, flag and HUD');
-    // The scene is whole: its shaders are compiled now, not in the first frame (M63, audit REN-06).
-    this.combat.warmShaders(this.match.warmTargets());
+    // The scene is whole: its shaders are compiled now, not in the first frame (M63, audit REN-06), and the round waits
+    // for the warm-up's draw (PF1), so nothing builds in its first moments; its first picture holds meanwhile.
+    void this.combat.warmShaders(this.match.warmTargets(), this.match.warmPoses(), true).then(() => {
+      this.warm = true;
+    });
     this.build.phase('shaders');
+  }
+
+  /** The warm-up's draws are done (PF1): until then the round doesn't start. */
+  private warm = false;
+
+  /** The round waits for the warm-up's draws (PF1): its frames say nothing about play. */
+  get warmingUp(): boolean {
+    return !this.warm;
   }
 
   /** Dev settings › Bots hold fire (M90). */
@@ -419,6 +430,11 @@ export class MatchSession implements Session {
   advance(dt: number): number {
     const p = this.player;
     this.input.update(p.armament.active, this.loadout.length, this.combat.aimRaised, this.combat.aimSensitivityScale, canAimDownSights(p.armament));
+    // The round starts once the warm-up is done (PF1): the frames meanwhile show the field, standing still.
+    if (!this.warm) {
+      this.input.clearLatches();
+      return 0;
+    }
     // Skipping the round (M83): clicks, inspects and orders made meanwhile are dropped; the ticks run flat out.
     if (this.skip) {
       this.input.clearLatches();

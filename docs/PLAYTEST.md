@@ -622,6 +622,11 @@ Settings › Graphics › Quality: Low, Medium, High, Ultra or Custom.
   Note the frame rate and draw calls on each preset in the open yard and in the office.
 - [ ] **Load time.** Play from the title after a moment: no long hitch; on the laptop Medium starts within about half
   a second of Low.
+- [ ] **No shader hitches (PF1).** In a private window open the game with `?perf` and the console open, on Medium,
+  High and Ultra in turn (one fresh window each). The first picture of the field holds a moment before round 1 while
+  shaders build: note how long. Then turn round, face the sun, switch replicas, reload, aim the 2x scope, watch an
+  eliminated figure fade and let overtime raise the flag. No "pipelines built mid-play" line should appear in the
+  console.
 
 ## Accessibility
 
