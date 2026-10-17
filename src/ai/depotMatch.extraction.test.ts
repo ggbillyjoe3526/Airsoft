@@ -64,7 +64,7 @@ describe('Extraction on Depot, headless (M43)', () => {
     expect(noise).toBeGreaterThanOrEqual(Math.floor(locker.openTime));
     expect(locker.open).toBe(true);
     expect(run.carried).toEqual(locker.finds);
-    // The locker always holds XP in its pool.md range, never a resupply (no supply event in this run).
+    // The locker always holds XP in its pool.md range, never a resupply.
     const kind = GAME_POOL.caseKinds.find((k) => k.key === 'locker')!;
     expect(locker.finds[0]!.resupply).toBe(false);
     expect(locker.finds[0]!.xp).toBeGreaterThanOrEqual(kind.xp.min);

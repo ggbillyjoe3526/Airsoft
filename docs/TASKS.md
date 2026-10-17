@@ -134,18 +134,6 @@ acceptance:
 status: open
 attempts: 0
 
-## RV1 · Remove supply weekends and dated events (feature triage, 2026-10-05)
-tier: core
-perf: skip
-touches: src/pool/supplyEvents.ts, src/pool/supplyEvents.test.ts, src/pool/supplyEvents.edge.test.ts, src/pool/caches.ts, src/pool/pool.ts, src/game.ts, src/matchSession.ts, pool.md, docs/IDEAS.md
-contract: none
-acceptance:
-  1. No supply weekend or dated event shows anywhere, and their code and their table in `pool.md` are gone.
-  2. No pool item ID changes, and an existing save loads unchanged.
-  3. The KNOWN_ISSUES row about IDEAS and M49 closes.
-status: open
-attempts: 0
-
 ## PF3 · The 4K 240 Hz line for maxed-out settings (after William's desktop baseline)
 tier: core
 perf: required

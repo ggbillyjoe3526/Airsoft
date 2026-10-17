@@ -139,7 +139,7 @@ describe('the plain title (M100 QA)', () => {
 
   it('no screen but the title shows the build\'s version', () => {
     const label = __BUILD_VERSION__.label;
-    const model = { picks: () => ({ map: 'depot', mode: 'elimination', difficulty: 'normal', teammateDifficulty: 'normal', ruleset: 'skirmish', rules: { ...DEFAULT_MATCH_RULES } }), lightingOf: () => 'day', supply: () => null, setMode: noop, practicePlace: () => 'range', setPracticePlace: noop } as unknown as PlayModel;
+    const model = { picks: () => ({ map: 'depot', mode: 'elimination', difficulty: 'normal', teammateDifficulty: 'normal', ruleset: 'skirmish', rules: { ...DEFAULT_MATCH_RULES } }), lightingOf: () => 'day', setMode: noop, practicePlace: () => 'range', setPracticePlace: noop } as unknown as PlayModel;
     const setup = new SetupScreen(model, { equipped: () => [] } as never, { pictures: null, realistic: () => false }, { onLoadout: noop, onBack: noop, onPlay: noop, onPractice: noop });
     const pool = loadPool(poolText);
     const armory = new ArmoryScreen({ pool: () => pool, levels: GAME_LEVELS, progress: () => newProgress(GAME_LEVELS), levellingOff: () => false, devContent: () => false });
@@ -230,7 +230,7 @@ describe('Practice, the last mode of the Match screen (M100 QA)', () => {
   function setup(mode = 'elimination') {
     const picks = { map: 'depot', mode, difficulty: 'normal', teammateDifficulty: 'normal', ruleset: 'skirmish', rules: { ...DEFAULT_MATCH_RULES } };
     const setMode = vi.fn((m: string) => void (picks.mode = m));
-    const model = { picks: () => picks, lightingOf: () => 'day', supply: () => null, setMode, practicePlace: () => 'range', setPracticePlace: noop } as unknown as PlayModel;
+    const model = { picks: () => picks, lightingOf: () => 'day', setMode, practicePlace: () => 'range', setPracticePlace: noop } as unknown as PlayModel;
     const ran: string[] = [];
     const screen = new SetupScreen(model, { equipped: () => [] } as never, { pictures: null, realistic: () => false }, { onLoadout: noop, onBack: noop, onPlay: () => ran.push('match'), onPractice: () => ran.push('practice') });
     screen.refresh(view(picks));
