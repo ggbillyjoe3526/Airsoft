@@ -103,18 +103,19 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Three to five digits (a high-capacity magazine, a big Dev count) take a smaller size, so the count stays about as wide
-   as two digits at full size and the words beside it keep their room (ui/replicaPanel.ts sets data-digits). */
+/* Three to five digits (a high-capacity magazine, a big Dev count) take a smaller size, so the count is no wider than two
+   digits at full size (52 px) and the fire-mode chips beside it stay on one line (ui/replicaPanel.ts sets data-digits;
+   UI2: at 30 / 24 / 19 px the chips took a second line). */
 .hud-mag[data-digits='3'] {
-  font-size: 30px;
+  font-size: 26px;
 }
 
 .hud-mag[data-digits='4'] {
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .hud-mag[data-digits='5'] {
-  font-size: 19px;
+  font-size: 16px;
 }
 
 .hud-mag.low {

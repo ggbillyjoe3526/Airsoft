@@ -497,6 +497,10 @@ describe('layout polish before the screenshots (G4, M100)', () => {
     expect(declared('.match-panel .menu-range input', 'flex')).toBe('0 1 var(--match-slider-w)');
     // 320 px before UI2.
     expect(Number(declared('.hud-replica', 'width')?.replace('px', ''))).toBeLessThanOrEqual(292);
+    // A three- to five-digit count is no wider than two digits at 40 px, so the fire-mode chips keep one line.
+    expect(declared(".hud-mag[data-digits='3']", 'font-size')).toBe('26px');
+    expect(declared(".hud-mag[data-digits='4']", 'font-size')).toBe('20px');
+    expect(declared(".hud-mag[data-digits='5']", 'font-size')).toBe('16px');
   });
 
   it('puts no backdrop blur on any of these', () => {
