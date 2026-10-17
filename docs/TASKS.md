@@ -248,7 +248,7 @@ attempts: 0
 ## DX3 · A fix-tier path through the pipeline (audit A5)
 tier: ui
 perf: skip
-touches: pipeline/, .claude/skills/pipeline/SKILL.md, .claude/agents/, docs/PROCESS.md, docs/records/README.md
+touches: pipeline/, .claude/skills/pipeline/SKILL.md, .claude/skills/new-content/SKILL.md, .claude/agents/, docs/PROCESS.md, docs/records/README.md
 contract: none
 acceptance:
   1. A task block may say `tier: fix`: gates, QA and the three review agents still run, but the record is the review line, one attempt row and a Decisions line, and no FEATURES or PLAYTEST edit is due unless the fix changes what the player sees (the changelog agent decides from the summary).
