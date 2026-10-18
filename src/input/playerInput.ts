@@ -18,7 +18,7 @@ const SPRINT_STOPPERS: readonly Action[] = ['crouch', 'aim', 'walk', 'fire'];
  * responsiveness; one-shot actions (jump, reload, switch, holster, fire selector, a trigger click) are latched until
  * a simulation tick consumes them, so none is lost or duplicated when frames and ticks don't line up.
  * Fire and aim are actions like any other, on whatever key or mouse button they're bound to (M18).
- * Crouch, aim and sprint each work while held or as a toggle (M18; crouch toggles by default):
+ * Crouch, aim and sprint each work while held or as a toggle (M18; aim toggles by default, crouch and sprint are held):
  * - a toggled crouch stands up on a sprint or jump press;
  * - a toggled aim drops on a sprint press, a replica switch, the holster key, or when the replica in hand has no sight;
  * - a toggled sprint stops when forward is let go, or on a crouch, aim, walk or fire press.
@@ -160,8 +160,8 @@ export class PlayerInput {
     if (kb.wasPressed('reload')) this.reloadLatch = true;
     this.fireModePresses = Math.min(FIRE_MODE_QUEUE_MAX, this.fireModePresses + kb.pressCount('fireMode'));
     if (kb.wasPressed('torch')) this.torchLatch = true;
-    if (kb.wasPressed('hopUp')) this.hopSteps++;
-    if (kb.wasPressed('hopDown')) this.hopSteps--;
+    // Every tap a notch, two inside one slow frame too (as the fire selector, KI1).
+    this.hopSteps += kb.pressCount('hopUp') - kb.pressCount('hopDown');
     if (kb.wasPressed('inspect')) this.inspectLatch = true;
     if (kb.wasPressed('orderFollow')) this.latchOrder('follow', false);
     if (kb.wasPressed('orderHold')) this.latchOrder('hold', false);

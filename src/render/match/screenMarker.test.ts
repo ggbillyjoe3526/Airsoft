@@ -142,6 +142,21 @@ describe('edge markers laid out together (KI1)', () => {
     expect(b.y).toBe(H - 40 - step.down);
   });
 
+  it('never moves one back onto the minimap: along the left and top edges it keeps past the floor (bug pass BP6a)', () => {
+    const pins = new EdgePins();
+    pins.begin();
+    const floor = { left: 300, top: 400 };
+    // Just below the minimap's panel: the flag at 330, then the hold marker at 310 would move up onto the panel.
+    expect(pins.place(pin(M, 330), W, H, step, floor).y).toBe(330);
+    expect(pins.place(pin(M, 310), W, H, step, floor).y).toBe(378);
+    // Across the top the same, right of the panel.
+    expect(pins.place(pin(420, M), W, H, step, floor).x).toBe(420);
+    expect(pins.place(pin(410, M), W, H, step, floor).x).toBe(516);
+    // The right and bottom edges ignore it.
+    pins.place(pin(W - M, 200), W, H, step, floor);
+    expect(pins.place(pin(W - M, 190), W, H, step, floor).y).toBe(152);
+  });
+
   it('points an edge marker the way to turn: right 0°, down 90°, left 180°, up -90°', () => {
     expect(edgeAngle(pin(W - M, H / 2), W, H)).toBeCloseTo(0, 6);
     expect(edgeAngle(pin(W / 2, H - M), W, H)).toBeCloseTo(90, 6);
