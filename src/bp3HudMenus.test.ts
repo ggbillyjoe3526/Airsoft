@@ -112,3 +112,11 @@ describe('BP3a: wiring of the presentation classes, pinned at the source', () =>
     expect(match).toMatch(/this\.extraction !== undefined, r\.run\.reserve, this\.tags\)/);
   });
 });
+
+describe('the stamp\'s click line (bug pass BP6a)', () => {
+  it('sits under the stamp out of the flow, so the word doesn\'t move up when it appears', () => {
+    const rule = /\.round-result-hint\s*\{([^}]*)\}/.exec(hudCss('round'))?.[1] ?? '';
+    expect(rule).toMatch(/position:\s*absolute/);
+    expect(rule).toMatch(/top:\s*100%/);
+  });
+});
