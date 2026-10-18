@@ -7,7 +7,7 @@ import type { PostSetup } from '../post/postStack';
 import type { EnvironmentLook } from '../replicas/replicaSheen';
 import type { DrawStats } from '../rendererParts';
 import { followSwappedBuffers } from './compute/computeKit';
-import { deferUniformFrees } from './deferredFrees';
+import { deferUniformFrees, dropFreedVertexArrays } from './deferredFrees';
 import { GpuDressing } from './compute/gpuDressing';
 import { ParticleTwins } from './compute/particleTwins';
 import { NightLighting } from './nightLights';
@@ -94,6 +94,7 @@ export class NodeBackend {
     this.timestamps = renderer.hasFeature('timestamp-query');
     followSwappedBuffers(renderer);
     this.frees = deferUniformFrees(renderer);
+    dropFreedVertexArrays(renderer);
     this.particles = new ParticleTwins(renderer);
     this.world = new WorldTwins(renderer, this.particles.claims);
     this.dressing = new GpuDressing(renderer, this.kind === 'webgpu');

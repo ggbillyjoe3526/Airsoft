@@ -549,6 +549,28 @@ describe('the shader warm-up (M63, audit REN-06)', () => {
     }
   });
 
+  it('stops the limit’s timer once a waiting session’s warm-up is drawn, so nothing keeps the session (BP6c)', async () => {
+    vi.useFakeTimers();
+    try {
+      const { r } = stubbedRenderer();
+      const warm = r.warmShaders(replica(), [], [unstaged], true);
+      expect(vi.getTimerCount()).toBe(1);
+      await r.afterCompiles();
+      await Promise.resolve();
+      r.render();
+      await warm;
+      expect(vi.getTimerCount()).toBe(0);
+      // And when the next session or the renderer's end lets it go first.
+      void r.warmShaders(replica(), [], [unstaged], true);
+      void r.warmShaders(replica(), [], [unstaged], true);
+      expect(vi.getTimerCount()).toBe(1);
+      r.dispose();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('lets go of a warm-up still waiting for its draw when the next session warms up or the renderer goes (PF1)', async () => {
     const { r } = stubbedRenderer();
     const first = r.warmShaders(replica());

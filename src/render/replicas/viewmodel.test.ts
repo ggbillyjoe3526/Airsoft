@@ -454,3 +454,12 @@ describe('Viewmodel paint (G1: what the match and the range hand it)', () => {
     vm.dispose();
   });
 });
+
+describe('Viewmodel dispose (BP6c)', () => {
+  it('empties its scene, so the lights Three keeps in its shared bind groups hold nothing of the match', () => {
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+    expect(vm.scene.children.length).toBeGreaterThan(0);
+    vm.dispose();
+    expect(vm.scene.children).toEqual([]);
+  });
+});

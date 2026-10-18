@@ -88,6 +88,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **UX1** · In a 1280 px window with HUD size 120 % or more, the widest score bar no longer crowds the minimap
 - **PF1** · Round 1 holds briefly while shaders build, so the first fade, light shaft, shadow, tossed magazine, 2x scope or overtime flag no longer stalls
 - **RE1** · WON, LOST or DRAW stays up 2 s (was 1.3) and the round's table about 4 s before the next round; bots hold fire for a strafing teammate
+- **BP6c** · Memory no longer climbs each time you quit a match or press Play Again (it kept about 18 MB a match before)
+- **BP6c** · On the Match screen the rules note fades at its foot while there is more to scroll; Start practice fits a 900 px window
 - **BP6b** · A click that moves past a round's end fires nothing in the next round until you let go; in windows under about 800 px tall, WON or LOST clears a two-line banner
 
 ### Internal
@@ -115,6 +117,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **DX6** · Developer-only: render code grouped into folders; vault prompt reads the simulation's answer, no HUD rays; HUD markers share one step
 - **DX8** · Developer-only: play flow, match and range setup, Dev settings and results split out of the game file; players see no change
 - **PF3** · Desktop perf run judges Ultra 4K frame times against the 17 Oct baseline; stops at match end, checks npm install, names failed rows
+- **BP6c** · Developer-only: a test fix and docs rows from the pull-request pass; players see the Fixed lines
 
 ## 0.1 Dev 6 · 2026-10-16
 
