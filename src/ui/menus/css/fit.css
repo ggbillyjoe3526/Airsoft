@@ -283,3 +283,24 @@
     flex: none;
   }
 }
+
+/* "Your match"'s note on the rules (BP6c): it keeps its few lines in a short window and scrolls the rest, with a fade
+   short enough to leave them readable. */
+.menu-hub .play-aside > .setup-rules {
+  min-height: 4.5em;
+}
+
+.menu-hub .play-aside > .setup-rules.more-below {
+  mask-image: linear-gradient(0deg, transparent, #000 1.6em);
+}
+
+.setup-rules-text {
+  display: block;
+}
+
+/* Below about 1000 px "Your match" is under 300 px wide: Start practice's words and arrow still fit on its button. */
+@media (max-width: 1000px) {
+  .menu-setup .play-aside .menu-button-big {
+    font-size: 18px;
+  }
+}

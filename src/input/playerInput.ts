@@ -45,6 +45,11 @@ export class PlayerInput {
   private readonly wheel = new WheelPointer();
   /** The trigger is the wheel's: no shot until it is let go of after the wheel closes. */
   private fireBlocked = false;
+  /**
+   * The click that moved a round's end on (RE1): no shot until that button is let go of, through the skipped pause and
+   * the next round's whistle, which clear the other latches (BP6b: a click still held as the round started fired).
+   */
+  private fireHeld = false;
   /** Aim pressed while the wheel was open: no raising the sight until it is let go of after the wheel closes. */
   private aimBlocked = false;
   /** The order last handed over by takeOrder came from the wheel (M23), not an order key. */
@@ -172,7 +177,8 @@ export class PlayerInput {
         this.jumpLatch = false;
       }
     }
-    if (kb.wasPressed('fire') && !this.fireBlocked) this.fireLatch = true;
+    if (this.fireHeld && !kb.isDown('fire')) this.fireHeld = false;
+    if (kb.wasPressed('fire') && !this.fireBlocked && !this.fireHeld) this.fireLatch = true;
     const switchBefore = this.switchLatch;
     // The holster key drops a switch asked for before it; a slot asked for with or after it draws instead (M92).
     const holster = kb.wasPressed('holster');
@@ -202,7 +208,7 @@ export class PlayerInput {
       // Pressed before forward, it waits for forward (M18a review); once you've run, letting go of forward ends it.
       if (this.sprintToggled && kb.isDown('forward')) this.sprintRunning = true;
       else if (this.sprintRunning) this.sprintToggled = false;
-      for (const a of SPRINT_STOPPERS) if (kb.wasPressed(a) && !(a === 'fire' && this.fireBlocked) && !(a === 'aim' && this.aimBlocked)) this.sprintToggled = false;
+      for (const a of SPRINT_STOPPERS) if (kb.wasPressed(a) && !(a === 'fire' && (this.fireBlocked || this.fireHeld)) && !(a === 'aim' && this.aimBlocked)) this.sprintToggled = false;
     }
     if (this.fireBlocked && !this.wheel.open && !kb.isDown('fire')) this.fireBlocked = false;
     if (this.aimBlocked && !this.wheel.open && !kb.isDown('aim')) this.aimBlocked = false;
@@ -276,7 +282,7 @@ export class PlayerInput {
     cmd.jump = this.jumpLatch;
     cmd.reload = this.reloadLatch;
     cmd.aim = this.aimModeValue === 'toggle' ? this.aimToggled : kb.isDown('aim') && !this.aimBlocked;
-    cmd.fire = !this.fireBlocked && (kb.isDown('fire') || this.fireLatch);
+    cmd.fire = !this.fireBlocked && !this.fireHeld && (kb.isDown('fire') || this.fireLatch);
     cmd.switchTo = this.switchLatch;
     cmd.holster = this.holsterLatch;
     cmd.cycleFireMode = this.fireModePresses > 0;
@@ -296,6 +302,12 @@ export class PlayerInput {
     const clicked = this.fireLatch;
     this.fireLatch = false;
     return clicked;
+  }
+
+  /** The click just taken moved a round's end on (RE1): the trigger stays up until that button is let go of. */
+  holdFireUntilReleased(): void {
+    this.fireHeld = true;
+    this.fireLatch = false;
   }
 
   /** The squad order key pressed or the wheel's order picked this frame, once (null if none; M22, M23). */

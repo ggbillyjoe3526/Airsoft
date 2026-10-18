@@ -722,6 +722,10 @@ export class Viewmodel {
   dispose(): void {
     this.replicas.dispose();
     this.disposeEyepieces();
+    // Three 0.186 keeps the shared bind groups it builds for good (NodeBuilder's cache, keyed by the renderer), and
+    // those of this scene's lights hold the lights: left in the scene, each light kept the arms, the replicas and the
+    // scene of every match played, about 3 MB a match (BP6c). Taken out, only the three lights stay.
+    this.scene.clear();
   }
 
   private disposeEyepieces(): void {

@@ -53,13 +53,17 @@
 /* WON, LOST or DRAW at a round's end (Dev 6 playtest item 33, ui/roundResult.ts): the word large in the HUD's heavy
    capitals over the field, a little above the middle, with the round (or "Match") under it. No panel, only a shadow, so
    the field stays in view; up for HUD.roundResultTime, then the round's table comes up. Won in acid, the HUD's "yours"
-   colour; Lost and Draw in the HUD's white. It settles in over --t-med (none under reduced motion). */
+   colour; Lost and Draw in the HUD's white. It settles in over --t-med (none under reduced motion). Placed by its
+   top, so the click line coming in under it doesn't lift the word: a third of the way down less half the word and
+   round, or 74 px (HUD-scaled) under the banner's top, whichever is lower, so the word clears a two-line banner
+   (half-time, a named winner, the overtime flag) by 10 px in a window under about 800 px tall (BP6b). */
 .round-result {
   position: absolute;
   left: 50%;
-  top: 33%;
-  translate: -50% -50%;
+  top: max(calc(33% - 48px * var(--hud-scale, 1)), calc(var(--hud-margin) + 32px * var(--hud-scale, 1) + var(--sb-height) * var(--sb-scale, 1) + 74px * var(--hud-scale, 1)));
+  translate: -50% 0;
   scale: var(--hud-scale, 1);
+  transform-origin: 50% 0;
   display: flex;
   flex-direction: column;
   align-items: center;

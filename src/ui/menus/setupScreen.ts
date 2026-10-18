@@ -81,6 +81,8 @@ export class SetupScreen {
   /** The pick of a saved loadout beside Change (SL1); none when the screen is given no saved loadouts (a test). */
   private readonly picker: LoadoutPicker | null;
   private readonly rules: HTMLParagraphElement;
+  /** The rules' words: a block of its own, so the scroll watch sees them change size (BP6c). */
+  private readonly rulesText = el('span', 'setup-rules-text');
   private readonly pays: HTMLParagraphElement;
   private readonly start: HTMLButtonElement;
   private readonly sections: { map: HTMLElement; rules: HTMLElement };
@@ -193,7 +195,9 @@ export class SetupScreen {
     loadoutHead.append(el('p', 'menu-kicker', PLAY_TEXT.loadout), change);
     this.kit = new KitStrip(loadout, context);
     this.loadoutLine = el('p', 'play-loadout-line');
-    this.rules = el('p', 'setup-rules');
+    // A long note scrolls in its box, fading at its foot while more lies below (BP6c: cut mid-line at 1280 x 720).
+    this.rules = el('p', 'setup-rules menu-scroll');
+    this.rules.append(this.rulesText);
     this.pays = el('p', 'play-pays');
     this.start = menuButton('', 'primary', () => (this.practice ? actions.onPractice() : actions.onPlay()));
     this.start.classList.add('menu-button-big', 'play-button');
@@ -262,7 +266,10 @@ export class SetupScreen {
     this.loadoutLine.textContent = view.loadout.detail || view.loadout.replicas;
     this.kit.update();
     this.picker?.update();
-    this.rules.textContent = view.notes;
+    if (this.rulesText.textContent !== view.notes) {
+      this.rulesText.textContent = view.notes;
+      this.rules.scrollTop = 0;
+    }
     this.pays.textContent = view.pays;
     this.pays.hidden = view.pays === '';
     this.showPracticeFacts();
