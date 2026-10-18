@@ -153,6 +153,15 @@ export class NodeBackend {
     return out;
   }
 
+  /**
+   * The pipelines the renderer has built so far, read from Three's own cache (`?perf` only, PF1: Three counts programs,
+   * which a see-through variant of a material shares, but not pipelines); the program count where the cache isn't there.
+   */
+  get pipelinesBuilt(): number {
+    const pipelines = (this.renderer as unknown as { _pipelines?: { caches?: Map<unknown, unknown> } })._pipelines;
+    return pipelines?.caches?.size ?? this.renderer.info.memory.programs;
+  }
+
   /** The WebGL2 back end's context (the diagnostics read its GPU's name from it); null on WebGPU. */
   get webglContext(): WebGL2RenderingContext | null {
     return (this.renderer.backend as { gl?: WebGL2RenderingContext }).gl ?? null;

@@ -86,6 +86,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **IN1** · Where Firefox refuses fullscreen from F10, the pause menu says "Click anywhere to go fullscreen" and one click does it (#251)
 - **IN1** · Settings › Controls › Raw mouse input says Firefox gives no raw input as soon as you open it (#251)
 - **UX1** · In a 1280 px window with HUD size 120 % or more, the widest score bar no longer crowds the minimap
+- **PF1** · Round 1 holds briefly while shaders build, so the first fade, light shaft, shadow, tossed magazine, 2x scope or overtime flag no longer stalls
 - **RE1** · WON, LOST or DRAW stays up 2 s (was 1.3) and the round's table about 4 s before the next round; bots hold fire for a strafing teammate
 
 ### Internal
@@ -103,6 +104,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **DX1** · Developer-only: each pipeline rule lives in one doc the others point to; architecture contracts get headings; process docs say 0.1 Beta 1
 - **Pipeline** · Desktop perf suite: one command records the 4K maxed-out baseline across Depot presets and Ultra maps, uncapped, with a summary
 - **DX3** · Developer-only: a task can be marked as a fix, with every check and review kept and a shorter record; the perf run needs no separate flag
+- **PF1** · `?perf` logs any shader pipeline built mid-play
 - **DX2** · Developer-only: Dev 5 and 6 plans, decisions, known issues and playtest guide archived or trimmed under 50 KB each
 - **IN1** · CI runs the boot and save browser tests in Firefox too, in a new firefox job (#251)
 - **DX4** · Developer-only: each pull request builds the game once for all its checks, the slow test jobs finish together, a code formatter is set up, and the quick test run drops its three slowest files to the full run

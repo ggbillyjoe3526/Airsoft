@@ -79,6 +79,7 @@ function fakeNode(name: string, log: string[], kind: 'webgpu' | 'webgl' = 'webgp
       node.qualities.push(quality);
       log.push(`${name} compile ${what(scene, overlay, drawer)}`);
     },
+    afterCompiles: () => Promise.resolve(),
     // W2: the world twins' scene scan and the environment map, made on this renderer.
     rescans: 0,
     prepared: 0,

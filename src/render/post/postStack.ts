@@ -55,6 +55,7 @@ export abstract class PostChain<G extends PostRenderer<T>, T extends THREE.Rende
       sun: new THREE.Vector3(0, 1, 0),
       night: false,
       index: 0,
+      warming: false,
     };
     for (const id of this.plan) {
       const pass = this.makePass(id, setup.quality, width, height);
@@ -87,6 +88,11 @@ export abstract class PostChain<G extends PostRenderer<T>, T extends THREE.Rende
   setLight(sun: THREE.Vector3, night: boolean): void {
     this.frame.sun.copy(sun).normalize();
     this.frame.night = night;
+  }
+
+  /** The warm-up's compile or draws are under way (PF1, PostFrame.warming). */
+  setWarming(on: boolean): void {
+    this.frame.warming = on;
   }
 
   /** The drawing buffer's size in pixels (the window times the pixel ratio and the render scale). */
