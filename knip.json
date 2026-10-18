@@ -1,0 +1,9 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["pipeline/*.mjs", ".claude/hooks/*.mjs", "tools/**/*.mjs"],
+  "project": ["src/**/*.ts!", "e2e/**/*.ts", "pipeline/**/*.mjs", ".claude/hooks/*.mjs", "tools/**/*.mjs", "*.ts"],
+  "vite": true,
+  "vitest": true,
+  "playwright": true,
+  "prettier": true
+}
