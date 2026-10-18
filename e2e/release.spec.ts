@@ -21,6 +21,14 @@ test('the release build boots, ignores the test flags and plays with the real po
   expect(await page.evaluate(() => 'airsoft' in window)).toBe(false);
   await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveCount(1);
 
+  // The title's Licences link opens the build's licences file (LC1), served as text, with every bundled package and the
+  // notices vendoredLicences() appends.
+  const licences = await page.request.get(new URL((await page.locator('.title-licences').getAttribute('href')) ?? '', page.url()).href);
+  expect(licences.ok()).toBe(true);
+  expect(licences.headers()['content-type']).toMatch(/^text\/plain/);
+  const licenceText = await licences.text();
+  for (const name of ['@dimforge/rapier3d-compat', 'three', 'meshoptimizer', 'Inter']) expect(licenceText).toMatch(new RegExp(`^## ${name} `, 'm'));
+
   // Rapier's WebAssembly is a plain file (IM3), served as application/wasm so the browser compiles it while it streams
   // in, with Brotli and gzip copies beside it for a host that serves them (audit CORE-29). Vite's preview server labels
   // a .br or .gz file with its Content-Encoding, so the browser unpacks it: the file's own bytes arrive, in well under

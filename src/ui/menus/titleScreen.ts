@@ -1,4 +1,5 @@
 import { MENU_TEXT, TITLE_TEXT } from '../../config/menus';
+import { THIRD_PARTY_LICENCES } from '../../config/thirdPartyLicences';
 import { isFullscreen, onFullscreenChange, toggleFullscreen } from '../fullscreen';
 import type { MenuHint } from './chrome';
 import { FULLSCREEN_ICONS, MENU_ICONS, NAV_ICONS, WARNING_ICON } from './icons';
@@ -21,7 +22,7 @@ export function tutorialOffered(tutorialDone: boolean, matchStarted: boolean): b
 /**
  * The first thing a player sees (M100): the wordmark on a plain background (no picture: the owner, 2026-10-08), the tagline, START, and under it the Tutorial on
  * a clean save; a Fullscreen button at the bottom left (Exit fullscreen while in it, MR1) and the build's version small at
- * the bottom right. Nothing else. START opens the Match screen, whose top bar leads to the Loadout, the Armory and
+ * the bottom right, with the third-party licences' link over it (LC1). Nothing else. START opens the Match screen, whose top bar leads to the Loadout, the Armory and
  * Settings.
  */
 export class TitleScreen {
@@ -65,6 +66,12 @@ export class TitleScreen {
     // Which build this is, worked out from git as the game is built (config/buildVersion.ts).
     const version = el('p', 'title-version', __BUILD_VERSION__.label);
     version.title = __BUILD_VERSION__.title;
+    // The licences of the code and font the game ships (config/thirdPartyLicences.ts), the build's file beside the page,
+    // in a new tab so the title stays as it was.
+    const licences = el('a', 'title-licences', TITLE_TEXT.licences);
+    licences.href = THIRD_PARTY_LICENCES.fileName;
+    licences.target = '_blank';
+    licences.rel = 'noopener';
 
     // Fullscreen in one click (MR1), the label and sign following the page however it got there (F11, Settings, Esc).
     // Hidden where the browser offers no fullscreen (a page in a frame without permission).
@@ -86,7 +93,7 @@ export class TitleScreen {
     const body = el('div', 'title-body');
     // The warning sits in the title's own column (the wordmark's left edge), with the column's gap above the wordmark.
     body.append(this.warning, hero, buttons);
-    this.root.append(body, this.fullscreen, version);
+    this.root.append(body, this.fullscreen, licences, version);
   }
 
   private showFullscreen(on: boolean): void {

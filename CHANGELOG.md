@@ -96,6 +96,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BP6a** · Round 1's start whistle blows when play starts after the loading warm-up, not on the frozen picture; mouse moves in the warm-up don't turn you
 - **BP6a** · Two quick hop-up taps in one slow frame turn two notches
 - **BP6a** · An off-screen marker pinned along the left or top edge no longer slides back onto the minimap
+- **LC1** · A Licences link over the version on the title screen opens the licences of the code and font the game ships, as plain text in a new tab
 
 ### Internal
 - **MS1** · Tests remove skyline pieces no player can see and keep hung units and cables clear of the player's room; perf baselines re-recorded
