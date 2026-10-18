@@ -1,26 +1,23 @@
 # Handoff
 
-What is happening now (as of 2026-10-16), for a session picking up the work. The planning thread rewrites it once per
-batch. The plan is `docs/ROADMAP.md`, the open tasks `docs/TASKS.md`, and the engine facts `docs/ARCHITECTURE.md` and
-each `src/` folder's `README.md`.
+What is happening now (as of 2026-10-18), for a session picking up the work. The plan is `docs/ROADMAP.md`, the open
+tasks `docs/TASKS.md`, and the engine facts `docs/ARCHITECTURE.md` and each `src/` folder's `README.md`.
 
 ## Now
 
-- **0.1 Dev 6 is out.** The owner tagged `0.1-dev.6` on 2026-10-16 (commit `c810dd3`). Every item in
-  `docs/archive/0.1-dev/ROADMAP.md` › 0.1 Dev 6 is done, the last its full bug pass (BP5, `docs/records/BP5.md`).
-- **Now: 0.1 Beta 1** (owner, 2026-10-16; he tags it when complete). His Dev 6 playtest list (34 items) is seven blocks
-  at the top of `docs/TASKS.md` (ST1, MR1, HD1, MV1, BD1, MS1, TT1), each built by its own thread. He played Dev 6 (2026-10-16). The Beta 1 blocks are in `docs/TASKS.md`, highest
-  priority first: fixes, balance, performance and polish, with no features. His playtest made three of them: WL1
-  (Woodland Attack / Defend), NH1 (Neon Heights' upper floors, placed with the Maps Update) and HV1 (the hit area
-  fitted to each figure, his ruling, done in HV1 with BD1, which made the rigged figures the default). The callouts' pace is fine, and
-  the overtime flag went unseen because rounds ended first. The spring sniper waits for 0.2 and his specs.
-- **Waiting on the owner:** trying Adaptive difficulty, the laptop and desktop Ultra perf baselines (PF2 waits on
-  them), and the Save checks in Firefox and Edge (`docs/PLAYTEST.md` › Only you can do these).
-- **Vault clips.** Both rigged figures (the default since BD1) have their own (shared in
-  `tools/blender/bot-figure/scripts/bot18.py`: the robot's built with it in RM10, the human's spliced into its RM9
-  export); a figure file without them falls back to the old placeholder. The built-in figures don't change. Of the
-  bots, anchors aim from cover where they stand still to fight or hold (BN1; not while sidestepping or hunting, BP5);
-  the rest fire from the hip.
+- **This repository's last build is 0.1 Beta 1.** Once the owner tags `0.1-beta.1`, all development stops here and
+  continues in a new repository: an installable game built with Godot and Blender by Claude Code, restarting at
+  0.1 Dev 1 (owner, 2026-10-18). This repository stays frozen at the tag as the new project's reference.
+- **The handover pack** is `docs/handover/`: why the move, the versioning restart, the salvage map, drafts of the new
+  project's instructions and `CLAUDE.md`, and the owner's setup steps (`docs/handover/SETUP.md`).
+- **0.1 Beta 1 is complete.** Every thread merged, then the full bug pass ran in four parts (BP6a gunplay and HUD,
+  BP6b bots, modes and maps, BP6c menus, settings and browser, BP6d the known issues and the owner's checklist;
+  `docs/records/BP6a.md` to `BP6d.md`). Its summary, and the owner's own checks, are in the project's shared files
+  (`bugpass/summary.md`, `playtest/beta1-checklist.md` › Only you can do these). He tags `0.1-beta.1` himself.
+- **Start nothing here after the tag.** The open blocks in `docs/TASKS.md` (BL1, WL1, BL2, BT1, TU1, PF2, NH1, NH2),
+  Prettier's reformat, knip's tidy-ups (TL1) and the desktop download or installable web app are not built here; what
+  of them still matters is planned again in the Godot project. The one exception is the release checklist's docs pull
+  request after the tag, if the owner asks for it (`docs/handover/SETUP.md`, step 2).
 
 ## Where to look
 
