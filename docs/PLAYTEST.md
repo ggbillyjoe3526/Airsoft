@@ -333,12 +333,15 @@ Meadow, Creek with the cabin). 5v5 by default, or 6v6. Turn on Settings › Dev 
   shoot". A Normal bot holds fire until it has a clearer line; an Easy one fires into the leaves.
 - [ ] **Night sight.** Bots see about 40 m into a light pool, 25 m in the open and 10 m under the trees; fires and
   lanterns give you away.
-- [ ] **The look and sound.** Bark trunks, log walls, boulders, plank fences, a gravel creek; wind in the pines,
+- [ ] **The look and sound.** Bark trunks, log walls and log piles, plank fences, a gravel ravine bed; wind in the pines,
   insects, a distant owl, a crackle at each fire, and footsteps that sound like the ground, as loud as on concrete.
 - [ ] **The meadow and the fort (WL2).** No lone oak in the middle and no boulders anywhere: the meadow has fallen
   trunks and the three climbs to the fort have log piles you can stand behind. The fort's outer walls are chest high
   (1.5 m): stand to shoot over, crouch to hide. The hut is taller, under a grey tin roof like the cabin's, and the flag
   still shows over the walls from the meadow.
+- [ ] **West Hill and the ravine (WL3).** From the Knoll by the east camp you can't see over West Hill into the west
+  camp. The meadow has one low swell. The creek lane runs along a dry ravine, deeper from the middle of the field east;
+  every slope walks, none needs a jump.
 
 ### Neon Heights (dev content)
 

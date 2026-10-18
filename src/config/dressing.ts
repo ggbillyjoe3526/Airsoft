@@ -21,9 +21,9 @@ import type { PuffConfig, QualitySettings } from './render';
  * render/dressing/g9DressingCost.test.ts, which holds Woodland to Depot's budget and Neon Heights to its own):
  * - Low draws none of it on either map: the same meshes, triangles, shaders, textures and horizon as before, and no
  *   moving effect at all.
- * - Woodland (Medium, High): 11 380 more triangles and 2 more draw calls — the junk mesh carries the fallen branches,
- *   twigs and logs and the leaf drifts (6 618 triangles since WL2 took the oak and the boulders out), the puddle mesh the mud and the puddles (2 040), and the treeline and hills join the tree ring (2 722, no draw
- *   call). The moss on the trunks, logs and boulders is vertex colour on meshes that were already there (nothing
+ * - Woodland (Medium, High): 11 376 more triangles and 2 more draw calls — the junk mesh carries the fallen branches,
+ *   twigs and logs and the leaf drifts (6 614 triangles since WL3 reshaped the ground; WL2 took the oak and the boulders out), the puddle mesh the mud and the puddles (2 040), and the treeline and hills join the tree ring (2 722, no draw
+ *   call). The moss on the trunks and logs is vertex colour on meshes that were already there (nothing
  *   added). Moving: the fireflies at night are one draw.
  * - Neon Heights (Medium, High): 34 102 more triangles and 2 more draw calls (MS1, owner 2026-10-16: a city that
  *   overwhelms with lights, adverts and signs; render/dressing/g9DressingCost.test.ts holds it to 36 000) — the junk mesh carries
