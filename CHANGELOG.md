@@ -91,6 +91,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BP6c** · Memory no longer climbs each time you quit a match or press Play Again (it kept about 18 MB a match before)
 - **BP6c** · On the Match screen the rules note fades at its foot while there is more to scroll; Start practice fits a 900 px window
 - **BP6b** · A click that moves past a round's end fires nothing in the next round until you let go; in windows under about 800 px tall, WON or LOST clears a two-line banner
+- **LC1** · A Licences link over the version on the title screen opens the licences of the code and font the game ships, as plain text in a new tab
 
 ### Internal
 - **MS1** · Tests remove skyline pieces no player can see and keep hung units and cables clear of the player's room; perf baselines re-recorded
