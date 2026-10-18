@@ -238,6 +238,33 @@ describe('fire button as a binding (M18)', () => {
   });
 });
 
+describe("the click that moves a round's end on (RE1, BP6b)", () => {
+  it('fires nothing until that button is let go of, through the latches a skip and a new round clear', () => {
+    const { keys, input, frame } = setup('hold');
+    keys.press('fire');
+    input.holdFireUntilReleased();
+    input.clearLatches(); // the skipped pause
+    input.resetView(0); // the next round's whistle
+    expect(frame().fire).toBe(false);
+    expect(frame().fire).toBe(false);
+    expect(input.takeClick()).toBe(false);
+    keys.release('fire');
+    expect(frame().fire).toBe(false);
+    expect(frame(() => keys.press('fire')).fire).toBe(true);
+  });
+
+  it('takes a quick click let go of within the same frame as the next shot', () => {
+    const { keys, input, frame } = setup('hold');
+    input.holdFireUntilReleased();
+    expect(
+      frame(() => {
+        keys.press('fire');
+        keys.release('fire');
+      }).fire,
+    ).toBe(true);
+  });
+});
+
 describe('aim toggle (M18)', () => {
   function toggleSetup() {
     const t = setup('hold');

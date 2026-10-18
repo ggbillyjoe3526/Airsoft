@@ -500,6 +500,7 @@ export class MatchSession implements Session {
    */
   private continueFromResult(): void {
     this.match.resultContinued();
+    this.input.holdFireUntilReleased();
     if (this.state.round.phase === 'matchOver') {
       if (!Number.isNaN(this.matchOverAt)) this.matchOverAt = this.state.time - matchOverScreenDelay();
       return;

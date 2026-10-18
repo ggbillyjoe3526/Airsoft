@@ -88,6 +88,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **UX1** · In a 1280 px window with HUD size 120 % or more, the widest score bar no longer crowds the minimap
 - **PF1** · Round 1 holds briefly while shaders build, so the first fade, light shaft, shadow, tossed magazine, 2x scope or overtime flag no longer stalls
 - **RE1** · WON, LOST or DRAW stays up 2 s (was 1.3) and the round's table about 4 s before the next round; bots hold fire for a strafing teammate
+- **BP6b** · A click that moves past a round's end fires nothing in the next round until you let go; in windows under about 800 px tall, WON or LOST clears a two-line banner
 
 ### Internal
 - **MS1** · Tests remove skyline pieces no player can see and keep hung units and cables clear of the player's room; perf baselines re-recorded
