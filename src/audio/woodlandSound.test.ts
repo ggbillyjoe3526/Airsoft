@@ -254,8 +254,8 @@ describe('M33j acceptance 3: footsteps on terrain sound like the ground underfoo
       expect(surfaceUnder(WOODLAND.blocks, at(fire.position.x + 0.8, fire.position.z), ground)).toBe('earth');
     }
     expect(surfaceUnder(WOODLAND.blocks, at(45 - WOODLAND_LAYOUT.halfX, WOODLAND_LAYOUT.halfZ - 47.5), ground)).toBe('grass');
-    // Standing on top of a log is wood and on a boulder stone, not the ground under them (BP2).
-    for (const kind of ['log', 'boulder'] as const) {
+    // Standing on top of a log is wood, not the ground under it (BP2; Woodland has no boulders since WL2).
+    for (const kind of ['log'] as const) {
       const b = WOODLAND.blocks.find((k) => k.kind === kind)!;
       const top = vec3(b.center.x, b.center.y + b.size.y / 2, b.center.z);
       expect(surfaceUnder(WOODLAND.blocks, top, ground), kind).toBe(kind === 'log' ? 'wood' : 'concrete');

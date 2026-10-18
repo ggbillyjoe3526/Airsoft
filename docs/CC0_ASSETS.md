@@ -58,12 +58,12 @@ src/assets/models/props/                  props (planned: not created or wired u
 src/assets/textures/                      loose surface textures (planned: not created or wired up yet)
 ```
 
-Every model file here is drawn by default (BD1, owner 2026-10-16): `render/modelFiles.ts` fetches them as the game
+Every model file here is drawn by default (BD1, owner 2026-10-16): `render/figures/modelFiles.ts` fetches them as the game
 starts, and the built-in models are drawn only when a file can't load.
 
 ### The figure model
 
-The loader is `src/render/externalModels.ts`; its settings are in `src/config/assets.ts`.
+The loader is `src/render/figures/externalModels.ts`; its settings are in `src/config/assets.ts`.
 
 - **Loading.** The game looks for `figure.glb` when it's built (or the dev server starts). Without it nothing is
   fetched and the built-in figures are drawn. With it, the model loads once at start and every player and bot uses it.
@@ -108,7 +108,7 @@ There are two levels of fit:
 
 ### Replica models
 
-The loader is `src/render/replicaFiles.ts`; its settings are `REPLICA_FILE` in `src/config/assets.ts`. A replica's file
+The loader is `src/render/replicas/replicaFiles.ts`; its settings are `REPLICA_FILE` in `src/config/assets.ts`. A replica's file
 replaces its built-in model in the hands, on the menus' pictures and on the figures. A file that can't be used logs a
 warning and the built-in model is drawn.
 
@@ -143,7 +143,7 @@ warning and the built-in model is drawn.
 ### Power-source models
 
 Menu pictures only (RM3): a power source never shows in a match (gas is full at the start, batteries sit inside the
-replicas). The loader is `src/render/powerSourceModels.ts`; its settings are `POWER_SOURCE_FILE` in
+replicas). The loader is `src/render/replicas/powerSourceModels.ts`; its settings are `POWER_SOURCE_FILE` in
 `src/config/assets.ts`, which names the file each power source (by its pool ID) is drawn from. A file loads the first
 time a menu shows its picture; one that can't be used logs a warning and the item keeps its line drawing.
 
@@ -196,8 +196,8 @@ taken), lets the game credit the authors anyway if it ever goes public, and make
 
 ## What isn't wired up yet
 
-- **Props and surface textures from files.** Depot's props and textures are built in code (`src/render/mapMeshes.ts`,
-  `src/render/proceduralTextures.ts`). Swapping one in means a small loader like the figure's, per kind of block.
+- **Props and surface textures from files.** Depot's props and textures are built in code (`src/render/field/mapMeshes.ts`,
+  `src/render/field/proceduralTextures.ts`). Swapping one in means a small loader like the figure's, per kind of block.
 - **glTF animations for a CC0 `figure.glb`.** The rigged Blender figures (BF1) play their own 23 clips; a dropped-in
   `figure.glb` is still drawn without animation.
 - **Draco and KTX2 compression.**

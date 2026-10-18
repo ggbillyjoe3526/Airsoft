@@ -50,7 +50,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Issue | Class | Notes |
 |---|---|---|
 | Bushes stopping BBs are first guesses: 0.6 m of leaves stops a BB; one through an edge leaves up to 0.5 rad a metre off its line at 0.35 of its speed | playtest | `BALLISTICS.leaves` (FO1). Play Woodland: a shot through a bush's edge should feel like a gamble, and bots holding fire should not leave fights stuck. |
-| The hit volume is capsules, so it misses or overhangs the drawn figure by a few cm at the rim (at most 3.5% of the drawn body, 2.7% of the volume) | can wait | Built-in figures only (`render/figureHitVolume.test.ts`). |
+| The hit volume is capsules, so it misses or overhangs the drawn figure by a few cm at the rim (at most 3.5% of the drawn body, 2.7% of the volume) | can wait | Built-in figures only (`render/figures/figureHitVolume.test.ts`). |
 | Arms and replicas neither count as hits nor stop BBs: a BB through a figure's forearm flies on | document | Owner ruling (DECISIONS 2026-10-01, arm hits off). (M85) |
 | Against a bot that strafes, aiming barely raises your share of BBs that hit (Normal, 15 to 35 m: 49 / 31 / 14% hip, 51 / 25 / 14% aimed) | can wait | The strafe, not the spread, decides most misses. (M84) |
 | Tracer visibility was reviewed on paper only (no per-replica tracer setting) | can wait | Fine with three replicas; give tracers per-replica settings when more platforms arrive. (M9) |
@@ -58,7 +58,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | With Ricochets count on, bounced BBs still decide about a fifth of hits, and Attack / Defend's attackers win more of those matches | document | The owner's ruling (2026-10-10): bounced BBs lose more speed. (G12) |
 | The spacing and friendly-ricochet guards pass or fail on which fixed seeds a change reshuffles | can wait | `depotMatch.spacing` and `depotMatch.ricochet` sit near their limits. (M87) Beta 1: BT1. |
 | The wind can only be read from the dust in the air, and Low quality (and Reduced motion) shows no dust | can wait | The owner's "dust only" default (M30). On Low you learn it from your BBs' drift. |
-| A bush doesn't move when a BB goes in: only a few leaves pop out and drift down, with a rustle | can wait | `render/leafFlecks.ts` (FO1). A shiver of the bush's mesh near the hit would read better; it is one merged mesh per map. |
+| A bush doesn't move when a BB goes in: only a few leaves pop out and drift down, with a rustle | can wait | `render/effects/leafFlecks.ts` (FO1). A shiver of the bush's mesh near the hit would read better; it is one merged mesh per map. |
 | The BBs' bush is a smooth ellipsoid and the drawn one is lumpy, so a BB can rustle up to a hand's width off the drawn leaves | document | `map/foliage.ts` (shared with bots' sight); the drawn lumps sit up to 14 % of the radius either side of it. (FO1) |
 | From deep inside a bush you can still see out (its leaves are drawn from outside only), yet your BBs stop in the leaves | document | "Leaves in the way · step clear to shoot" shows when your own BB stops within 2 m of you. (FO1) |
 
@@ -149,10 +149,9 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Neon Heights (dev): the east end wins a little more of Elimination, 44.5 % to the west over seeds 1-96 | playtest | Attack / Defend is even (attackers 54 %). (M34c, M55, M57, M71, M73) |
 | Neon Heights (dev) by Day, Pro Attack / Defend: attackers win ~60 %, the top of the 40-60 % band | playtest | BP2's report read 60.3 % ±3.3 on seeds 1-32 (TE4: 57.9 %), outside but within noise. (M40, M71, M73) |
 | Neon Heights (dev) Pro Elimination sits near its band's floor: the west end wins about 41 % of decided rounds | playtest | Within noise (±3.7) of the 40 % floor by Day and Night. (M40, M71, M73, M102) |
-| Woodland (dev) Elimination at 5v5: the downhill (west) end still wins a little more, about 57 % of decided rounds at Normal | playtest | Levers if it climbs: lane-point spacing near each camp, `RISE_HEIGHT`, `EAST_FALL`. (M87, M88) Beta 1: WL1. |
+| Woodland (dev) Elimination at 5v5: the downhill (west) end's share of decided rounds has swung with each change (57 % at Normal after M88) | playtest | WL2's runs read 45.8 % to 60.0 % (±6) as its cover changed. Since WL3's West Hill: Normal 46.9 %, Hard 37.1 %, Pro 45.8 %, all in band. Levers: lane-point spacing near each camp, `RISE_PEAK`, `EAST_FALL`, the meadow swells (a second one took Pro to 37.5 %). (M87, M88, WL2, WL3) Beta 1: WL1. |
 | Depot Elimination: the east end wins a little more often in bot-only matches | can wait | West end 48 % over 64 seeds, 49 % on the guard's 16 (`src/ai/balance/depotEnds.balance.ts`). |
 | Low draws no skyline: Depot and Neon Heights show plain sky over their walls | can wait | The skyline joins the tree ring at Trees: Layered (`skylineShown`, Medium and up). (MS1) |
-| Woodland's boulders keep their collision box's silhouette: they read as stone by texture, facets and moss, not by outline | can wait | Owner rule: no point of a block's box (M33i) MS1 kept the box colliders. |
 | A map offering Day and Night with fire lights would show its fire pits cold by day | can wait | Flames, embers and lantern panes are built with the light pools, under a night preset only. (M33i) |
 | Practice range: on Low the targets are plain greybox (white discs on a post, flat plywood cut-outs) | can wait | With Map detail (Medium and up) FA7 adds scuffed plates, scoring-zone figures, chains, arms and a shelf. (M21, BP5) |
 | Practice range: a BB still in the air when its 2.5 s lifetime ends outside the walls reads as "flew out of bounds · aim lower or turn the hop-up down" | can wait | A very steep lob; rare. Playtest whether the wording fits. (M21, BP5) |
@@ -169,6 +168,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | In Extraction only you open cases; bot teammates don't loot, and the home team guards and patrols the cases but never opens or moves them | can wait | Since M46 teammates cover you while you open. (M44, M46) |
 | An Extraction teammate covering you from crouch-only cover still crouches, and crouched it can't see the way it watches | can wait | Corner spots lean out; crouch cover stays by M46's design. Standing up is an owner call. (M55, audit AI-01) |
 | Extraction's balance figures play a bot runner, which walks straight to the nearest cases and falls quicker than a careful player | document | Quick runs end before the home team hunts (`depotMatch.extractionHunters.test.ts`). The owner's playtest sets the targets. (M46, M72) |
+| Woodland's Extraction reads easy since WL2 took the boulders out: against a Normal home team 52 % of runs out (18–48 %) and 52.6 XP a minute (12–52), against Easy 73 % (39–69), on 48 runs each | document | Was 35 % and 33 XP at Normal. WL3's ground changes (West Hill, a swell, the ravine) didn't move it: WL2 read 50 % and 55 XP. The figures play a bot runner (row above). Tune it after William plays Extraction on Woodland (his Beta 1 checklist), with the case spots and the home team's holds as the levers. (WL2, WL3) |
 | Neon Heights' Extraction figure against a Normal home team reads 50 FC a minute on its 48 runs, over the 9–49 band | document | Seeds 1–48 are a high block (over 96 runs the haul is inside the band). Re-measure on more seeds in the bug pass. (BN1) |
 
 ## Figures and art
@@ -191,7 +191,8 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | The rigged figures hold the pistol in the rifle's grip pose in the sprint, the hit call and the walk-off; the Cyber Pistol sits where the gas pistol does | can wait | Those clips were made holding the AEG. (BF1) BD1 kept it. |
 | A holstered figure that vaults keeps the Vault clip's arms, its right hand closed as if on the rifle that is slung on its back | can wait | The vault has no holstered version yet; a Holster_Vault clip would fix it. (BP4) BD1 kept it. |
 | The figure files still carry the six unused Rest clips (Rifle_ and Pistol_Rest, RestUp, RestDown) | can wait | Rest on cover is gone (MV1); the game ignores the clips, so they cost only download size. (MV1) |
-| Your own body casts no shadow, and you see it only looking well down | document | It is drawn 0.17 m behind the eyes without its head and arms, so a headless shadow would look wrong. (BF1, BD1) |
+| A figure's held replica casts its shadow from its small version (PF4), so in a close reload the shadow keeps the magazine in place for a moment beside the hand's copy | can wait | A few shadow-map texels for about a second; the whole model's shadow cost ~9k triangles a figure. (PF4) |
+| Your own figure casts no shadow | document | It is never drawn in first person, and holds no replica there (the first-person one is in view), so its shadow would show empty hands. (BF1, BD1, MV2) |
 | First-person hand poses are hand-tuned numbers, checked by geometry tests rather than by eye | document | Poses live in `replicaModels.ts`; `handPoses.test.ts` and `fileHandPoses.test.ts` measure them against the replicas' triangles. Whether a hold looks natural is the owner's call. |
 
 ## Graphics and performance
@@ -221,8 +222,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | At Medium and up the node renderer keeps three multisampled buffers: the canvas, the post stack's scene target (4 samples, half float) and the held replica's own target | can wait | Estimated ~235 MB at 1920 × 1080 (not measured on a GPU) |
 | Night lamps' real point lights (Medium and High) light the slab above them, so a ceiling reads warm (faintly olive on Neon Heights' plaster) and a lamp can light the room above | document | Kept (owner, 2026-10-05): physically right, Medium and High only. |
 | Woodland at 6v6 (M88) is unmeasured on Medium and High; the perf harness picks Woodland at its standard 5v5 | document | Low is checked at 6v6 (74 draw calls, 86k triangles). Medium's Extraction run already averages 113 of its 120 draw calls. Needs a laptop run. (BP5) |
-| Woodland on Medium at 5v5 sits close to its ceiling: ~197k of 200k triangles and 114 of 120 draw calls (before M75) | document | Ten figures and their shadows take 108k. (M33i, M48, M75, G9) |
-| Neon Heights Extraction on Medium (WebGPU) sits on its 200k triangle line, so a slow container run can fail the perf gate | document | The mean depends on which frames the run samples (max 223k). Container, 360 ticks: 193.7k at baseline, 203.9k then 197.6k on RV2's branch (no new geometry). Re-run once before reading a fail here as a regression. (RV2) |
+| Woodland on Medium at 5v5 sits close to its draw-call ceiling: 112 of 120 (Extraction, container, 2026-10-17) | document | Triangles are well clear since PF4: 127k of 200k (145k before). (M33i, M48, M75, G9, PF4) |
 | Neon Heights on Medium (Extraction) sits close to its draw-call budget: about 138 of 145 after G9's dressing | document | The budget is `maps.neon` in `pipeline/perf-budget.json`. (BP5) |
 | Medium keeps a 6.3 MB prefiltered environment map on the GPU | document | Built once from the sky and shared with the replica sheen. (FA7, F1) |
 | Baked light (G6): under a roof the probes keep about a third of the sky light, so a covered spot reads lighter than a real one | document | Rays that reach open ground count as open, standing for the hemisphere's ground light. |
@@ -257,19 +257,15 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Issue | Class | Notes |
 |---|---|---|
 | The spare-magazine gauges show no number for each magazine | can wait | Beta UX/QoL: the ammo panel already prints the spare BBs ("/ 120"); a gauge's low is striped and next has a caret, so they don't rely on colour. (BP5, HD1) |
-| Menu pages scrolled in a 1280×720 window before M100's redesign; they need measuring again | can wait | Last measured 2026-10-08: Controls 1332 px, Gameplay 1137, Customise 1111, Loadout 1010. (M15, FA5, BP5) Beta 1: UX1. |
-| New game still scrolls below ~900 × 600 (two tiles a row) | can wait | Below the desktop sizes the game targets; fits 1024×640, 1366×657 and up. (M15b) Beta 1: UX1. |
-| The menus have no size step for 4K at 100 % OS scaling: body text stays 15 px while the HUD grows to 1.5× | can wait | Decision 16: nothing now (most 4K desktops run 150–200 % scaling). (audit UI-12) Beta 1: UX1. |
 | Sound cues for several sounds from the same direction stack on the ring (hit calls sit just outside it) | can wait | One marker per player and kind; playtest whether a busy fight reads. (M18b) |
 | The hit feed wraps a long line (friendly fire with a ricochet tag) to two rows to keep clear of the scoreboard | can wait | Since BP3 a plain line fits on one row at 1280 and 1366 px. (bug pass, FA5) |
-| At 1280 px with Settings › HUD size over about 120 %, the widest score bar (Attack and Defend, 5v5) can come within the minimap's 14 px gap | can wait | `scoreboardScale` never takes the bar below size 1, by design. (BP3) |
-| At 1280 × 720 the held pistol's grip sits partly under the ammo panel | can wait | The viewmodel is placed for 16:9 at any size and the panel scales with the HUD. (BP3) |
 | The minimap draws Depot's loading dock at the floor's level (a lighter shade); a patch for a player heard on the dock looks like one below | can wait | A map with storeys (Neon Heights) gets one drawing per storey. (M23, BP5) |
 | Dev settings' Game speed runs the simulation slower or faster, but sounds keep their pitch and the replica's bob and sway run on real time | can wait | A toy for watching BBs fly; timing-sensitive presentation isn't speed-aware. (M24) |
 | The crosshair shows the spread only, not the recoil kick | document | Recoil is light on toy-like replicas; revisit in the Phase 4 HUD pass. (M10) |
 | The round's table shows by itself between rounds and covers the middle of the screen | document | Since HD1 it waits for the WON or LOST stamp, and a click moves on at once. The owner's playtest decides whether it should wait for Tab. (M19, HD1) |
 | Dev settings' Ghost: bots still see you and shoot at you (their BBs pass through) | document | Deliberate: for walking the field under fire, not for hiding. (M24) |
 | With Dev content on, a Match screen map card with a Dev tag or the Day and Night buttons is about twice as tall at 1280 px wide | can wait | It grows so the tags stay off the map's name (Dev 5 playtest, note 1). Dev content only. (M94, PT1) MR1 kept the taller card. |
+| Below about 1390 px wide (1280 and 1366 among them) the Match screen's Time-out rule puts its two options (Overtime flag, More players left) on two lines | can wait | Its row needs 493 px; House rules' column gets 421 at 1280 px. The options wrap rather than cut a word; UI2 brought the line down from about 1540 px. (UI2) |
 
 ## Save and browsers
 
@@ -292,7 +288,6 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Issue | Class | Notes |
 |---|---|---|
 | The picture compare's WebGL reference (b10c006) no longer matches Woodland or the figures, so those pairs fail on content, not drawing | document | Since b10c006, M88 rebuilt Woodland and RM4's replicas draw part by part. (W6b) |
-| The hand-pose test on the replica files (`fileHandPoses.test.ts`, the AEG case) takes about 3.7 s alone | can wait | It ran past Vitest's 5 s limit in three local gates on PF3's branch under load, so each case now has 20 s. Speed up its fit if it grows. (PF3) |
 | The WebGPU twins' and particles' allocation tests count heap growth, which can run over their limit while the bot-match guards run beside them | can wait | Seen four times on a local gate, never alone; each passed on the re-run. Widen or isolate them if it recurs. |
 | A map's team-colour rule reads each block's tint, and a textured block's tint is white, so an orange or blue texture would pass it | can wait | The skin checks measure each map as painted in the browser (`measureMapPalettes`). (CT2, CT4) |
 | `config/renderView.ts` and `config/audio.ts` hold small derived helpers (whistle schedule, result-screen delay), and renderView imports audio | can wait | Fine at this size; move derived timing into a module if config grows more logic. (BP2) |

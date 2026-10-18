@@ -13,7 +13,7 @@ export interface MapLight {
   radius: number;
   colour: number;
   /**
-   * What gives the light (M33i, render/lightFixtures.ts): a camp fire (a ring of stones, burning logs, flickering
+   * What gives the light (M33i, render/light/lightFixtures.ts): a camp fire (a ring of stones, burning logs, flickering
    * flames) or a lantern (hung on the block beside it, or on a post). Absent: the pool alone, as before.
    */
   kind?: 'fire' | 'lantern';
@@ -105,7 +105,7 @@ function terrainGround(t: Terrain, x: number, z: number): number | undefined {
 
 /**
  * The night field of `map`, or null for a daylight map. Tree trunks are its blocks of kind `tree`. `night`: whether it is
- * played at night (M33h: the match passes its resolved lighting preset's flag, render/lightingPreset.ts playsAtNight);
+ * played at night (M33h: the match passes its resolved lighting preset's flag, render/light/lightingPreset.ts playsAtNight);
  * the map's own `night` when not given.
  */
 export function buildNightField(map: MapData, cfg: NightSightConfig, night: boolean = map.night === true): NightField | null {

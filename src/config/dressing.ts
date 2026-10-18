@@ -1,11 +1,11 @@
 import type { PuffConfig, QualitySettings } from './render';
 
 /**
- * Set dressing (G8, MapData.dressing; render/mapDressing.ts places it, the modules it names draw it). Look only: none
+ * Set dressing (G8, MapData.dressing; render/dressing/mapDressing.ts places it, the modules it names draw it). Look only: none
  * of it collides, is walked on, hides anyone or is read by play. Sizes in metres, colours sRGB hex, and no colour here
  * reads as a team's (mapDressing.test.ts checks every one against both team colour sets).
  *
- * What it costs, by preset (Low draws none of it; render/dressingMeshes.test.ts holds Medium and High to at most four
+ * What it costs, by preset (Low draws none of it; render/dressing/dressingMeshes.test.ts holds Medium and High to at most four
  * more draw calls and 15 000 more triangles on Depot, where it is about 6 000):
  * - map detail (Medium, High): the dirt, litter, logos, sprays and signs join the decal mesh (no draw call, about 400
  *   triangles on Depot; its atlas grows from 1024 × 1024 to 1024 × 1536 on every map); the junk and the glow strips are
@@ -18,22 +18,22 @@ import type { PuffConfig, QualitySettings } from './render';
  * - dust motes: only their colour and a fade with height (the same draw).
  *
  * G9 dresses Woodland and Neon Heights through the same engine, and costs them the same way (measured in
- * render/g9DressingCost.test.ts, which holds Woodland to Depot's budget and Neon Heights to its own):
+ * render/dressing/g9DressingCost.test.ts, which holds Woodland to Depot's budget and Neon Heights to its own):
  * - Low draws none of it on either map: the same meshes, triangles, shaders, textures and horizon as before, and no
  *   moving effect at all.
- * - Woodland (Medium, High): 11 888 more triangles and 2 more draw calls — the junk mesh carries the fallen branches,
- *   twigs and logs and the leaf drifts (7 126 triangles since MS1 stood the cabin's walls on one level), the puddle mesh the mud and the puddles (2 040), and the treeline and hills join the tree ring (2 722, no draw
- *   call). The moss on the trunks, logs and boulders is vertex colour on meshes that were already there (nothing
+ * - Woodland (Medium, High): 11 376 more triangles and 2 more draw calls — the junk mesh carries the fallen branches,
+ *   twigs and logs and the leaf drifts (6 614 triangles since WL3 reshaped the ground; WL2 took the oak and the boulders out), the puddle mesh the mud and the puddles (2 040), and the treeline and hills join the tree ring (2 722, no draw
+ *   call). The moss on the trunks and logs is vertex colour on meshes that were already there (nothing
  *   added). Moving: the fireflies at night are one draw.
  * - Neon Heights (Medium, High): 34 102 more triangles and 2 more draw calls (MS1, owner 2026-10-16: a city that
- *   overwhelms with lights, adverts and signs; render/g9DressingCost.test.ts holds it to 36 000) — the junk mesh carries
+ *   overwhelms with lights, adverts and signs; render/dressing/g9DressingCost.test.ts holds it to 36 000) — the junk mesh carries
  *   the street litter, the posters and every neon tube, the flickering ones too (16 066 triangles with MS1's 27 more
  *   signs), the dirt, litter scraps and sprays join the decal mesh (706, no draw call), the puddle mesh the puddles
  *   (840), and the towers, cables, wall units and skybridges join the tree ring with their lit windows, adverts, light
- *   strips, lanterns and beacons (16 490, unlit; no draw call either, render/skyHost.ts). Moving: the vents' steam is
+ *   strips, lanterns and beacons (16 490, unlit; no draw call either, render/dressing/skyHost.ts). Moving: the vents' steam is
  *   one instanced draw while in view; the passing plane rides the tree ring too (108 triangles, collapsed to a point
  *   between passes: no draw call).
- * - The totals are pinned against the real meshes by render/g9EffectsQA.test.ts (it reads them from this comment).
+ * - The totals are pinned against the real meshes by render/dressing/g9EffectsQA.test.ts (it reads them from this comment).
  * - Depot is untouched: it draws exactly what it drew before, to the vertex (pinned from `main`).
  * - The signs' gentle flicker rides the junk mesh's own material as one vec3 uniform and a per-vertex channel: no extra
  *   draw and no extra triangle. It is one more shader variant of that material, compiled once and only on a map that
@@ -111,7 +111,7 @@ export const DRESSING = {
     segments: 8,
   },
   /**
-   * The decals the dressing adds to the map's decal mesh (render/mapDecals.ts): banks of dirt, a soft dark contact
+   * The decals the dressing adds to the map's decal mesh (render/field/mapDecals.ts): banks of dirt, a soft dark contact
    * shadow under each piece of junk (`contact` m wider than it), grit round rubble, litter; and on the walls logos,
    * sprays and warning signs. Sizes in metres; `alpha` and `colour` for the atlas' drawings.
    */
@@ -144,7 +144,7 @@ export const DRESSING = {
   /** Glow strips: how much brighter than lit paint they glow (added light, so they read in shade and at night). */
   strips: { glow: 1.6, offset: 0.007 },
   /**
-   * The skyline (render/skyline.ts): flat-shaded and vertex-coloured, in the tree ring's mesh. Trees standing within
+   * The skyline (render/dressing/skyline.ts): flat-shaded and vertex-coloured, in the tree ring's mesh. Trees standing within
    * `treeClear` m of a piece are left out. Kinds' default colours; a shed's doors, roof and band.
    */
   skyline: {
@@ -159,7 +159,7 @@ export const DRESSING = {
     segments: 12,
   },
   /**
-   * Chimney smoke (render/smokePlumes.ts): `puffs` soft puffs per chimney on a loop `period` s long, rising `rise` m
+   * Chimney smoke (render/dressing/smokePlumes.ts): `puffs` soft puffs per chimney on a loop `period` s long, rising `rise` m
    * with the wind bending them (`windShare` of the match's wind, eased over `windEase` s, over a `breeze` m/s along x
    * on a still day), growing from `size[0]` to
    * `size[1]` m and fading out. Unlit, fogged; `night` darkens it under a night preset. Frozen under Reduced motion.
@@ -172,7 +172,7 @@ export const DRESSING = {
    * glossy for the eye (the same material: its colour does the work), `lift` m over terrain at every vertex.
    */
   mud: { core: '#3a332b', wet: '#2e2a25', alpha: 0.85, wetAlpha: 0.5, lift: 0.02 },
-  /** G9: the skyline's new kinds (render/skyline.ts). */
+  /** G9: the skyline's new kinds (render/dressing/skyline.ts). */
   hill: { colour: '#26362b', around: 14, rings: 4 },
   treeline: { colours: ['#1c3024', '#22382a', '#18291f', '#2a3a2c'], spacing: 2.4, sides: 6, width: 0.27, jitter: 0.35 },
   tower: {
@@ -201,7 +201,7 @@ export const DRESSING = {
     /** MS1: light strips up a tower's field face, `width` m wide, `inset` m in from its edges, glowing `day` / `night`. */
     strip: { width: 0.35, inset: 0.4, day: 0.9, night: 1.6 },
   },
-  /** MS1: silos (render/skyline.ts): drums `gap` m apart, cone roofs `roof` radii tall, a band `band` m tall at `bandAt` m. */
+  /** MS1: silos (render/dressing/skyline.ts): drums `gap` m apart, cone roofs `roof` radii tall, a band `band` m tall at `bandAt` m. */
   silo: { colour: '#d8d6cf', roofColour: '#9aa0a6', bandColour: '#6f7378', walkway: '#6d737a', gap: 0.8, roof: 0.6, band: 1.2, bandAt: 3 },
   /**
    * MS1: cables strung across the streets: `thick` m, sagging `sag` m in `segments` pieces; paper lanterns on every
@@ -215,7 +215,7 @@ export const DRESSING = {
 } as const;
 
 /**
- * G9: a wooded map's floor (MapDressing.woods; render/woodsDressing.ts places it on the terrain, map detail). Leaf litter
+ * G9: a wooded map's floor (MapDressing.woods; render/dressing/woodsDressing.ts places it on the terrain, map detail). Leaf litter
  * lies flat (`lift` over the ground, never over 3 cm); fallen branches, twigs and short logs keep every rule loose junk
  * keeps (DRESSING.junk: low, against a face, out of every lane, spot and passage).
  */
@@ -264,7 +264,7 @@ export const WOODS = {
 };
 
 /**
- * G9: neon signs (MapDressing.neon; render/neonDressing.ts): tubes `tube` m thick on a dark plate mounted flush on its
+ * G9: neon signs (MapDressing.neon; render/dressing/neonDressing.ts): tubes `tube` m thick on a dark plate mounted flush on its
  * wall (`standoff` only keeps the plate's back off the wall's own surface), glowing `glow` times their colour (self-lit,
  * so they read by day and blaze by night). A sign is mounted on the wall face behind it within `mount` m, and only
  * where that face backs its whole plate. Flicker: the channels share one schedule. Each `cycle` s is cut into one slot
@@ -287,7 +287,7 @@ export const NEON = {
 };
 
 /**
- * G9: posters pasted on street walls (MapDressing.posters; render/streetDressing.ts): a few to a bay, their middles
+ * G9: posters pasted on street walls (MapDressing.posters; render/dressing/streetDressing.ts): a few to a bay, their middles
  * `y` m up, `width` m wide and 1.41 times as tall, `gap` apart, `offset` m proud of the wall; paper and a print of two
  * or three colour blocks (no words, no brands), some torn.
  */
@@ -301,19 +301,19 @@ export const POSTERS = {
   inks: ['#d94fc0', '#2fc9a0', '#b8e63a', '#ecd04a', '#7a4aa0', '#1d1f22', '#7d3b52'],
 };
 
-/** G9: steam from vents and drains (MapDressing.steam; render/smokePlumes.ts): thin, low and never thick enough to hide anyone. */
+/** G9: steam from vents and drains (MapDressing.steam; render/dressing/smokePlumes.ts): thin, low and never thick enough to hide anyone. */
 export const STEAM = { puffs: 9, period: 4.2, rise: 2.8, spread: 0.3, windShare: 0.25, breeze: 0.12, windEase: 2.5, size: [0.35, 1.5] as const, opacity: 0.2, colour: '#e6e2f0', night: 0.55, fadeIn: 0.12, seed: 7717 };
 
 /**
- * G9: fireflies (MapDressing.fireflies; render/fireflies.ts), by night only: points `size` m across hanging `height` m
+ * G9: fireflies (MapDressing.fireflies; render/dressing/fireflies.ts), by night only: points `size` m across hanging `height` m
  * over the ground round the bushes and along the creek, each drifting up to `drift` m and pulsing slowly (a cycle every
  * `period` s, never faster), from `low` to full. Standing still and steady under Reduced motion.
  */
 export const FIREFLIES = { size: 0.11, colour: '#d6ff7a', height: [0.3, 1.9] as const, drift: 0.35, period: [2.6, 5] as const, low: 0.12, reach: 2.5, seed: 6161 };
 
 /**
- * G9: a plane crossing the sky (MapDressing.plane; render/passingPlane.ts flies it, the tree ring's mesh draws it,
- * render/skyHost.ts): `length` m long at the map's height, `speed` m/s along a seeded line through the sky over the
+ * G9: a plane crossing the sky (MapDressing.plane; render/dressing/passingPlane.ts flies it, the tree ring's mesh draws it,
+ * render/dressing/skyHost.ts): `length` m long at the map's height, `speed` m/s along a seeded line through the sky over the
  * field, `path` m long (a 10 s crossing, so with Neon Heights' pass every 20 s, start to start, the sky is empty half
  * the time); unlit, in `day` or `night` colours with steady wingtip and beacon lights. Hidden under Reduced motion.
  * Its line stays within `dome` of the sky dome's radius from the field's middle (BP3: past the dome, the dome hid it, so
@@ -334,7 +334,7 @@ export const PLANE = {
 };
 
 /**
- * Dust kicked up by feet (Impact grit, render/combatPresentation.ts): a low, faint puff at a sprinting footfall and a
+ * Dust kicked up by feet (Impact grit, render/match/combatPresentation.ts): a low, faint puff at a sprinting footfall and a
  * bigger one (`land`) on landing, tinted by the map (MapDressing.kickedDust), only within `range` m of the camera. Its
  * top stays under about 0.3 m: it never hides anyone. No minimum size on screen: far dust is allowed to vanish.
  */

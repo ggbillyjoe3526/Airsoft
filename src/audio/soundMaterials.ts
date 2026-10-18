@@ -8,7 +8,7 @@ import type { Vec3 } from '../sim/vec';
 
 /**
  * Blocks whose top is leaves, by how deep the leaves go, as drawn (Dev 6 item 44): a planter's shrubs fill the top of its
- * box (render/cityProps.ts). A BB that lands that high on one rustles in the leaves (impactMaterialAt); the box still
+ * box (render/field/mapPieces/cityProps.ts). A BB that lands that high on one rustles in the leaves (impactMaterialAt); the box still
  * stops it as before.
  */
 const LEAFY_TOPS: Readonly<Partial<Record<MapBlock['kind'], number>>> = { planter: CITY_PROPS.planter.foliage };

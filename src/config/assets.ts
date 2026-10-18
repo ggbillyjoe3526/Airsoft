@@ -7,7 +7,7 @@ import { FIGURE } from './characters';
 
 /**
  * The parts of a figure a model can replace, by node name: each part is moved and posed exactly like the built-in
- * figure's (render/characterModels.ts). Author them in figure space: metres, feet at the origin, standing up +Y.
+ * figure's (render/figures/characterModels.ts). Author them in figure space: metres, feet at the origin, standing up +Y.
  * - `body`: torso, head and kit (everything above the hips; it drops when crouching and rolls when leaning);
  * - `legL`, `legR`: each leg, swinging about its hip;
  * - `aimRifle`, `aimPistol`: arms holding the rifle or the pistol, pitching with the aim about the shoulder line;
@@ -68,7 +68,7 @@ export const REPLICA_FILE = {
 
 /**
  * Power-source models (RM3, docs/CC0_ASSETS.md › Power-source models): `src/assets/models/powerSources/<file>.glb`, the
- * menus' picture of a battery or a gas bottle, drawn in the same studio as the replicas' (render/itemPictures.ts). Each
+ * menus' picture of a battery or a gas bottle, drawn in the same studio as the replicas' (render/replicas/itemPictures.ts). Each
  * file is one object, in metres, any way up (the picture frames whatever shows). It loads the first time a menu shows
  * its picture; one that can't be used logs a warning and the item keeps its line drawing.
  */

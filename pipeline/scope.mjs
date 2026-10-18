@@ -7,8 +7,8 @@
 /**
  * What any task may touch besides its `touches` list: tests, the browser tests, docs, CHANGELOG, README and the folder
  * READMEs under `src/` (a task that adds, renames or moves a file keeps its folder's README current, TE2).
- * `pool.md` (game data the game reads at start) and `CLAUDE.md` (the rules every agent works under) are not on it
- * (audit CORE-07): a task that changes them lists them in `touches`.
+ * `data/` (the tables the game reads at start, `pool.md` among them) and `CLAUDE.md` (the rules every agent works under)
+ * are not on it (audit CORE-07): a task that changes them lists them in `touches`.
  */
 export const ALWAYS_ALLOWED = [/\.test\.ts$/, /^e2e\//, /^docs\//, /^CHANGELOG\.md$/, /^README\.md$/, /^src\/(.+\/)?README\.md$/];
 

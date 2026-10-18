@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { CROSSHAIR_COLORS, CROSSHAIR_RANGES, CROSSHAIR_SHAPES, DEFAULT_CROSSHAIR } from '../config/matchInfo';
 import { SETTINGS_KEY } from '../settings/storage';
-import { crosshairCss, crosshairGap, hexColour, loadCrosshair } from './crosshair';
+import { crosshairCss, crosshairGap } from './crosshair';
+import { hexColour, loadCrosshair } from '../settings/hudPrefs';
 
 function storage(saved: Record<string, unknown>): Storage {
   const data = new Map([[SETTINGS_KEY, JSON.stringify({ version: 1, ...saved })]]);

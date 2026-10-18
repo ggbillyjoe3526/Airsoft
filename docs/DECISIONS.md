@@ -129,8 +129,9 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   measured inside every budget line (Depot, container: 35 draw calls of 100, 54k triangles of 150k, 78 MB of 300); its
   frame time on the owner's laptop is still to be measured (PF2). Medium's Player detail is Low.
 - **The Blender figures (owner, 2026-10-10; approved 2026-10-12).** Hands hold the replica naturally; robots wear no
-  vest, holsters, magazines or accessories, their team shown by colour on their highlights; the figure is also the
-  player's first-person body, without its head. A reload pulls the old magazine and throws it (owner, 2026-10-11). The
+  vest, holsters, magazines or accessories, their team shown by colour on their highlights. Your own figure is never
+  drawn in first person, looking down or vaulting included (owner, 2026-10-17, Beta 1 playtest item 24; MV2, replacing
+  BD1's body drawn when you look well down). A reload pulls the old magazine and throws it (owner, 2026-10-11). The
   aim clips turn the replica through 55 % of their ±60 degrees (BF1). Files are packed losslessly after each export
   (`tools/blender/bot-figure/pack.mjs`; no gltfpack: it renames what the game reads). Attachments sit on a sight line
   3.05 cm over the rail; a parts file's optic marks its own (RM8).
@@ -147,11 +148,11 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
 
 - **Hit volume is a body capsule plus a head sphere, no arms or replica (2026-09-30; owner, 2026-10-01).** The drawn
   figure is built from the same numbers; a crouched head top stays at or below 1.15 m, because crouch cover is 1.2 m.
-  `render/figureHitVolume.test.ts` measures it against the drawn figure on every pose (M85). **Every body stops a BB
+  `render/figures/figureHitVolume.test.ts` measures it against the drawn figure on every pose (M85). **Every body stops a BB
   (2026-10-06):** a hit BB knocks the player out and stops, with no bounce off bodies.
 - **The hit area is fitted to each rigged figure (owner, 2026-10-16, Dev 6 playtest; HV1, IM8).** Head, chest,
   shoulders, hips and legs sit on each figure's own bones (`FIGURE_HIT_SHAPES`, read from the clips as the figures
-  load); `render/riggedHitVolume.test.ts` holds every pose of both figures to M85's bar (4 % missed, 3 % thin air). A
+  load); `render/figures/riggedHitVolume.test.ts` holds every pose of both figures to M85's bar (4 % missed, 3 % thin air). A
   new figure must pass it; the built-in figures keep the built-in volume.
 - **Hit calling stays a raised hand and a sign, with no dead rag, night light or shouted "HIT!" for now (owner,
   2026-10-06).**
@@ -199,8 +200,8 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   and jump height (2026-09-28).** Crouched eyes (1.09 m) hide behind 1.2 m cover and standing eyes (1.66 m) shoot over
   it. Crouch cover is unclimbable (tested).
 - **3 holsters the replica (1 primary, 2 secondary, rebindable): moving holstered is faster, never past the sprint, and
-  the draw from the holster slower (owner, 2026-10-06 and 2026-10-16; M92, MV1).** Holstered run 5.0 m/s against 4.2
-  with the replica out (`MOVEMENT.holsterRunSpeed`); sprint 6.3 either way. A draw takes 1.8 times the replica's own
+  the draw from the holster slower (owner, 2026-10-06, 2026-10-16 and 2026-10-17; M92, MV1, MV2).** Holstered run
+  5.4 m/s against 4.2 with the replica out (`MOVEMENT.holsterRunSpeed`); sprint 6.3 either way. A draw takes 1.8 times the replica's own
   (`HOLSTER.drawScale`). A slot key, a fresh trigger pull, an aim press or a reload draws it. Bots holster only on a
   calm sprint through their own half (`ai/botHolster.ts`).
 - **Vaulting is Jump at a low obstacle, with no key of its own (owner, 2026-10-12; M102).** Obstacles 0.6 to 0.95 m
@@ -264,7 +265,7 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
 ## Maps and modes
 
 - **What no player can see is not drawn (owner, 2026-10-16, MS1).** Beyond a map's walls only what shows over them from
-  a lane, a spawn or a raised floor is built (`render/skylineSeen.test.ts`). Look-only fixtures hung over the field stay
+  a lane, a spawn or a raised floor is built (`render/dressing/skylineSeen.test.ts`). Look-only fixtures hung over the field stay
   out of the room a player takes up. Woodland's bushes are small and decorative (0.9 to 1.25 m): crouch cover, never
   full cover.
 - **The maps' vault walls are 0.9 m, at most 0.4 m deep, open above (M102, 2026-10-13).** Not cover: a crouched
@@ -297,6 +298,16 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   BBs (owner, 2026-10-04).** No prone, a gentle slope, one much higher end with the flag. It plays 5v5 by default and
   allows 6v6 (owner, 2026-10-06). Its long open lines are intended (the longest clear line stays under 141 m). Its
   starts are hidden from each other and the east end stands at most 2 m above the west (M88; `map/woodland.test.ts`).
+- **Woodland has no boulders, no lone oak, chest-high fort walls and a roofed hut (owner, 2026-10-17, Beta 1 playtest
+  item 30 and his tweaks: "completely remove all boulders. I hate them.").** Logs give the cover instead: log piles on
+  the fort's climbs, fallen trunks on the meadow. The fort's outer walls are 1.5 m (at 1.2 m Hard attackers won 76 % of
+  Attack / Defend); the hut is 3 m under the cabin's grey tin roof, which he picked over roofing the whole fort (WL2).
+- **Woodland's West Hill, a meadow swell and a dry ravine (owner, 2026-10-17: "a small hill (enough to stop the other
+  side immediately seeing them)… one side of the map should have a more significant elevation change"; he picked "Land
+  first" on the concept).** The West Rise's crest is 3.4 m at its middle and 2.2 m at its ends. One 0.6 m swell sits on
+  the meadow; the concept's second, at (66, 37), tipped Pro Elimination to 37.5 % for the west end. The south creek is a
+  dry ravine 2.2 m deep from plan x 40 east, easing to 1 m by the hill, so no slope passes a ramp's. The stream in its
+  bed is a later step (WL3).
 - **Neon Heights is the third field: a vertical futuristic city with Day and Night (owner, 2026-10-04).** 46 × 30 m,
   three playable floors, roofs not playable, stairs only, open windows with a 1.2 m sill, 4v4, both modes, Night first.
 - **Bushes hide you and stop BBs, but not people (2026-10-15, FO1; Claude's defaults; replaces "Bushes hide but BBs
@@ -363,7 +374,7 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   picks are the sandboxed ones. The owner can rule for a separate practice loadout.
 - **Aiming down the 2x scope looks like the red dot: the replica stays in view and the world shows round it (owner,
   2026-10-13, Dev 5 playtest note 5).** The view zooms 2× and the scope's rear glass shows the world
-  (`render/eyepiece.ts`); the dark surround is gone, so the scope's cost is its slower raise alone.
+  (`render/replicas/eyepiece.ts`); the dark surround is gone, so the scope's cost is its slower raise alone.
 
 ## Menus, HUD, settings and accessibility
 
@@ -374,7 +385,14 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   Colour tab (MR1), and the Voices placeholder is gone. The top bar's level reads "LVL 3".
 - **Small menu rulings (owner, 2026-10-03 to 2026-10-07).** The tagline is "Call your hit. Go again." Menu headings and
   labels are in capitals (in the stylesheet), descriptions as written. Unbuilt items are listed greyed out with a LATER
-  tag (`config/menus.ts`). Menus at 4K with 100 % OS scaling stay as they are; scaling them like the HUD is a Beta task.
+  tag (`config/menus.ts`).
+- **The menus grow with a tall window as the HUD does (UX1, 2026-10-17; replaces decision 16's "as they are").**
+  `menuScale` zooms `.menus` by the window height over 1080, up to 1.5× at 4K, held back so the layout keeps 1500 px of
+  width; 1080p and smaller draw as before. Heights inside use `--vh`, since the zoom multiplies `vh`.
+- **A menu page is pinned to the window; only its long part scrolls (UX1, 2026-10-17).** The top bar, the heading and the
+  main button always show; the Match choices, a Settings group's rows, the Loadout's numbers, the Armory's levels and
+  Customise's lists scroll inside (`.menu-scroll`, fading at the foot while more lies below). A window under 821 px high
+  draws spacing and controls a step closer. Below 901 px wide only the Match screen stays pinned.
 - **The order wheel is on Z (owner, 2026-10-04); Hold here X, Regroup V, Follow me F.** Orders end when their giver is
   hit and at each round start. A hidden tab or a window that loses focus pauses the match. Esc while you are out skips the
   round at once (owner, 2026-10-13).
@@ -416,6 +434,10 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   only on a map that hosts it, and a rule the mode doesn't read is hidden.
 - **The mode cards' pictures are deleted (owner, 2026-10-17; KI2).** The cards are text boxes since MR1, so the pictures
   were never shown; a picture the player never sees doesn't ship.
+- **The tutorial teaches leaning, and its read cards last 10 s (owner, 2026-10-17, Beta 1 playtest item 33; TT2).** The
+  lean step comes back after Crouch: hold Q and E (or their bindings) to peek either way, ticked once both sides are
+  done. It teaches peeking, not resting on cover (note 30). Every read card stays up 10 s with its filling bar, in place
+  of TT1's 5 to 8 s.
 - **A UI redesign, a Visual redesign, an Audio redesign and a Performance update are planned for later, their versions
   not set (owner, 2026-10-13 and 2026-10-16).** Parked in `docs/IDEAS.md` until he places them, with no work before.
 

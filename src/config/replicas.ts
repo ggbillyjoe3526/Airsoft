@@ -84,7 +84,7 @@ export type ReplicaModelKind = 'rifle' | 'pistol';
 
 export interface ReplicaLook {
   model: ReplicaModelKind;
-  /** Its own first-person model (render/replicaModels.ts), when it isn't its kind's standard one (the Cyber Pistol's, M32). */
+  /** Its own first-person model (render/replicas/replicaModels.ts), when it isn't its kind's standard one (the Cyber Pistol's, M32). */
   viewmodel?: 'cyber';
   /** The sounds it makes (config/sounds.ts), when they aren't its power's own (the Cyber Pistol's, M32). */
   sound?: ShotProfile;
@@ -94,7 +94,7 @@ export interface ReplicaLook {
    * Where it sits in the first-person view (camera space, metres) and its inward cant (radians, + turns the muzzle
    * left). A barrel pointing straight ahead (0) runs on screen from the muzzle to the crosshair, the line your BBs
    * are drawn along, so the rifle keeps 0. The pistol keeps a slight lean (owner playtests, 2026-10-03: 0.36 looked
-   * aimed off to the left, 0 "slightly too straight"); `render/tracerLine.test.ts` caps how far it may turn.
+   * aimed off to the left, 0 "slightly too straight"); `render/effects/tracerLine.test.ts` caps how far it may turn.
    */
   hold: { position: readonly [number, number, number]; yaw: number };
   /**
@@ -104,7 +104,7 @@ export interface ReplicaLook {
   aimHold?: readonly [number, number, number];
   /**
    * Its iron sights (M84: every replica aims down sights, through these when no optic is fitted), in the model's own
-   * space (metres, bore along -Z, up +Y, as render/replicaModels.ts and its model file draw it): the rear sight's aim
+   * space (metres, bore along -Z, up +Y, as render/replicas/replicaModels.ts and its model file draw it): the rear sight's aim
    * point (an aperture's centre, a notch's top, a fin's tip) and the front sight's (a post's tip), each [height, z],
    * and how far in front of the eye the rear one sits when aimed (a cheek weld for a rifle, arms out for a pistol).
    * The viewmodel lines the two up on the view's centre line, so the post's tip is where your BBs go. Without it the
@@ -158,7 +158,7 @@ const AEG_BUILT_IN: BuiltInReplica = {
     model: 'rifle',
     suppressed: false,
     hold: { position: [0.16, -0.17, -0.48], yaw: 0 },
-    // The optic's axis is RIFLE_OPTIC.axisUp above the model's origin (render/replicaModels.ts); its back end about
+    // The optic's axis is RIFLE_OPTIC.axisUp above the model's origin (render/replicas/replicaModels.ts); its back end about
     // 0.2 m in front of the eye, so the tube frames the view without filling it.
     aimHold: [0, -0.126, -0.205],
     // The flip-up aperture (its hole's centre) at the back of the receiver rail and the front post's tip, small and low
@@ -362,5 +362,8 @@ export const TRIGGER = {
   burstShots: 3,
 } as const;
 
-/** How the HUD names each fire mode. */
+/** How the HUD names each fire mode in full (the chip's spoken name). */
 export const FIRE_MODE_LABELS: Readonly<Record<FireMode, string>> = { semi: 'Semi', burst: 'Burst', auto: 'Auto' };
+
+/** The letter on each fire mode's chip on the replica panel (UI2, Beta 1 playtest: "S/B/A"). */
+export const FIRE_MODE_LETTERS: Readonly<Record<FireMode, string>> = { semi: 'S', burst: 'B', auto: 'A' };

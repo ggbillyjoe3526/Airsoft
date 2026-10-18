@@ -1,8 +1,8 @@
-import statsText from '../../stats.md?raw';
+import statsText from '../../data/stats.md?raw';
 import { loadStats, type StatsFile } from './statsFile';
 
 /**
- * The game's performance numbers: stats.md at the repository's root, bundled into the build and read once at start
+ * The game's performance numbers: data/stats.md, bundled into the build and read once at start
  * (M29). The config modules (replicas, attachments, optics, lasers) lay it over their built-in numbers; anything it
  * can't read keeps the built-in number and is listed in the console (src/config/stats.test.ts fails on it).
  */

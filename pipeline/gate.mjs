@@ -23,7 +23,7 @@
  * the task ids from the pull request's title in GATE_PR_TITLE (audit CORE-08).
  * With no task, scope and changelog are skipped. Exit code 1 when any gate fails.
  * CI splits the work across jobs (audit CORE-04): `--tests fast` runs the unit tests' fast project only, `--tests slow
- * --shard k/n` one share of the headless bot-match guards (vitest's own sharding, by file), and `--only tests` runs
+ * --shard k/n` one share of the headless bot-match guards (balanced by their measured seconds, pipeline/shards.mjs), and `--only tests` runs
  * the tests gate alone (no build, smoke, perf, scope or changelog). `--only smoke --shard k/n` runs one share of the
  * browser smoke test (Playwright's own sharding, by file; its servers build what they need), so the build and unit
  * tests run beside it with `--no-smoke` (2026-10-12). Off CI the default, `--tests auto`, runs the slow
@@ -38,6 +38,7 @@ import { allowedFile, findTaskBlock, parseTaskList, qaAllowedFile, taskIdsFromTi
 import { baselineFileName, baselineLag, baselineLagWarning, budgetFor, frameTimesGatedFor, judgeRun, runFileName, runName, selectPerfRuns } from './perfMatrix.mjs';
 import { smokeFailures } from './smokeReport.mjs';
 import { metricsRow } from './records.mjs';
+import { balancedShare, readTimes } from './shards.mjs';
 import { MAX_FAILURES, buildFailures, failureLines, failuresSummary, vitestFailures } from './failures.mjs';
 import { writePacket } from './packet.mjs';
 import { reachNote, slowGuardsReached } from './testReach.mjs';
@@ -152,14 +153,16 @@ function record(name, gate) {
 }
 
 // 1. build: type check and the production build with its chunk budgets (vite.config.ts fails over budget on CI). Always
-// built; the stamp it leaves lets the smoke test's release server reuse dist/ (pipeline/build-cached.mjs). --quick
+// built off CI; on CI the workflow's `bundles` job has already built this source once (type check and budgets
+// included) and handed its dist/ over, so the stamp lets the gate reuse it instead of building again (DX4). The stamp
+// it leaves lets the smoke test's release server reuse dist/ (pipeline/build-cached.mjs). --quick
 // leaves out the .br/.gz copies (owner decision 3 of audit 2, CORE-11): only the release smoke test and a host read
 // them, and Brotli is most of the build's plugin time. The full gate and CI say so explicitly, so a shell's leftover
 // AIRSOFT_PRECOMPRESS=0 can't reach them.
 const PRECOMPRESS_ENV = { AIRSOFT_PRECOMPRESS: options.quick ? '0' : '1' };
 if (skipAllBut('build')) record('build', { pass: null, reason: `skipped (--only ${options.only})` });
 else {
-  const r = run('build', 'node', ['pipeline/build-cached.mjs', '--mode', 'production', '--force'], { ...PRECOMPRESS_ENV, ...(options.ci ? { CI: '1' } : {}) });
+  const r = run('build', 'node', ['pipeline/build-cached.mjs', '--mode', 'production', ...(options.ci ? [] : ['--force'])], { ...PRECOMPRESS_ENV, ...(options.ci ? { CI: '1' } : {}) });
   record('build', { pass: r.ok, ms: r.ms, log: r.log, precompressed: !options.quick, ...(r.ok ? {} : { evidence: tail(r.output), failures: buildFailures(r.output, ROOT).slice(0, MAX_FAILURES) }) });
 }
 
@@ -181,13 +184,26 @@ function testProjects() {
   }
 }
 
+/**
+ * How the tests gate cuts out its share: the slow guards by their measured seconds (pipeline/shards.mjs, so CI's slow
+ * jobs finish together; DX4), anything else by vitest's own `--shard`, which splits by file count.
+ */
+function shardArgs(projects, share) {
+  if (projects !== 'slow') return [`--shard=${share}`];
+  const listed = JSON.parse(execFileSync('npx', ['vitest', 'list', '--project', 'slow', '--filesOnly', '--json'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], shell: process.platform === 'win32' }));
+  const files = listed.map((t) => relative(ROOT, t.file).split('\\').join('/'));
+  const [k, n] = share.split('/').map(Number);
+  // vitest takes the paths as filters; with 44 guards and three jobs no share is empty (an empty one would run them all).
+  return balancedShare(files, readTimes(), k, n);
+}
+
 // 2. tests: the unit suite, with its JSON report as the artifact.
 if (skipAllBut('tests')) record('tests', { pass: null, reason: `skipped (--only ${options.only})` });
 else {
   const json = join(ARTIFACTS, 'vitest.json');
   const chosen = testProjects();
   const projects = chosen.projects === 'all' ? [] : ['--project', chosen.projects];
-  const shard = options.shard ? [`--shard=${options.shard}`] : [];
+  const shard = options.shard ? shardArgs(chosen.projects, options.shard) : [];
   const r = run('tests', 'npx', ['vitest', 'run', ...projects, ...shard, '--reporter=json', `--outputFile=${json}`]);
   let summary = { pass: r.ok, ms: r.ms, log: r.log };
   try {

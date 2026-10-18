@@ -9,7 +9,7 @@ import { expect, type Page } from '@playwright/test';
  * SwiftShader; each pixel threshold was checked against the counts at this size.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- the in-page code reads the game's untyped debug handle. */
+/* `any` in this file: the in-page code reads the game's untyped debug handle. */
 export type Any = any;
 
 /**
@@ -146,9 +146,11 @@ export async function boot(page: Page, map: string, light: string, webgpu = fals
         for (const [p] of saved) p.visible = name !== null && p.name === name;
         return () => saved.forEach(([p, v]: Any) => (p.visible = v));
       },
-      /** Settings › Accessibility › Reduced motion turned on or off mid-match, as the menu does. */
+      /** Settings › Accessibility › Reduced motion turned on or off mid-match, as the menu does (settings/hudPrefs.ts setHudPref, DX5): the session shows it from its next frame. */
       reduceMotion(on: boolean): void {
-        game.changeReducedMotion(on);
+        game.prefs.reducedMotion = on;
+        game.prefs.version++;
+        game.hudLook.show();
       },
     };
     w.__qa = qa;

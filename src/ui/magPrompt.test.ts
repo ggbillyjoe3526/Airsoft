@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_MAG_PROMPTS, MAG_SHARE, MAG_WHEEL_LABELS } from '../config/magShare';
 import { loadSetting, oneOf, saveSetting, SETTINGS_KEY } from '../settings/storage';
-import { loadMagPrompts } from './hudSettings';
+import { loadMagPrompts } from '../settings/hudPrefs';
 import { ORDER_WHEEL } from '../config/squad';
 import { MagPrompt, magLine } from './magPrompt';
 import { ORDER_KEYS, OrderWheel } from './orderWheel';

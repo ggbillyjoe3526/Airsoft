@@ -8,7 +8,7 @@ import type { GameEvent } from './events';
 /**
  * The weapon torch (M33h): a light fitted to a replica (ReplicaParts.light), switched on and off through the command
  * like any other control, so the player and the bots work it the same way. Plain data on the character; what it lights
- * is worked out by map/torchLight.ts (for the bots) and drawn by render/torchBeams.ts.
+ * is worked out by map/torchLight.ts (for the bots) and drawn by render/light/torchBeams.ts.
  */
 
 /**

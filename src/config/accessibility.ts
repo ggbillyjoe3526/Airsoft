@@ -19,9 +19,9 @@ export const REDUCED_MOTION = {
   sway: 0,
   /** The replica's kick per shot and its jolt when you're hit. */
   kick: 0.5,
-  /** The view's roll as you lean, and its dip and tip over a vault (render/cameraRig.ts). */
+  /** The view's roll as you lean, and its dip and tip over a vault (render/match/cameraRig.ts). */
   leanRoll: 0.25,
-  /** The dust motes drifting in the sunlight (render/dustMotes.ts, M14): shown at all (1) or not (0). */
+  /** The dust motes drifting in the sunlight (render/effects/dustMotes.ts, M14): shown at all (1) or not (0). */
   dust: 0,
 } as const;
 

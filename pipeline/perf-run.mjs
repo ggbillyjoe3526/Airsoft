@@ -201,7 +201,7 @@ async function measure(preset) {
   // The saved picks are what the Match screen starts: a dev map's data arrives a moment after the title shows. A map or
   // mode the game doesn't have (or doesn't offer on that map) never becomes the pick.
   const offered = await page
-    .waitForFunction(({ map, mode }) => { const p = globalThis.airsoft?.playedPicks?.(); return p?.map === map && p?.mode === mode; }, { map: gameMap, mode: options.mode }, { timeout: 60_000 })
+    .waitForFunction(({ map, mode }) => { const p = globalThis.airsoft?.setup?.playedPicks?.(); return p?.map === map && p?.mode === mode; }, { map: gameMap, mode: options.mode }, { timeout: 60_000 })
     .then(() => true, () => false);
   if (!offered) {
     await page.close();
@@ -210,7 +210,7 @@ async function measure(preset) {
   // The click waits for the menu's page to answer: on a software WebGL2 adapter the menu's item pictures and the
   // match's warm-up compile hold it for 20 s and more (W6a), past Playwright's 30 s default on a slow run.
   await setup.getByRole('button', { name: 'Start match', exact: true }).click({ timeout: 120_000 });
-  await page.waitForFunction((t) => globalThis.airsoft?.state && globalThis.airsoft.state.tick >= t, options.warmupTicks, { timeout: 120_000 });
+  await page.waitForFunction(() => globalThis.airsoft?.state && globalThis.airsoft.state.tick >= 1, null, { timeout: 120_000 });
   const backend = await page.evaluate(() => globalThis.airsoft.renderer.backend);
   console.log(`perf: match running (map ${options.map}, mode ${options.mode}, env ${options.env}, preset ${preset}, cpu ×${options.cpu}, drawn with ${backend}); measuring ${ticks} ticks from tick ${options.warmupTicks}`);
   if (backend !== options.backend) {
@@ -220,14 +220,18 @@ async function measure(preset) {
     process.exit(1);
   }
 
-  const sample = await page.evaluate(async ({ ticks, maxSeconds, stallMs }) => {
+  const sample = await page.evaluate(async ({ ticks, warmupTicks, maxSeconds, stallMs }) => {
     const g = globalThis.airsoft;
     // The renderer's draw counts, read the same on WebGL and the node renderer (one object, refilled each read).
     const stats = () => g.renderer.stats;
     const frames = [];
     const heap = [];
     let calls = 0, callsMax = 0, tris = 0, trisMax = 0, dressing = 0, dressingMax = 0;
-    const tick0 = g.state.tick;
+    // The window opens on the first frame at or past the warm-up tick (PF4): waiting for that tick from outside the page
+    // overshot it by up to three of software rendering's ten-tick frames, so each run measured a window shifted by a
+    // different amount, and a window starting later loses the opening's heaviest view (a few thousand triangles on
+    // the mean).
+    let tick0 = -1;
     // The figures' drawing work each frame (BF1): CharacterRenderer.update timed in place.
     const figures = g.session?.match?.characters;
     let figureMs = 0;
@@ -236,7 +240,7 @@ async function measure(preset) {
       figures.update = (...a) => {
         const t = performance.now();
         update(...a);
-        figureMs += performance.now() - t;
+        if (tick0 >= 0) figureMs += performance.now() - t;
       };
     }
     const heapNow = () => performance.memory?.usedJSHeapSize ?? 0;
@@ -246,19 +250,37 @@ async function measure(preset) {
       if (heapGc) for (let i = 0; i < 2; i++) globalThis.gc();
       return heapNow();
     };
-    const heapStart = liveHeap();
-    heap.push(heapStart);
+    let heapStart = 0;
     // A match that ends inside the window (Neon Heights Extraction on the desktop's 3600 ticks) stops the simulation:
     // its frames from the last tick on are the results screen's, so the window ends at that tick (`matchEnded`).
     let matchEnded = false;
-    await new Promise((done) => {
-      const t0 = performance.now();
-      let last = t0;
-      let nextHeap = t0 + 1000;
-      let tickSeen = g.state.tick, advancedAt = t0;
+    await new Promise((done, fail) => {
+      let t0 = -1, last = 0, nextHeap = 0;
+      let tickSeen = -1, advancedAt = 0;
       // One object, written in place on each tick, so the window makes no garbage of its own.
-      const kept = { n: 0, calls, callsMax, tris, trisMax, dressing, dressingMax };
+      const kept = { n: 0, calls: 0, callsMax: 0, tris: 0, trisMax: 0, dressing: 0, dressingMax: 0 };
+      // As long as the old wait for the warm-up allowed (a timer: a page that stops drawing stops its frames too).
+      const guard = setTimeout(() => fail(new Error(`the match never reached its warm-up tick ${warmupTicks}`)), 120_000);
       const f = (now) => {
+        if (tick0 < 0) {
+          if (g.state.tick >= warmupTicks) {
+            clearTimeout(guard);
+            tick0 = g.state.tick;
+            heapStart = liveHeap();
+            heap.push(heapStart);
+          }
+          requestAnimationFrame(f);
+          return;
+        }
+        // The frame after the collections starts the clock, so no frame measured carries their time.
+        if (t0 < 0) {
+          t0 = last = now;
+          nextHeap = t0 + 1000;
+          tickSeen = g.state.tick;
+          advancedAt = now;
+          requestAnimationFrame(f);
+          return;
+        }
         frames.push(now - last);
         last = now;
         const s = stats();
@@ -329,7 +351,7 @@ async function measure(preset) {
       figureMs: figureMs / n,
       matchEnded,
     };
-  }, { ticks, maxSeconds: options.maxSeconds, stallMs: STALL_MS });
+  }, { ticks, warmupTicks: options.warmupTicks, maxSeconds: options.maxSeconds, stallMs: STALL_MS });
   // The graphics card the browser drew with (an integrated GPU instead of the discrete one would show here), read after
   // the window from a context of its own, released at once.
   const gpu = await page.evaluate(() => {

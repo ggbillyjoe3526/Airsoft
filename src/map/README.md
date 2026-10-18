@@ -7,7 +7,7 @@ meshes. The format, coordinates and Extraction block are in `docs/ARCHITECTURE.m
   of its own; a map that goes public moves its import to `maps.ts`.
 - `depot.ts` (plan coordinates turned to world ones), `woodland.ts` (terrain, bushes, night), `neonHeights.ts` (city,
   storeys, signs), `range.ts` (the practice range, built from `config/range.ts`). Set dressing, one file per map, read
-  only by `render/mapDressing.ts`: `depotDressing.ts`, `woodlandDressing.ts`, `neonHeightsDressing.ts`, and the range's
+  only by `render/dressing/mapDressing.ts`: `depotDressing.ts`, `woodlandDressing.ts`, `neonHeightsDressing.ts`, and the range's
   `rangeDressing.ts` (M81: also its props and the wall kept clear round its distance boards). Each has one low wall
   built to be vaulted (M102, `config/vault.ts` `VAULT_WALL_HEIGHT`), checked by `vaultSpots.test.ts`.
   `ms1QA.test.ts` checks MS1's map detail: Woodland's cabin roof, lanterns, bush sizes and brighter night, and Neon

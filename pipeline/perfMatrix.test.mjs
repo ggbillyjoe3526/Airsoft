@@ -45,7 +45,7 @@ describe('the perf gate\'s matrix (perf-budget.json, M76, audit CORE-03)', () =>
 describe('which combinations a diff runs (pipeline/perfMatrix.mjs)', () => {
   it('runs nothing for a diff without a perf path, nor for tests and docs under one', () => {
     expect(names(['docs/TASKS.md', 'src/ui/hud.ts', 'pipeline/gate.mjs', 'README.md'])).toEqual([]);
-    expect(names(['src/render/lighting.test.ts', 'src/ai/botBrain.test.ts', 'pipeline/perfMatrix.test.mjs'])).toEqual([]);
+    expect(names(['src/render/light/lighting.test.ts', 'src/ai/botBrain.test.ts', 'pipeline/perfMatrix.test.mjs'])).toEqual([]);
     // Test support and the balance figures (TE4) ship nothing either; a production file beside them still counts.
     expect(names(['src/ai/depotMatchSupport.ts', 'src/ai/extractionRunSupport.ts', 'src/sim/testSupport.ts', 'src/ai/balance/depotPro.balance.ts', 'src/ai/balance/balanceSupport.ts'])).toEqual([]);
     expect(isPerfPath('src/ai/botBrain.ts')).toBe(true);
@@ -54,7 +54,7 @@ describe('which combinations a diff runs (pipeline/perfMatrix.mjs)', () => {
   });
 
   it('runs the whole matrix for a shared perf path, config and pool included (CORE-03)', () => {
-    for (const file of ['src/render/lighting.ts', 'src/sim/bbs.ts', 'src/config/graphics.ts', 'src/pool/pool.ts', 'src/map/maps.ts', 'vite.config.ts', 'src/core/loop.ts']) {
+    for (const file of ['src/render/light/lighting.ts', 'src/sim/bbs.ts', 'src/config/graphics.ts', 'src/pool/pool.ts', 'src/map/maps.ts', 'vite.config.ts', 'src/core/loop.ts']) {
       expect(isPerfPath(file), file).toBe(true);
       expect(names([file]), file).toEqual(matrix.map(runName));
     }
@@ -63,7 +63,7 @@ describe('which combinations a diff runs (pipeline/perfMatrix.mjs)', () => {
   it('runs only a map\'s combinations for that map\'s own files', () => {
     expect(names(['src/map/woodland.ts'])).toEqual(both(['woodland elimination low', 'woodland extraction low', 'woodland extraction medium']));
     expect(names(['src/map/depot.ts'])).toEqual(both(['depot elimination low', 'depot extraction low']));
-    expect(names(['src/render/cityProps.ts', 'src/map/neonHeights.ts'])).toEqual(both(['neon elimination low', 'neon extraction low', 'neon extraction medium']));
+    expect(names(['src/render/field/mapPieces/cityProps.ts', 'src/map/neonHeights.ts'])).toEqual(both(['neon elimination low', 'neon extraction low', 'neon extraction medium']));
   });
 
   it('runs a map\'s Extraction combinations for its Extraction data, and every map\'s for Extraction\'s own code', () => {
@@ -71,7 +71,7 @@ describe('which combinations a diff runs (pipeline/perfMatrix.mjs)', () => {
     expect(names(['src/map/neonHeightsExtraction.ts'])).toEqual(both(['neon extraction low', 'neon extraction medium']));
     expect(names(['src/sim/extraction.ts'])).toEqual(both(['depot extraction low', 'woodland extraction low', 'neon extraction low', 'woodland extraction medium', 'neon extraction medium']));
     expect(perfScope('src/ai/extractionRoles.ts')).toEqual({ mode: 'extraction' });
-    expect(perfScope('src/render/exitRenderer.ts')).toEqual({ mode: 'extraction' });
+    expect(perfScope('src/render/match/exitRenderer.ts')).toEqual({ mode: 'extraction' });
   });
 
   it('unions the scopes of several files, in the matrix\'s order', () => {

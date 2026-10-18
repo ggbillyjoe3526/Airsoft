@@ -1,9 +1,9 @@
 import type { SurfaceTextureId } from './render';
 
 /**
- * Wear and weathering (G6): what the texture library draws into its textures (render/textureLibrary.ts), and the
+ * Wear and weathering (G6): what the texture library draws into its textures (render/field/textureLibrary.ts), and the
  * world-space grime the map's surface shaders add on Medium and up (QualitySettings.weathering,
- * render/surfaceShader.ts). Look only: nothing here changes what collides or what a bot sees.
+ * render/light/surfaceShader.ts). Look only: nothing here changes what collides or what a bot sees.
  */
 
 /** Marks drawn into a library texture, each 0 (none) to 1 (heavy). */
@@ -65,7 +65,7 @@ export const WEATHERING = {
   noise: { patchScale: 0.33, fineScale: 3.7, creep: 0.45, creepVary: 0.5, streakAcross: 9, streakAlong: 0.22, rustScale: 1.1 },
   mix: { patches: 0.38, creep: 0.6, streaks: 0.32, grey: 0.45, dirt: [0.6, 0.55, 0.48], rust: [0.36, 0.17, 0.07], rustStrength: 0.85, roughen: 0.6 },
   /**
-   * Stains on the ground (map detail, render/mapDecals.ts; their pictures in the signs' atlas): the floors are cut into
+   * Stains on the ground (map detail, render/field/mapDecals.ts; their pictures in the signs' atlas): the floors are cut into
    * squares `cell` m across and each square holds one stain with chance `chance` (from `seed` and the square, so the
    * same map always gets the same stains), `size` m across (a tyre mark `tyre` wide and a quarter as deep), at least
    * `inset` m inside its floor's edge, never where a block stands within `clearance` m above the floor (no stain is

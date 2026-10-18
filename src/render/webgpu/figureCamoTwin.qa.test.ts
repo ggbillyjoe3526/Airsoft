@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { FIGURE } from '../../config/characters';
 import { createRng, rngNext } from '../../sim/rng';
-import { CAMO_ATTRIBUTE, camoTone, SLEEVE_CAMO_SEED, useSleeveCamo } from '../figureCamo';
-import { useVertexFinish } from '../figureFinish';
+import { CAMO_ATTRIBUTE, camoTone, SLEEVE_CAMO_SEED, useSleeveCamo } from '../figures/figureCamo';
+import { useVertexFinish } from '../figures/figureFinish';
 import { figureTwin } from './figureNodes';
 
 /**
@@ -39,7 +39,7 @@ interface Inputs {
   fwidth: (n: number) => number;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- TSL's node classes are untyped here. */
+/* `any` in this file: TSL's node classes are untyped here. */
 function evalNode(n: any, inp: Inputs, memo = new Map<any, V>()): V {
   const known = memo.get(n);
   if (known !== undefined) return known;

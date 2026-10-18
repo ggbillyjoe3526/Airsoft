@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DIFFICULTIES, type Difficulty } from '../config/bots';
-import { MatchSession } from '../matchSession';
+import { MatchPresentation } from '../render/match/matchPresentation';
 import { DEFAULT_WHAT_GOT_YOU_MODE, WHAT_GOT_YOU_MODES, type WhatGotYouMode, whatGotYouShown } from '../config/matchInfo';
 import { PRO_TIPS, proTip } from '../config/tutorial';
 import { flushSettings, loadSetting, oneOf, saveSetting } from '../settings/storage';
 import { createHitFacts, type HitFacts } from '../sim/hitFacts';
-import { loadWhatGotYouMode } from './menus/savedChoices';
+import { loadHudPrefs, loadWhatGotYouMode, setHudPref } from '../settings/hudPrefs';
 import { FakeElement } from './testSupport';
 import { describeBearing, WhatGotYouCard, whatGotYouText } from './whatGotYou';
 
@@ -119,13 +119,26 @@ describe('Pro briefing tips (M41)', () => {
 });
 
 describe('the What got you setting follows the opponents\' difficulty in a match (M41)', () => {
-  /** A match session with just what setWhatGotYouMode reads: its setup and its presentation (the real session needs a GPU and physics). */
+  const sessionSource = import.meta.glob<string>('../matchSession.ts', { query: '?raw', import: 'default', eager: true })['../matchSession.ts'] ?? '';
+  /**
+   * A match's presentation with just what applyPrefs reads (the real one needs a GPU), handed the preferences and the
+   * level the session hands it (DX5: the opponents', pinned below); `setWhatGotYouMode` is a pick on Settings › HUD.
+   */
   function session(opponents: Difficulty, teammates: Difficulty) {
     const shown: boolean[] = [];
-    const s = Object.create(MatchSession.prototype) as MatchSession;
-    Object.assign(s, { setup: { difficulty: opponents, teammateDifficulty: teammates }, match: { setWhatGotYou: (on: boolean) => shown.push(on) } });
+    const quiet = { setEnabled() {}, setMode() {}, setCorner() {}, setRotating() {}, setHitMarker() {}, setShown() {}, clearCallouts() {} };
+    const m = Object.create(MatchPresentation.prototype) as MatchPresentation;
+    Object.assign(m, { soundCues: quiet, feed: quiet, minimap: quiet, feedback: quiet, magPrompt: quiet, pingMarkers: quiet, setWhatGotYou: (on: boolean) => shown.push(on) });
+    const setup = { difficulty: opponents, teammateDifficulty: teammates };
+    const prefs = loadHudPrefs(null);
+    m.usePrefs(prefs, setup.difficulty);
+    const s = { setWhatGotYouMode: (mode: WhatGotYouMode) => (setHudPref(prefs, 'whatGotYou', mode), m.applyPrefs()) };
     return { s, shown };
   }
+
+  it('is handed the opponents\' level by the match session, not the teammates\'', () => {
+    expect(sessionSource).toMatch(/this\.match\.usePrefs\(prefs, setup\.difficulty\)/);
+  });
 
   it('Auto is on against Pro opponents and off against the rest, whatever the teammates\' level', () => {
     for (const opp of DIFFICULTIES.map((d) => d.id)) {

@@ -1,0 +1,285 @@
+/*
+ * Fitting the window (UX1). The pages under the top bar don't scroll as a whole: the top bar, the page's heading and
+ * its main button always show, and the one part that can outgrow a small window (the Match screen's choices, a
+ * Settings group's rows, the Loadout's numbers) scrolls inside the page, fading at its foot while more lies below
+ * (menuParts.watchScroll marks it). A short window (720 px high) also draws them closer together, and a narrow one
+ * keeps "Your match" beside the choices, so New game's Start match is in sight down to 900 x 600. Below 900 px wide the
+ * other pages stack into one column (narrow.css) and scroll as a whole, as before. Imported after narrow.css, so these
+ * rules win over it.
+ */
+
+/* A part that scrolls: a thin bar, and the fade at its foot while more lies below. Its padding gives a picked card's
+   glow room inside the clipping edge. */
+.menu-hub .menu-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--menu-line) transparent;
+}
+
+.menu-hub .menu-scroll.more-below {
+  mask-image: linear-gradient(0deg, transparent, #000 56px);
+}
+
+/* The page: the window under the top bar; what's in it shares that height. */
+.menu-setup {
+  overflow-y: hidden;
+}
+
+.menu-setup > .play-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Match: the choices scroll beside "Your match", which is never taller than the page. */
+.menu-setup .play-layout {
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.menu-setup .play-main {
+  margin: -8px;
+  padding: 8px;
+}
+
+.menu-setup .play-aside {
+  position: static;
+  align-self: start;
+  max-height: 100%;
+}
+
+/* A narrow window keeps "Your match" and Start match beside the choices rather than under them. */
+@media (max-width: 1180px) {
+  .menu-setup .play-layout {
+    grid-template-columns: minmax(0, 1fr) clamp(250px, 30vw, 320px);
+  }
+}
+
+@media (min-width: 901px) {
+  .menu-hub {
+    overflow-y: hidden;
+  }
+
+  .menu-hub > :not(.sr-only) {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  /* Loadout: the numbers scroll in their panel; the carried and owned replicas share what's left. */
+  .loadout-view {
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .loadout-view > .loadout-selected {
+    max-height: 100%;
+  }
+
+  /* Armory: the level track takes what's left under the band, and scrolls down as well as across past its height. */
+  .armory-columns {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .armory-track {
+    min-height: 0;
+  }
+
+  .armory-track-body {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .armory-track-body > .armory-levels {
+    max-height: 100%;
+  }
+
+  /* Settings: the groups down the left and a group's rows each scroll on their own; "About this setting" stays put. */
+  .settings-columns {
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .menu-hub .settings-side {
+    position: static;
+    margin: -8px;
+    padding: 8px;
+  }
+
+  .menu-hub .settings-panels {
+    margin: -8px;
+    padding: 8px;
+  }
+
+  .settings-about {
+    position: static;
+    align-self: start;
+  }
+
+  /* Customise: Back and where you are stay put; the parts and the replica with its options scroll side by side. */
+  .customise-box,
+  .customise {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .customise {
+    flex: 1 1 auto;
+  }
+
+  .customise-bar {
+    flex: none;
+  }
+
+  .customise-layout {
+    flex: 1 1 auto;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .menu-hub .customise-layout.menu-scroll {
+    overflow-y: visible;
+  }
+
+  .customise-parts,
+  .customise-centre {
+    margin: -8px;
+    padding: 8px;
+  }
+
+  .customise-side {
+    align-self: start;
+    max-height: 100%;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
+/* 901 to 1500 px: Settings' and Customise's third column goes under the second (narrow.css). Settings' rows take what's
+   left over "About this setting"; Customise scrolls as one under Back, its parts pinned at the left. */
+@media (min-width: 901px) and (max-width: 1500px) {
+  .settings-columns {
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .menu-hub .settings-side {
+    grid-row: 1 / -1;
+  }
+
+  .customise-layout {
+    grid-template-rows: none;
+    align-items: start;
+  }
+
+  .menu-hub .customise-layout.menu-scroll {
+    overflow-y: auto;
+  }
+
+  .customise-parts {
+    position: sticky;
+    top: 0;
+    max-height: 100%;
+  }
+
+  .menu-hub .customise-centre.menu-scroll {
+    min-height: auto;
+    overflow-y: visible;
+  }
+
+  .customise-side {
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+/* Below 900 px only the Match screen keeps its pinned parts; the other pages' panels open out and the page scrolls. */
+@media (max-width: 900px) {
+  .menu-hub:not(.menu-setup) .menu-scroll {
+    overflow-y: visible;
+    mask-image: none;
+  }
+}
+
+/* A short window (720 px high): the same type, drawn closer together. The spacing and control heights step down a
+   size, the pictures shrink and the page's edge narrows. */
+@media (max-height: 820px) {
+  .menus {
+    --page-top: 16px;
+    --sp-4: 12px;
+    --sp-5: 18px;
+    --sp-6: 24px;
+    --control-lg: 42px;
+    --control-md: 36px;
+    --control-sm: 32px;
+    --control-xs: 28px;
+  }
+
+  /* Match: the sections closer, the map cards lower, and the ruleset's line only in the help line, which shows it while
+     no rule is pointed at. */
+  .play-main {
+    gap: var(--sp-3);
+  }
+
+  .play-main .menu-section-head {
+    margin-bottom: 6px;
+  }
+
+  :is(.map-cards, .practice-places) .choice-card {
+    aspect-ratio: 4 / 1;
+  }
+
+  .match-ruleset-note {
+    display: none;
+  }
+
+  .match-panel .menu-row {
+    padding-block: 1px;
+  }
+
+  .match-help {
+    min-height: calc(1.4em + 2 * var(--sp-2));
+    padding-block: var(--sp-2);
+  }
+
+  /* Loadout: lower pictures, and the numbers' rows closer. */
+  .carried-card .gear-slot {
+    min-height: 240px;
+  }
+
+  .carried-card .gear-slot > .pic-slot {
+    min-height: 100px;
+  }
+
+  .replica-tile {
+    min-height: 124px;
+  }
+
+  .replica-tile .pic-slot {
+    aspect-ratio: 3 / 1;
+  }
+
+  .perf-bar {
+    margin: 1px 0 4px;
+  }
+
+  /* Armory and Customise: lower pictures, so the track and the options start higher. */
+  .armory-item > .pic-slot {
+    height: 40px;
+  }
+
+  .customise-hero {
+    max-height: calc(28 * var(--vh));
+  }
+}
+
+/* Short and wide enough for the saved loadouts' note beside their buttons: one row, not two. */
+@media (max-height: 820px) and (min-width: 1181px) {
+  .saved-row {
+    flex-wrap: nowrap;
+  }
+
+  .saved-row > .saved-hint,
+  .saved-row > .saved-actions {
+    flex: none;
+  }
+}

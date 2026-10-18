@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import poolText from '../../pool.md?raw';
+import poolText from '../../data/pool.md?raw';
 import { RECORDS_KEY } from '../config/matchInfo';
 import { storedIsNewer } from '../save/overStored';
 import { addMatch, emptyRecords, loadRecords, saveRecords } from '../stats/records';
-import levelsText from '../../levels.md?raw';
+import levelsText from '../../data/levels.md?raw';
 import { DEFAULT_XP, loadLevels } from '../progress/levels';
 import { loadProgress, newProgress, PROGRESS_KEY, saveProgress } from '../progress/progress';
 import { loadPool } from './pool';

@@ -24,4 +24,3 @@
 - Ultra at 4K misses the 240 Hz aim on every map (KNOWN_ISSUES › Graphics and performance, can wait).
 - WebGL2 on Ultra at 4K is slower than WebGPU on Depot (KNOWN_ISSUES › Graphics and performance, can wait).
 - The Neon Heights Extraction desktop baseline is missing (KNOWN_ISSUES › Graphics and performance, playtest).
-- The hand-pose test on the replica files takes about 3.7 s alone (KNOWN_ISSUES › Build, tests and pipeline, can wait).

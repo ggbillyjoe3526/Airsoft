@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import levelsText from '../../levels.md?raw';
+import levelsText from '../../data/levels.md?raw';
 import { GAME_POOL } from '../pool/gamePool';
 import { GAME_LEVELS } from './gameLevels';
 import { DEFAULT_XP, levelOf, loadLevels, standing, unlocksUpTo } from './levels';

@@ -1,6 +1,6 @@
 /**
  * Item pictures (graphics overhaul G2): the small images of replicas, parts and colour schemes the menus show, rendered
- * in the game from the same models the hands hold (render/itemPictures.ts), so a picture always matches what you carry
+ * in the game from the same models the hands hold (render/replicas/itemPictures.ts), so a picture always matches what you carry
  * and nothing extra is downloaded. One picture is drawn per animation frame, at most, and kept for the visit.
  */
 export const ITEM_PICTURE = {
@@ -25,6 +25,6 @@ export const ITEM_PICTURE = {
     key: { colour: 0xfff2e0, intensity: 2.6, at: [1.2, 2.2, -1.6] as const },
     rim: { colour: 0x9fc8ff, intensity: 2.2, at: [-1.4, 1.0, 2.0] as const },
   },
-  /** Brightness before the filmic curve (render/itemPictures.ts toneMap). */
+  /** Brightness before the filmic curve (render/replicas/itemPictures.ts toneMap). */
   exposure: 1.15,
 } as const;

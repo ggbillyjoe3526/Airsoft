@@ -1,6 +1,7 @@
 /**
- * What Play does (audit CORE-05, CORE-23): Game.play reads its flags into a PlayPress and acts on the answer, so the
- * whole decision is a pure function with a table test (sessionPlan.test.ts) rather than branches wired to DOM callbacks.
+ * What Play does (audit CORE-05, CORE-23): PlayFlow.play (playFlow.ts) reads its flags into a PlayPress and acts on the
+ * answer, so the whole decision is a pure function with a table test (sessionPlan.test.ts) rather than branches wired to
+ * DOM callbacks.
  */
 
 /** What Play (New game's Play, Practice range, Tutorial, Resume, Play Again) finds when it is pressed. */

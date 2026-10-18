@@ -6,7 +6,7 @@ import { GAME_POOL } from '../pool/gamePool';
 import { LoadoutModel } from '../pool/loadoutModel';
 import { type Pool, replicaOf } from '../pool/pool';
 import { MemoryStorage } from '../pool/testStorage';
-import { NO_REPLICA_FILES, type ReplicaFiles } from '../render/replicaFiles';
+import { NO_REPLICA_FILES, type ReplicaFiles } from '../render/replicas/replicaFiles';
 
 /** What the skin checks share (CT4): their context, how a skin reads in a result. */
 

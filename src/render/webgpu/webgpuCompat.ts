@@ -7,7 +7,7 @@
  *   and reject the string, so the first texture view a frame makes throws and the game stops on its crash screen. The
  *   member is cleared before each view is made (`undefined` reads as absent: the identity swizzle Three asked for).
  * - **Layers written into a 3D texture that may be drawn into.** Three gives every texture `RENDER_ATTACHMENT` use, and
- *   writes a 3D texture a layer at a time (the baked light's grid, render/bakedLight.ts); Dawn there clears such a
+ *   writes a 3D texture a layer at a time (the baked light's grid, render/light/bakedLight.ts); Dawn there clears such a
  *   texture first through a 2D view of it, which is invalid, so the grid is never uploaded and every surface reading it
  *   fails to draw (Depot went black). The game draws into no 3D texture, so its 3D textures are made without that use.
  *

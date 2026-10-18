@@ -4,7 +4,7 @@ import type { LightingPresetId, SurfaceTextureId } from './render';
  * Baked bounce light (G6; the concept's gi.ts, baked offline): `node pipeline/bake-light.mjs` turns a map's pieces into a
  * grid of solid voxels and casts rays from a grid of light probes. Rays that reach the sky keep the sky fill; rays that
  * hit a prop bring back its colour, brighter where the sun reaches it. The game reads the probes as the map loads
- * (render/bakedLight.ts). `bake` is everything the bake reads (a change asks for a re-bake: render/lightBake.ts hashes
+ * (render/light/bakedLight.ts). `bake` is everything the bake reads (a change asks for a re-bake: render/light/lightBake.ts hashes
  * it); `look` is how the game draws it (free to tune without a re-bake).
  */
 export const BAKED_LIGHT = {
@@ -62,7 +62,7 @@ export const BAKED_LIGHT = {
      */
     vertex: { cell: 6, indirectShare: 0.45, bounce: 0.45 },
     /**
-     * Figures (every preset, render/characterRenderer.ts): read `height` metres above their feet; their colour is scaled as
+     * Figures (every preset, render/figures/characterRenderer.ts): read `height` metres above their feet; their colour is scaled as
      * a vertex's (`indirectShare`), and the bounce glows on them at `bounce` (an emissive term, no new shader).
      */
     figure: { height: 1.1, indirectShare: 0.4, bounce: 0.12 },

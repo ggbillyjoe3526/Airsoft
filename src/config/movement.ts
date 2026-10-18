@@ -164,8 +164,9 @@ export const MOVEMENT: MovementConfig = {
   walkSpeed: 2.3,
   sprintSpeed: 6.3,
   // Owner's Dev 6 note 27: holstering alone makes you faster than armed, but no faster than a sprint, and a holstered
-  // sprint is the same sprint. About a fifth over the run: 25 m in 5.0 s rather than 6.0, against 4.0 s sprinting.
-  holsterRunSpeed: 5.0,
+  // sprint is the same sprint. Beta 1 playtest item 18 asked for a little faster: about 30 % over the run, 25 m in
+  // 4.6 s rather than 6.0, against 4.0 s sprinting.
+  holsterRunSpeed: 5.4,
   crouchSpeed: 2.1,
   groundAccel: 45,
   groundDecel: 38,

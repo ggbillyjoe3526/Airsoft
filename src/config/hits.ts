@@ -74,7 +74,7 @@ export interface HitConfig {
   figureBodies?: readonly FigureBody[];
 }
 
-/** The bones a figure's hit shape hangs its points on (render/figureBody.ts reads their frames from the clips). */
+/** The bones a figure's hit shape hangs its points on (render/figures/figureBody.ts reads their frames from the clips). */
 export type FigureHitBone = 'Hips' | 'Spine1' | 'Chest' | 'Head';
 
 /** A point of a figure's hit shape: `at` metres in `bone`'s own frame (x across, y along the bone, up; z forward). */
@@ -85,7 +85,7 @@ export interface FigureHitPoint {
 
 /**
  * One figure's hit volume above the legs and its legs' radii (HV1; owner, 2026-10-16: "fit to each figure"), measured
- * against that figure by render/riggedHitVolume.test.ts. The chest and the hips are each two capsules side by side,
+ * against that figure by render/figures/riggedHitVolume.test.ts. The chest and the hips are each two capsules side by side,
  * `halfWidth` either side of the middle (an oval: wider than deep), from `bottom` to `top`; the shoulders one capsule
  * across, from `left` to `right`; the head a sphere. The legs' joints are the figures' own (FigureLegs).
  */
@@ -98,11 +98,11 @@ export interface FigureHitShape {
 }
 
 /**
- * A figure's upper body as plain numbers (HV1), read from its file as it loads (render/figureBody.ts): its hit shape's
+ * A figure's upper body as plain numbers (HV1), read from its file as it loads (render/figures/figureBody.ts): its hit shape's
  * points (sim/figureBody.ts BODY_POINT) on every sample of each leg clip, by the legs' slots, in the figure's own frame
  * (x right, y up from the feet, z forward-negative). Each clip has two sets: `whole`, the figure playing the clip with
  * its own upper body (sprinting, vaulting, calling the hit, walking off, out), and `aimed`, the same legs under the
- * aim's upper body (in play otherwise, render/figurePose.ts). The samples match the legs' (FigureLegClip.frames).
+ * aim's upper body (in play otherwise, render/figures/figurePose.ts). The samples match the legs' (FigureLegClip.frames).
  */
 export interface FigureBody {
   shape: FigureHitShape;
@@ -110,7 +110,7 @@ export interface FigureBody {
 }
 
 /**
- * The rigged figures' leg clips as plain numbers (IM8), read from the figure file as it loads (render/figureLegs.ts):
+ * The rigged figures' leg clips as plain numbers (IM8), read from the figure file as it loads (render/figures/figureLegs.ts):
  * where each leg's joints are, frame by frame, so the hit volume can put its legs where the figure draws them.
  */
 export interface FigureLegs {
@@ -187,7 +187,7 @@ export const HITS: HitConfig = {
    */
   lean: { maxAngle: 0.6, pivotHeight: 0.92 },
   /**
-   * Measured against the drawn figure (render/figureHitVolume.test.ts, M85). The chest with its plate carrier, pouches
+   * Measured against the drawn figure (render/figures/figureHitVolume.test.ts, M85). The chest with its plate carrier, pouches
    * and pack is about as deep as it is wide, so round, from the cummerbund (1.15 m) to the top of the plates (1.52 m).
    * The hips and belt below are an oval, 0.34 m across and 0.22 m deep. Below them only the two legs are drawn, with a
    * gap between: one round volume down to the boots (before M85) caught BBs on thin air from the side.
@@ -196,8 +196,8 @@ export const HITS: HitConfig = {
   torsoTop: 1.4,
   hips: { bottom: 0.95, top: 1.05, halfWidth: 0.06, radius: 0.11 },
   /**
-   * Measured against the drawn legs (render/figureHitVolume.test.ts): a thigh tapering from 0.094 m to 0.064 m, a shin
-   * about 0.055 m, the knee pad, and a boot 0.3 m long and 0.1 m tall (render/figureHuman.ts humanLeg).
+   * Measured against the drawn legs (render/figures/figureHitVolume.test.ts): a thigh tapering from 0.094 m to 0.064 m, a shin
+   * about 0.055 m, the knee pad, and a boot 0.3 m long and 0.1 m tall (render/figures/figureHuman.ts humanLeg).
    */
   legs: {
     hipSpread: 0.095,

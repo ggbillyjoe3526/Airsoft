@@ -41,7 +41,7 @@ export const MAG_SHARE = {
   /** Most magazines in the air at once (GameState.magTosses, made once). */
   maxTosses: 6,
   /**
-   * How the tossed magazine flies (render/magTosses.ts): its arc's peak over the straight line, this much a metre of
+   * How the tossed magazine flies (render/effects/magTosses.ts): its arc's peak over the straight line, this much a metre of
    * toss up to arcHeight (m), so a hand-off up close is a flick and one at full reach a lob; and its spin (turns a second).
    */
   arcPerMetre: 0.1,

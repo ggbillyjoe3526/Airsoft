@@ -1,6 +1,6 @@
 import { MINIMAP } from '../config/minimap';
 import type { MapBlock } from '../map/mapTypes';
-import type { ScreenMarker } from '../render/screenMarker';
+import type { ScreenMarker } from '../render/match/screenMarker';
 import type { HeardSound } from './soundCues';
 
 /** A point on the minimap, in pixels from its middle (x right, y down). */

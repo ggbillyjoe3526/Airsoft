@@ -6,10 +6,10 @@ import { characterLegWeights, LEG_CLIPS, LEG_MODE, legClipShare, legMode, legsHa
  * The rigged figures' upper bodies in the simulation (HV1; owner, 2026-10-16: "fit to each figure"). As the legs' hit
  * volumes sit on the drawn legs (IM8, sim/figureLegs.ts), the head, chest, shoulders and hips sit where each figure
  * draws them: its hit shape's points (config/figureRig.ts FIGURE_HIT_SHAPES), read on the figure's bones from its clips
- * as it loads (render/figureBody.ts), blended by the same weights as the legs. In play the figure's upper body is the
+ * as it loads (render/figures/figureBody.ts), blended by the same weights as the legs. In play the figure's upper body is the
  * aim's over the clip's legs, so it stays upright over a bobbing or crouched pelvis; sprinting, vaulting, calling the
  * hit, walking off and out it is the clip's own, so it leans into the sprint and tucks over the vault (FigurePose's
- * overlay, render/figurePose.ts). The peek's roll is put on afterwards (sim/hitbox.ts), as the figure's is.
+ * overlay, render/figures/figurePose.ts). The peek's roll is put on afterwards (sim/hitbox.ts), as the figure's is.
  */
 
 /** The points of a figure's hit shape, in FigureBody's samples. */

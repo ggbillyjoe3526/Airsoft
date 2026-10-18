@@ -1,40 +1,17 @@
 import {
-  DEFAULT_HIT_MARKER,
   DEFAULT_HIT_MARKER_SETTINGS,
-  HIT_MARKER_CHOICES,
   HIT_MARKER_COLORS,
   HIT_MARKER_FRIENDLY,
-  HIT_MARKER_OUTLINES,
-  HIT_MARKER_RANGES,
   HIT_MARKER_SHAPE,
   type HitMarkerSettings,
 } from '../config/hits';
-import { browserStorage, loadSetting, numberIn, oneOf } from '../settings/storage';
-import { hexColour } from './crosshair';
+import { hexColour } from '../settings/hudPrefs';
 
 /**
  * The hit marker's look (the owner's 0.1 Dev 5 playtest, note 4): an X of four arms on the diagonals round the
  * crosshair, sized, thickened, outlined and coloured from Settings › Gameplay, as the crosshair is. The same element is
  * the live preview on the Settings screen.
  */
-
-/** The saved hit marker, each part falling back to the default on its own (off on a clean save, M97). */
-export function loadHitMarker(storage = browserStorage()): HitMarkerSettings {
-  const d = DEFAULT_HIT_MARKER_SETTINGS;
-  const t = HIT_MARKER_RANGES.thickness;
-  const thickness = (raw: unknown): number | undefined => {
-    const v = numberIn(t.min, t.max)(raw);
-    return v === undefined ? undefined : Math.round(v);
-  };
-  return {
-    on: loadSetting('hitMarker', oneOf(HIT_MARKER_CHOICES.map((c) => c.id)), DEFAULT_HIT_MARKER ? 'on' : 'off', storage) === 'on',
-    scale: loadSetting('hitMarker.scale', numberIn(HIT_MARKER_RANGES.scale.min, HIT_MARKER_RANGES.scale.max), d.scale, storage),
-    thickness: loadSetting('hitMarker.thickness', thickness, d.thickness, storage),
-    outline: loadSetting('hitMarker.outline', oneOf(HIT_MARKER_OUTLINES.map((o) => o.id)), d.outline, storage),
-    color: loadSetting('hitMarker.color', oneOf(HIT_MARKER_COLORS.map((o) => o.id)), d.color, storage),
-    customColor: loadSetting('hitMarker.customColor', hexColour, d.customColor, storage),
-  };
-}
 
 /** The marker's colour as CSS: the picked swatch's, or the custom one. */
 export function hitMarkerCss(s: HitMarkerSettings): string {

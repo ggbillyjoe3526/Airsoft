@@ -1,0 +1,273 @@
+import * as THREE from 'three';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { HITS, ROUNDS } from '../../config/hits';
+import { BODY } from '../../config/movement';
+import { LOADOUT } from '../../config/replicas';
+import { TEAM_COLOUR_SETS } from '../../config/teams';
+import { createCharacter } from '../../sim/character';
+import type { ExtractionContext } from '../../sim/extraction';
+import type { RoundRules } from '../../sim/round';
+import { createGameState, type GameState } from '../../sim/state';
+import { vec3 } from '../../sim/vec';
+import { MatchStats } from '../../stats/matchStats';
+import type { HitFeed as HitFeedClass } from '../../ui/hitFeed';
+import type { Minimap as MinimapClass } from '../../ui/minimap';
+import type { Scoreboard as ScoreboardClass } from '../../ui/scoreboard';
+import type { SquadOrderLine as SquadOrderLineClass } from '../../ui/squadOrderLine';
+import type { MatchPresentation as MatchPresentationClass } from './matchPresentation';
+
+// G4 QA: how MatchPresentation drives the new HUD parts. Every drawing class is auto-mocked (no DOM or GPU under Vitest),
+// so what is asserted is the presentation's own wiring: what the score bar is told is the match's aim, what the minimap's
+// caption says and when it changes, and what the hit feed is handed for a friendly or ricochet hit.
+
+vi.mock('../../ui/casePrompt');
+vi.mock('../../ui/flagMarker');
+vi.mock('../../ui/roundResult');
+vi.mock('../../ui/hitFeed');
+vi.mock('../../ui/hitFeedback');
+vi.mock('../../ui/holdMarker');
+vi.mock('../../ui/pingMarkers', async (orig) => ({ ...(await orig<typeof import('../../ui/pingMarkers')>()), PingMarkers: class { pings = []; markersShown = true; place() {} setShown() {} show() {} hide() {} hideAll() {} clear() {} dispose() {} } }));
+vi.mock('../../ui/matchBoard');
+vi.mock('../../ui/minimap');
+vi.mock('../../ui/minimapView');
+vi.mock('../../ui/magPrompt');
+vi.mock('../../ui/orderWheel');
+vi.mock('../../ui/roundBanner');
+vi.mock('../../ui/scoreboard');
+vi.mock('../../ui/soundCues');
+vi.mock('../../ui/squadOrderLine');
+vi.mock('../../ui/teammateMarkers');
+vi.mock('../../ui/whatGotYou');
+vi.mock('../figures/characterRenderer');
+vi.mock('./caseRenderer');
+vi.mock('./exitRenderer');
+vi.mock('./flagRenderer', () => ({ FlagRenderer: class { object = { visible: false }; update() {} dispose() {} setReceiveShadows() {} setDetail() {} setEnvironmentLit() {} } }));
+vi.mock('./spectatorCamera', () => ({
+  SpectatorCamera: class {
+    constructor(_c: unknown, private readonly player: unknown) {}
+    ensureTarget() {
+      return this.player;
+    }
+    place() {}
+    reset() {}
+    next() {}
+  },
+}));
+
+let MatchPresentation: typeof MatchPresentationClass;
+let Scoreboard: typeof ScoreboardClass;
+let Minimap: typeof MinimapClass;
+let HitFeed: typeof HitFeedClass;
+let SquadOrderLine: typeof SquadOrderLineClass;
+beforeAll(async () => {
+  vi.resetModules();
+  ({ MatchPresentation } = await import('./matchPresentation'));
+  ({ Scoreboard } = await import('../../ui/scoreboard'));
+  ({ Minimap } = await import('../../ui/minimap'));
+  ({ HitFeed } = await import('../../ui/hitFeed'));
+  ({ SquadOrderLine } = await import('../../ui/squadOrderLine'));
+});
+afterAll(() => {
+  vi.resetModules();
+});
+beforeEach(() => {
+  vi.clearAllMocks();
+  // Extraction adds a respawn fade of its own (a plain element here).
+  vi.stubGlobal('document', { createElement: () => ({ className: '', classList: { add() {}, remove() {} }, remove() {} }) });
+});
+afterEach(() => void vi.unstubAllGlobals());
+
+const PLAYER = 0;
+const ENEMY = 1;
+const MATE = 2;
+const ENEMY2 = 3;
+
+interface Options {
+  rules?: RoundRules;
+  extraction?: boolean;
+  /** The player's team (0 = Alpha). */
+  team?: number;
+  name?: string;
+}
+
+function rig(o: Options = {}) {
+  const team = o.team ?? 0;
+  const rules = o.rules ?? ROUNDS;
+  const state: GameState = createGameState(1, 8, rules);
+  const player = createCharacter(PLAYER, vec3(0, 0, 0), 0, LOADOUT, team);
+  state.characters.push(
+    player,
+    createCharacter(ENEMY, vec3(0, 0, -12), 0, LOADOUT, 1 - team),
+    createCharacter(MATE, vec3(4, 0, 0), 0, LOADOUT, team),
+    createCharacter(ENEMY2, vec3(8, 0, -12), 0, LOADOUT, 1 - team),
+  );
+  const container = { appendChild() {}, append() {} } as unknown as HTMLElement;
+  const keyName = (action: string): string => `key:${action}`;
+  const match = new MatchPresentation(
+    { add() {} } as unknown as THREE.Scene,
+    container,
+    { width: 800, height: 600 },
+    state,
+    player,
+    BODY,
+    HITS,
+    { raycastStatic: () => -1 },
+    [2, 2],
+    rules,
+    new MatchStats(state.characters),
+    keyName,
+    TEAM_COLOUR_SETS.standard,
+    { blocks: [], name: o.name ?? 'Depot' },
+    null,
+    'low',
+    o.extraction ? ({ rules: {} } as unknown as ExtractionContext) : undefined,
+  );
+  const event = (e: GameState['events'][number]): void => {
+    state.events.length = 0;
+    state.events.push(e);
+    match.afterTick(0);
+    state.events.length = 0;
+  };
+  return { state, match, player, event, keyName };
+}
+
+const aim = (): unknown[] => vi.mocked(Scoreboard.prototype.setAim).mock.calls.map((c) => c[0]);
+const captions = (): unknown[] => vi.mocked(Minimap.prototype.setCaption).mock.calls.map((c) => c[0]);
+
+describe('the score bar is told what wins the match (G4 criterion 1)', () => {
+  it('says "First to N" for the match\'s rounds to win', () => {
+    rig();
+    expect(aim()).toEqual([`First to ${ROUNDS.winsNeeded}`]);
+  });
+
+  it('adds the lead needed under Win by two', () => {
+    rig({ rules: { ...ROUNDS, winsNeeded: 7, winBy: 2 } });
+    expect(aim()).toEqual(['First to 7, by 2']);
+  });
+
+  it('says the run\'s line in Extraction, not a round count', () => {
+    rig({ extraction: true });
+    expect(aim()).toHaveLength(1);
+    expect(aim()[0]).toBe('Extraction');
+    expect(String(aim()[0])).not.toMatch(/first to/i);
+  });
+});
+
+describe('the minimap names the map and the round (G4 criterion 2)', () => {
+  it('starts with the map and the round now, and follows each round that starts', () => {
+    const r = rig();
+    expect(captions()).toEqual([`Depot · Round ${r.state.round.number}`]);
+    r.event({ type: 'roundStart', round: 2 } as never);
+    r.event({ type: 'roundStart', round: 3 } as never);
+    expect(captions().slice(1)).toEqual(['Depot · Round 2', 'Depot · Round 3']);
+  });
+
+  it('names only the map in Extraction, which is one long round', () => {
+    const r = rig({ extraction: true });
+    r.event({ type: 'roundStart', round: 1 } as never);
+    expect(captions()).toEqual(['Depot', 'Depot']);
+  });
+});
+
+// Owner, 2026-10-08: no squad cards or order keys on the HUD; the orders show on the order wheel only, and the order
+// line is a status region off the screen (ui/squadOrderLine.ts) a screen reader still hears.
+describe('the squad orders are on the order wheel only (G4, owner 2026-10-08)', () => {
+  it('builds the order line alone, with nothing but the HUD to go in: no cards, no team, no names, no keys', () => {
+    rig();
+    expect(vi.mocked(SquadOrderLine).mock.calls).toHaveLength(1);
+    expect(vi.mocked(SquadOrderLine).mock.calls[0]).toHaveLength(1);
+  });
+
+  it('hands it each order given and the order in force, and shows and clears it with the match', () => {
+    const r = rig();
+    r.match.setPlaying(true);
+    expect(SquadOrderLine.prototype.setVisible).toHaveBeenLastCalledWith(true);
+    r.match.orderGiven('none', 'cancelled');
+    expect(SquadOrderLine.prototype.ordered).toHaveBeenLastCalledWith('none', 'cancelled');
+    r.match.showSquadOrder('hold', null, new THREE.PerspectiveCamera(), 0.016);
+    expect(SquadOrderLine.prototype.update).toHaveBeenLastCalledWith('hold', 0.016);
+    r.event({ type: 'roundStart', round: 2 } as never);
+    expect(SquadOrderLine.prototype.clear).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves no squad bar to build: its module is gone', () => {
+    expect(Object.keys(import.meta.glob('../../ui/squadBar.ts'))).toEqual([]);
+    expect(Object.keys(import.meta.glob('../../ui/squadOrderLine.ts'))).toHaveLength(1);
+  });
+});
+
+describe('the hit feed is handed who, which team, friendly, yours and ricochet (G4 criterion 3)', () => {
+  const hit = (r: ReturnType<typeof rig>, victimId: number, shooterId: number, ricochet = false): void =>
+    r.event({ type: 'characterHit', victimId, shooterId, position: vec3(), direction: vec3(0, 0, 1), ricochet } as never);
+  const added = (): unknown[][] => vi.mocked(HitFeed.prototype.add).mock.calls.map((c) => [c[0], c[1], c[2], c[3], c[5]]);
+
+  it('names the one who called the hit and whose BB it was, in their teams', () => {
+    const r = rig();
+    hit(r, MATE, ENEMY);
+    expect(added()).toEqual([[{ name: 'Alpha 2', team: 0 }, { name: 'Beta 1', team: 1 }, false, false, false]]);
+  });
+
+  it('marks a hit on a teammate by your side friendly, and yours when it is you who fired', () => {
+    const r = rig();
+    hit(r, MATE, PLAYER);
+    expect(added()).toEqual([[{ name: 'Alpha 2', team: 0 }, { name: 'You', team: 0 }, true, true, false]]);
+  });
+
+  it('marks a hit on you yours, and carries the ricochet tag', () => {
+    const r = rig();
+    hit(r, PLAYER, ENEMY, true);
+    expect(added()).toEqual([[{ name: 'You', team: 0 }, { name: 'Beta 1', team: 1 }, false, true, true]]);
+  });
+
+  it('does not call your own ricochet a friendly hit (the row names you twice)', () => {
+    const r = rig();
+    hit(r, PLAYER, PLAYER, true);
+    expect(added()).toEqual([[{ name: 'You', team: 0 }, { name: 'You', team: 0 }, false, true, true]]);
+  });
+
+  it('marks a hit between two others neither friendly nor yours', () => {
+    const r = rig();
+    hit(r, ENEMY2, ENEMY);
+    expect(added()).toEqual([[{ name: 'Beta 2', team: 1 }, { name: 'Beta 1', team: 1 }, true, false, false]]);
+  });
+});
+
+describe('the HUD reads "your team" from the player, on Beta as on Alpha (M98)', () => {
+  it('marks Beta yours on the score bar and colours the minimap, markers, hold spot and order wheel in Beta\'s colour', async () => {
+    const { OrderWheel } = await import('../../ui/orderWheel');
+    const { TeammateMarkers } = await import('../../ui/teammateMarkers');
+    const { HoldMarker } = await import('../../ui/holdMarker');
+    const set = TEAM_COLOUR_SETS.standard;
+    for (const team of [0, 1]) {
+      vi.clearAllMocks();
+      rig({ team });
+      expect(vi.mocked(Scoreboard).mock.calls[0]![2], `team ${team}`).toBe(team);
+      const css = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
+      // The minimap: your team's dots in its colour, the other team's heard patches in theirs.
+      expect(vi.mocked(Minimap).mock.calls[0]!.slice(2, 4), `team ${team}`).toEqual([css(set.hud[team]!), css(set.hud[1 - team]!)]);
+      expect(vi.mocked(OrderWheel).mock.calls[0]![1]).toBe(`var(--team-${team})`);
+      expect(vi.mocked(HoldMarker).mock.calls[0]![1]).toBe(`var(--team-${team})`);
+      // Over your teammate's head: its name (Beta 2 when you are on Beta) in your colour.
+      const [, names, colour] = vi.mocked(TeammateMarkers).mock.calls[0]!;
+      expect(names).toEqual([team === 0 ? 'Alpha 2' : 'Beta 2']);
+      expect(colour).toBe(`var(--team-${team})`);
+    }
+  });
+});
+
+describe('the magazine hand-off line gives way to the order wheel (MG1)', () => {
+  it('shows while playing, not while the wheel is open (its Mag item says the same), and again once it closes', async () => {
+    const { MagPrompt } = await import('../../ui/magPrompt');
+    vi.clearAllMocks();
+    const { match } = rig();
+    match.setPlaying(true);
+    const view = { line: 'H · Toss Beta 2 a mag', toss: true, wheel: 'Toss a Mag', mates: [] };
+    const pointer = { x: 0, y: 0, pick: -1 };
+    const shown = () => vi.mocked(MagPrompt.prototype.show).mock.calls.at(-1);
+    for (const open of [false, true, false]) {
+      match.showOrderWheel(open, pointer, 'none', 'hover', view.wheel);
+      match.showMagHandoff(view);
+      expect(shown(), `wheel open: ${open}`).toEqual(open ? ['', false] : [view.line, true]);
+    }
+  });
+});
