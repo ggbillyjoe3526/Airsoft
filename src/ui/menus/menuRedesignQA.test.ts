@@ -99,9 +99,9 @@ describe('the plain title (M100 QA)', () => {
     return shown(node(t.root));
   };
 
-  it('reads exactly: the wordmark, the tagline, START, the Tutorial under it on a clean save, Fullscreen and the version, in that order', () => {
-    expect(read(true)).toEqual(['Airsoft', 'Call your hit. Go again.', 'START', 'Tutorial', 'Fullscreen', __BUILD_VERSION__.label]);
-    expect(read(false)).toEqual(['Airsoft', 'Call your hit. Go again.', 'START', 'Fullscreen', __BUILD_VERSION__.label]);
+  it('reads exactly: the wordmark, the tagline, START, the Tutorial under it on a clean save, Fullscreen, Licences and the version, in that order', () => {
+    expect(read(true)).toEqual(['Airsoft', 'Call your hit. Go again.', 'START', 'Tutorial', 'Fullscreen', 'Licences', __BUILD_VERSION__.label]);
+    expect(read(false)).toEqual(['Airsoft', 'Call your hit. Go again.', 'START', 'Fullscreen', 'Licences', __BUILD_VERSION__.label]);
   });
 
   it('puts the Tutorial after START in the same column, and the version after everything else as the last child', () => {

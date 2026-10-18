@@ -6,6 +6,7 @@ import { LOADING } from './src/config/loading.ts';
 import { CONTENT_SECURITY_POLICY } from './src/config/page.ts';
 import { PRECOMPRESS, precompressedCopies, precompressWanted } from './src/config/precompress.ts';
 import { plainWasmBundle, RAPIER_WASM } from './src/config/rapierWasm.ts';
+import { noticeText, THIRD_PARTY_LICENCES, VENDORED_NOTICES, withVendoredNotices } from './src/config/thirdPartyLicences.ts';
 
 
 /** The headless guards (src/ai/depotMatchSupport.ts): most of the unit suite's time, project `slow`; the Pro guards on
@@ -137,6 +138,31 @@ function pageMeta(): Plugin {
   };
 }
 
+/**
+ * The vendored notices (config/thirdPartyLicences.ts, LC1) appended to the licences file Vite's `build.license` writes:
+ * code bundled from inside another package and the font, which its package list can't see. Ordered after Vite's own
+ * licence step, which writes the file in the same hook; a build without the file fails, since the game would ship with
+ * no licence text.
+ */
+function vendoredLicences(): Plugin {
+  return {
+    name: 'airsoft-vendored-licences',
+    apply: 'build',
+    generateBundle: {
+      order: 'post',
+      async handler(_options, bundle) {
+        const file = bundle[THIRD_PARTY_LICENCES.fileName];
+        if (file?.type !== 'asset' || typeof file.source !== 'string') return this.error(`no ${THIRD_PARTY_LICENCES.fileName} from build.license`);
+        const fs = (await import('node:fs/promises' as string)) as { readFile(path: URL, encoding: 'utf8'): Promise<string> };
+        const notices = await Promise.all(
+          VENDORED_NOTICES.map(async (notice) => ({ notice, text: noticeText(notice, await fs.readFile(new URL(notice.source, import.meta.url), 'utf8')) })),
+        );
+        file.source = withVendoredNotices(file.source, notices);
+      },
+    },
+  };
+}
+
 /** The node:zlib and node:fs/promises calls precompress() needs, typed here: the project doesn't load Node's types. */
 interface ZlibCalls {
   brotliCompress(source: Uint8Array, options: { params: Record<number, number> }, done: (error: Error | null, out: Uint8Array) => void): void;
@@ -219,13 +245,16 @@ export default defineConfig(async () => ({
   define: {
     __BUILD_VERSION__: JSON.stringify(await buildVersion()),
   },
-  plugins: [rapierWasm(), chunkBudget(), pageMeta(), precompress()],
+  plugins: [rapierWasm(), chunkBudget(), pageMeta(), vendoredLicences(), precompress()],
   build: {
     target: 'es2022',
     // Source maps next to the chunks but not linked from them (audit CORE-11): players never download them, and a
     // crash report's stack (game-abc.js:1:48213) can be read against dist/assets/*.map in DevTools or with a
     // source-map tool. The chunk budgets count the code only.
     sourcemap: 'hidden' as const,
+    // Every bundled package's licence in one file beside the page (LC1), linked from the title screen; the minifier
+    // strips the licence comments from the code itself. vendoredLicences() adds what ships from inside a package.
+    license: { fileName: THIRD_PARTY_LICENCES.fileName },
     rolldownOptions: {
       output: {
         // Vendor code in its own chunks so it caches across game updates and each size stays visible.

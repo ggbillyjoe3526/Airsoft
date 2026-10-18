@@ -318,6 +318,8 @@ export const MENU_TEXT = {
 /** The title screen's words (M100: a plain title). */
 export const TITLE_TEXT = {
   tagline: 'Call your hit. Go again.',
+  /** The link to the third-party licences file, over the version (LC1). */
+  licences: 'Licences',
 } as const;
 
 /** The Match screen's words (G3: New game in the new look; M100: the screen is Match, Practice its last mode). */

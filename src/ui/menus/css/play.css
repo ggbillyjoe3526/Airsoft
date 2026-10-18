@@ -84,6 +84,23 @@
   color: var(--menu-faint);
 }
 
+/* The licences' link, small over the version in the same faint type. */
+.title-licences {
+  position: absolute;
+  right: var(--menu-gutter);
+  bottom: calc(clamp(14px, 1.4vw, 24px) + 1.6 * var(--fs-sm));
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: var(--ls-caps);
+  color: var(--menu-faint);
+  text-decoration: none;
+}
+
+.title-licences:hover {
+  color: var(--menu-muted);
+  text-decoration: underline;
+}
+
 .choice-card-pic img {
   width: 100%;
   height: 100%;

@@ -56,6 +56,9 @@ You cannot rely on paid or unlicensed assets.
 - Record every external asset in `docs/ASSETS.md`: name, source URL, license, author.
 - Keep assets small. Use glTF/GLB, compressed textures where practical, and a total initial download target under ~30 MB.
 - Do not use real brand names or trademarked replica designs.
+- Libraries, tools and assets follow `docs/ASSETS.md` › Adding a library or tool (npm only, no GPL or LGPL code in the
+  game, dev code never ships) and never anything on its Do not use list (owner, 2026-10-18). Every build ships
+  `third-party-licences.txt`; `docs/ASSETS.md` › Licences says what each licence asks.
 
 ## 5. Core Mechanics (starting defaults)
 
