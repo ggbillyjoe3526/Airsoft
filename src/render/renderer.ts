@@ -460,12 +460,19 @@ export class Renderer {
     (setUp.at(-1) ?? unstaged)(() => this.node.compile(this.scene, this.camera, overlay, drawer, this.quality));
     // A session built before this one never had its draws: nothing waits on them any more.
     this.warmDraw?.done();
-    return new Promise<void>((done) => {
+    return new Promise<void>((settle) => {
+      let limit: ReturnType<typeof setTimeout> | undefined;
+      // Settling stops the limit's timer (BP6c): left to run, it kept the session's scenes and figures for its full minute
+      // after the warm-up was done, a match's worth of memory per match quit or played again inside it.
+      const done = (): void => {
+        clearTimeout(limit);
+        settle();
+      };
       const warm = { overlay, setUp, ready: false, hold, shown: false, done };
       this.warmDraw = warm;
       // A session that waits never waits for good (RENDER.warmUpLimitMs): it plays on and draws again.
       if (hold)
-        setTimeout(() => {
+        limit = setTimeout(() => {
           warm.hold = false;
           done();
         }, RENDER.warmUpLimitMs);

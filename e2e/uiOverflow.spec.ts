@@ -218,8 +218,10 @@ for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]] as const
     await setup.getByRole('button', { name: 'Start match', exact: true }).click();
     await page.waitForSelector('.hud-replica', { state: 'visible', timeout: 60_000 });
     // Round 1 goes live once the shader warm-up is done (PF1), and its start fills every pouch afresh.
-    await page.waitForFunction(() => ((window as unknown as { airsoft?: { state?: { tick: number } } }).airsoft?.state?.tick ?? 0) > 0, null, { timeout: 120_000 });
-    await page.waitForTimeout(1000);
+    // Then a few frames past the first live one: SwiftShader takes 10 s and more over that one at 2560 x 1440 (its GPU
+    // process, not the game's code, measured BP6c), and a HUD check waiting on it timed out on CI. A frame advances at
+    // most 10 ticks, so 30 ticks is three frames drawn.
+    await page.waitForFunction(() => ((window as unknown as { airsoft?: { state?: { tick: number } } }).airsoft?.state?.tick ?? 0) > 30, null, { timeout: 120_000 });
     // Hold round 1 for the checks below: they outlast its 150 s on a slow CI runner, and a round's end freezes the HUD
     // (WON and the table) and then refills the pouch. Nobody fires, nobody sees you, and the clock reads 50:00.
     await page.evaluate(() => {
