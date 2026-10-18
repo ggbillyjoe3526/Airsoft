@@ -29,12 +29,13 @@ if (!server) {
 
 const cloud = process.env.CLAUDE_CODE_REMOTE === 'true';
 const chrome = process.env.AIRSOFT_MCP_CHROME || (cloud && existsSync(CLOUD_CHROMIUM) ? CLOUD_CHROMIUM : '');
+// npx is a .cmd script on Windows, which Node only starts through a shell; the shell splits a path at its spaces
+// ("C:\Program Files\…") unless it is quoted. Stopping it there ends the shell; the server then exits on its closed stdin.
+const windows = process.platform === 'win32';
 const args = ['-y', server.pkg, ...server.flags];
-if (chrome) args.push('--executable-path', chrome);
+if (chrome) args.push('--executable-path', windows ? `"${chrome}"` : chrome);
 if (cloud) args.push('--headless', ...(name === 'devtools' ? ['--chrome-arg=--no-sandbox'] : ['--no-sandbox']));
 
-// npx is a .cmd script on Windows, which Node only starts through a shell.
-const windows = process.platform === 'win32';
 const child = spawn(windows ? 'npx.cmd' : 'npx', args, { stdio: 'inherit', shell: windows });
 child.on('exit', (code, signal) => process.exit(signal ? 1 : (code ?? 0)));
 for (const s of ['SIGINT', 'SIGTERM']) process.on(s, () => child.kill(s));
