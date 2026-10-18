@@ -40,6 +40,10 @@ binds; the rest goes in the task's record. When this file nears 50 KB, move supe
   licences (`docs/ASSETS.md`).
 - **Libraries, tools and assets follow `docs/ASSETS.md` › Adding a library or tool, and never anything on its Do not
   use list (owner, 2026-10-18).** Every build ships `third-party-licences.txt`, linked from the title (LC1).
+- **The game moves from the browser to an installable desktop game built with Godot and Blender, in a new repository
+  (owner, 2026-10-18).** The same game, not a sequel; a new repository rather than a fork. Design, rulings, data,
+  layouts, models and the gameplay code as a reference carry over: `docs/handover/` is the pack the new project starts
+  from.
 
 ## Versions, releases and branches
 
@@ -54,8 +58,10 @@ binds; the rest goes in the task's record. When this file nears 50 KB, move supe
   small additions (an in-match hop-up control, a home-screen fullscreen button, one feed with a placement setting, WON
   or LOST at a round's end) and removals (resting on cover, Voices, the Skins option). Each is a block in
   `docs/TASKS.md`.
-- **The project goes on hold once 0.1 Beta 1 is tagged (owner, 2026-10-18).** No further work until he picks it up
-  again; `main` holds everything, and `docs/HANDOFF.md` lists what waits.
+- **0.1 Beta 1 is this repository's last build (owner, 2026-10-18).** Once he tags `0.1-beta.1`, nothing more is
+  built here; the repository stays frozen at the tag as the reference for the Godot project.
+- **The Godot project's versions restart at 0.1 Dev 1, in this format (owner, 2026-10-18).** Its first build is tagged
+  `0.1-dev.1`; this repository's tags stay the browser game's history (`docs/handover/VERSIONING.md`).
 - **Only full releases are tagged, and only the owner creates tags (owner, 2026-10-01).** After he tags, the release
   checklist is due in the next pull request (owner, 2026-10-03): `docs/PROCESS.md › Releases`.
 - **The release path: 0.1 Dev 6, 0.1 Beta, then 0.1.0 opens Early Access; themed updates follow; 1.0 is the full

@@ -5,8 +5,8 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 (`docs/records/<id>.md`) and its CHANGELOG line remain. The planning thread writes blocks; the build thread sets
 `status` and `attempts` once, in its records commit (no status-only commits).
 
-**On hold (owner, 2026-10-18).** Once 0.1 Beta 1 is tagged no work is done until the owner picks the project up again;
-no block below has started (`docs/HANDOFF.md`).
+**Frozen after 0.1 Beta 1 (owner, 2026-10-18).** It is this repository's last build: no block below has started, and
+none will be built here (`docs/HANDOFF.md`).
 
 **0.1 Beta 1 (owner, 2026-10-16).** Fixes, balance, performance and polish, with no features. The blocks come from
 `docs/ROADMAP.md` › Beta, `docs/KNOWN_ISSUES.md` and the owner's Dev 6 playtest (2026-10-16, rulings in

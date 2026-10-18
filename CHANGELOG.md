@@ -125,6 +125,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **PF3** · Desktop perf run judges Ultra 4K frame times against the 17 Oct baseline; stops at match end, checks npm install, names failed rows
 - **BP6c** · Developer-only: a test fix and docs rows from the pull-request pass; players see the Fixed lines
 - **TL1** · Developer-only: property tests for BB flight, bot routes and scoring, the knip dead-code finder and two browser debugging tools
+- **GD1** · Developer handover pack for the new Godot and Blender repository; development moves there after 0.1 Beta 1
 
 ## 0.1 Dev 6 · 2026-10-16
 
