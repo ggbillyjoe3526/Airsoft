@@ -161,15 +161,3 @@ acceptance:
   2. Every KNOWN_ISSUES row in a public area is checked against the build.
 status: open
 attempts: 0
-
-## BP6a · Beta 1 bug pass, part 1: gunplay, movement, hit calling, replicas and the HUD
-tier: fix
-perf: required
-touches: src/input/, src/matchSession.ts, src/matchSessionWarmQA.test.ts, src/render/match/, src/ui/, src/bp3HudMenus.test.ts, docs/KNOWN_ISSUES.md
-contract: none
-acceptance:
-  1. BP6's bug pass over first-person gunplay, movement, hit calling, the three replicas and the in-match HUD, played in the browser; results in the project's `bugpass/BP1-results.md`.
-  2. Every bug found in this area is fixed with a test, or logged as a KNOWN_ISSUES row.
-  3. Every KNOWN_ISSUES row in this area is checked against the build.
-status: building
-attempts: 1
