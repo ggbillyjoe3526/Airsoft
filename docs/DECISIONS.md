@@ -38,6 +38,8 @@ binds; the rest goes in the task's record. When this file nears 50 KB, move supe
   2026-10-06).** His answers on loot, zone and pay: `docs/archive/0.1-dev/ROADMAP.md`, Dev 4 playtest table.
 - **The code is MIT-licensed, copyright "ggbillyjoe3526" (owner, 2026-10-05).** Third-party assets keep their own
   licences (`docs/ASSETS.md`).
+- **Libraries, tools and assets follow `docs/ASSETS.md` › Adding a library or tool, and never anything on its Do not
+  use list (owner, 2026-10-18).** Every build ships `third-party-licences.txt`, linked from the title (LC1).
 
 ## Versions, releases and branches
 

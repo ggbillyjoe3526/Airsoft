@@ -99,7 +99,7 @@ describe('the title screen (M100: plain)', () => {
     const t = fake(screen.root);
     const body = t.children.find((c) => c.className === 'title-body')!;
     expect(body.children.map((c) => c.className)).toEqual(['menu-title-warning', 'title-hero', 'title-actions']);
-    expect(t.children.map((c) => c.className)).toEqual(['title-body', 'menu-button menu-button-secondary title-fullscreen', 'title-version']);
+    expect(t.children.map((c) => c.className)).toEqual(['title-body', 'menu-button menu-button-secondary title-fullscreen', 'title-licences', 'title-version']);
     const warning = body.children[0]!;
     expect([warning.hidden, warning.text]).toEqual([false, expect.stringContaining('hardware acceleration')]);
     screen.setWarning('');
@@ -111,6 +111,12 @@ describe('the title screen (M100: plain)', () => {
     const version = findAll(t, 'title-version')[0]!;
     expect(version.text).toBe(__BUILD_VERSION__.label);
     expect(t.children.at(-1)).toBe(version);
+  });
+
+  it('links the build\'s third-party licences file over the version, in a new tab (LC1)', () => {
+    const t = fake(title(false).root);
+    const link = findAll(t, 'title-licences')[0]! as unknown as { text: string; href: string; target: string; rel: string };
+    expect([link.text, link.href, link.target, link.rel]).toEqual(['Licences', 'third-party-licences.txt', '_blank', 'noopener']);
   });
 
   it('offers Fullscreen, reads Exit fullscreen while the page is in it however it got there, and hides where none is offered (MR1)', () => {

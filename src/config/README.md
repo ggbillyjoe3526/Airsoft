@@ -33,7 +33,7 @@ holds no magic numbers.
   balance band and exception registers: `docs/content/README.md`), `dev.ts` (Dev settings), `dataTables.ts` (the six `data/` tables' problems, for the console and the Dev tab, DX7), `save.ts`, `assets.ts`.
 - Build and pipeline: `buildVersion.ts` (the version comes from git through `vite.config.ts` and `.git_archival.txt`;
   nothing to bump), `chunkBudget.ts`, `page.ts`, `precompress.ts`, `rapierWasm.ts` (Rapier's WebAssembly as a plain
-  file in builds, IM3), `perfScript.ts`, `crash.ts`, `loading.ts`.
+  file in builds, IM3), `thirdPartyLicences.ts` (the build's licences file and the notices Vite can't see, LC1), `perfScript.ts`, `crash.ts`, `loading.ts`.
 - Tests: `render.test.ts`, `graphics.test.ts`, `stats.test.ts`, `content.test.ts`, `dev.test.ts`, `botsTuning.test.ts`,
   `rulesets.test.ts`, `matchRules.test.ts`, `attachments.test.ts`, `dataTables.test.ts` (a bad row in each `data/`
   table reaches the Dev tab and the console), `statsDrift.test.ts` (the built-in numbers equal `stats.md`'s, audit B5).

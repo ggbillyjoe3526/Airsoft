@@ -174,8 +174,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   locked as "set by Skirmish", unused rules hidden, one help line at the foot; Your match lists rules as chips with no map
   picture; no map is loaded until Play (M15, M15b, G3, MR1)
 - Menus scale with the window height like the HUD, up to 1.5× at 4K; a menu page stays pinned to the window and only its long list scrolls, fading at its foot (UX1)
-- Title screen with a Fullscreen button at the bottom left (it reads Exit fullscreen while in fullscreen) and the version at
-  the bottom right (MR1); pause, match summary and result screens; the pause screen shows the match's seed for bug reports (M15,
+- Title screen with a Fullscreen button at the bottom left (it reads Exit fullscreen while in fullscreen) and a Licences link and the version at
+  the bottom right (MR1, LC1); pause, match summary and result screens; the pause screen shows the match's seed for bug reports (M15,
   M24, BP1, G3)
 - Replica, battery and gas bottle pictures on Loadout, Customise and Armory; Customise lists the parts down the left, Colour first, each option
   a picture tile beside the replica and its numbers; a Back button, no Skins part; Colour offers the bold schemes and four

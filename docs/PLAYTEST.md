@@ -475,8 +475,9 @@ Defend. Pro pays XP ×2 but counts for nothing while it is dev content.
 ## Menus
 
 - [ ] **The title screen.** Only "AIRSOFT", the tagline "Call your hit. Go again." and **START**; on a clean save a
-  **Tutorial** button under START. The build sits small at the bottom right, a **Fullscreen** button at the bottom
-  left.
+  **Tutorial** button under START. The build sits small at the bottom right with **Licences** over it, a
+  **Fullscreen** button at the bottom left. Licences opens the third-party licences in a new tab, as plain text, in a
+  built copy (`npm run build`, `npm run preview`; the dev server has no such file).
 - [ ] **The top bar** on every screen after the title: MATCH, LOADOUT, ARMORY, SETTINGS, your level and XP bar on the
   right, the current place marked.
 - [ ] **The Match screen** (START). 01 Map as picture cards (a Day | Night switch where a map has both), 02 Mode as
