@@ -27,6 +27,12 @@ export const RENDER = {
    * this and is drawn as it is.
    */
   leanCut: { easeTime: 0.1, allowance: 0.1 },
+  /**
+   * A match waits for its shaders before round 1 (owner, PF1), but never longer than this (ms): a build that never
+   * settles (a driver fault) would hold it for good. Then the round starts and the warm-up's draws come when it settles.
+   * The container's slowest wait, Ultra on SwiftShader, was ~27 s.
+   */
+  warmUpLimitMs: 60_000,
 } as const;
 
 /**

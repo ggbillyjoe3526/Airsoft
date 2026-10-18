@@ -513,6 +513,9 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   times are judged there; its other lines are the preset's. WebGL2, the fallback, measured slower on Depot (p95 6.7,
   p99 10.6 ms), so PF3 read "today's numbers" as its own baseline too: 7.2 and 11.5 ms
   (`envs.desktop.backends.webgl`; the thread's reading, not the owner's word yet).
+- **Round 1 waits for every shader to be built before it goes live (owner, 2026-10-17, PF1).** A short wait on a still
+  field beats a stutter in round 1; the time to round 1 may grow for it (PF1's 10 % load line was dropped for this).
+  A 60 s limit (`RENDER.warmUpLimitMs`) only guards against a build that never settles.
 - **Medium has map-scoped draw-call lines: Woodland 120 and Neon Heights 145 (owner, 2026-10-11, W6a).** Other Medium
   lines and every Low line stay the presets'. Woodland's GPU grass and stand-ins cost 2 draws on Medium. The GPU
   dressing's triangles have a line of their own (`dressingTriangles`, `pipeline/perf-budget.json`).
