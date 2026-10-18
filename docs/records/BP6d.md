@@ -17,16 +17,15 @@
   record's commit clears the BP6 block with its own; each other part has its block.
 - **Every row was checked against the code** by four read-only audits, one per group of sections, each row marked holds,
   stale or wrong in a detail with a `file:line`; the browser checks of playable rows are BP6a–c's. None was fixed by
-  accident. Two rows went (`Game`'s 30 settings, gone with DX5; the order wheel's pointer, now in
-  `e2e/pointerLock.spec.ts`) and 33 were put right: notes cut mid-sentence by the 300-character trim restored, numbers
+  accident. One row went (`Game`'s 30 settings, gone with DX5) and 33 were put right: notes cut mid-sentence by the 300-character trim restored, numbers
   and paths that later work moved (RE1's round-end timing, PF4's Neon Heights draw calls, RM9's name tag, DX7's config
   files, "Medium and High" that Ultra shares).
 - **The Red Laser's text, not its effect, changed.** `pool/kit.ts` scales the replica's whole spread, aimed included,
   while the blurb said "steadier from the hip". A hip-only laser would be a balance change, so the words follow the game.
-- **Mouse look gets a test under the real lock.** Headless Chromium grants the lock (IN1), so `e2e/pointerLock.spec.ts`
-  turns the view by mouse counts and picks Follow Me on the order wheel. Esc itself stays a hand check: the browser
-  releases the lock on it, out of reach of a synthetic key. It waits for the round clock to run before moving the mouse: on CI's slower
-  runners the shader warm-up was still holding the view when it first moved (red twice on CI, green here).
+- **The mouse-look test was withdrawn.** `e2e/pointerLock.spec.ts` turned the view by mouse counts and picked Follow Me on
+  the order wheel under the real lock, and passed in the cloud container's Chromium, but on CI's headless shell
+  (Chromium 156) the view never turned, even with raw input off and the round's clock running: four CI runs red. It
+  went rather than hold the paused project's last pull request; the two rows it closed are back, with that finding.
 - **The bush's drawn lumps were left as they are.** MS1's look puts them from about 17 % inside the BBs' ellipsoid to
   30 % outside; re-centring them would change how bushes look, which wants the owner's eye on a picture first. The row
   says so.
