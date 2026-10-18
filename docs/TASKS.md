@@ -151,17 +151,6 @@ attempts: 0
 threads' branches it touches have merged (ST1, MR1, HD1, MV1, BD1, MS1, TT1), so none conflicts with them. DX2 takes
 over DC1's known-issues tidy-up. DX0, the quick wins, is the audit thread's own pull request.
 
-## BP6b · Beta 1 bug pass: bots, modes, round flow and maps
-tier: fix
-perf: skip
-touches: src/input/playerInput.ts, src/matchSession.ts, src/ui/hudCss/round.css
-contract: none
-acceptance:
-  1. The bug pass's bots, modes and maps share (William, 2026-10-17): every map, mode and difficulty played in the browser and headless, its KNOWN_ISSUES rows and Beta 1 checklist items proven or disproven (`/mnt/project-files/bugpass/BP2-results.md`).
-  2. Each bug found is fixed with a test, or logged in `docs/KNOWN_ISSUES.md` with why.
-status: open
-attempts: 0
-
 ## BP6 · Beta 1 bug pass (when William says go)
 tier: core
 perf: required

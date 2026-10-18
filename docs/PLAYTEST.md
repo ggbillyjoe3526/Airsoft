@@ -503,6 +503,8 @@ Defend. Pro pays XP ×2 but counts for nothing while it is dev content.
   shows the dial, a tick at the best setting for your BBs and how far they stay flat ("Flat to 39 m").
 - [ ] **Round end stamp.** WON, LOST or DRAW stamps at the end of a round and stays 2 s, then the round's table holds
   about 4 s before the next round (RE1); a click after half a second moves on. Long enough to read, never a wait?
+  Since BP6b a click held through the skip fires nothing until you let go, and in a 720 px window the word sits clear
+  under a two-line banner.
 - [ ] **Feed position** (Settings › HUD). Bottom left moves the feed there; top right is the default.
 - [ ] **Hit feed.** Hits and callouts share one feed, top right, newest on top: "Beta 2 called HIT · Alpha 3" with names in team colours; lines about
   you say "You"; friendly fire says FRIENDLY and a ricochet RICOCHET.
