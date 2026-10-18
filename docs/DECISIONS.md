@@ -511,8 +511,8 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   p95 ≤ 6.5 ms and p99 ≤ 9 ms (`envs.desktop.ultra` in `pipeline/perf-budget.json`): Ultra can't get slower, and
   nothing in the game was cut to reach 240 Hz. The 240 Hz aim stands and is unmet (KNOWN_ISSUES). Only Ultra's frame
   times are judged there; its other lines are the preset's. WebGL2, the fallback, measured slower on Depot (p95 6.7,
-  p99 10.6 ms), so PF3 read "today's numbers" as its own baseline too: 7.2 and 11.5 ms
-  (`envs.desktop.backends.webgl`; the thread's reading, not the owner's word yet).
+  p99 10.6 ms), so it holds its own baseline too: 7.2 and 11.5 ms (`envs.desktop.backends.webgl`; PF3's reading,
+  confirmed by the owner 2026-10-18).
 - **Round 1 waits for every shader to be built before it goes live (owner, 2026-10-17, PF1).** A short wait on a still
   field beats a stutter in round 1; the time to round 1 may grow for it (PF1's 10 % load line was dropped for this).
   A 60 s limit (`RENDER.warmUpLimitMs`) only guards against a build that never settles.
