@@ -12,7 +12,7 @@
 ## Decisions
 
 - **The desktop's Ultra line at 4K is the 2026-10-17 baseline, p95 6.5 ms and p99 9 ms, not the 240 Hz aim.** The owner's pick on the decision card ("today's numbers"); nothing in the game was cut for it (also in DECISIONS).
-- **WebGL2 holds its own desktop Ultra line at its own baseline, 7.2 and 11.5 ms.** Its Depot run was slower than WebGPU's line (6.7, 10.6), and "today's numbers" reads the same for each renderer; the owner is asked to confirm (also in DECISIONS).
+- **WebGL2 holds its own desktop Ultra line at its own baseline, 7.2 and 11.5 ms.** Its Depot run was slower than WebGPU's line (6.7, 10.6), and "today's numbers" reads the same for each renderer; the owner confirmed it on 2026-10-18 (also in DECISIONS).
 - **Only Ultra's frame times are judged on the desktop (`frameTimeGatedPresets`).** Low to High run far past 240 Hz there, and the 1080p row is for the GPU-bound hint only.
 - **Environment lines come last in `budgetFor` (`envs.<env>.<preset>`, then `envs.<env>.backends.<backend>.<preset>`).** The desktop's line must not reach the laptop, container or CI runs.
 - **QA may commit its own `pipeline/*.qa.test.mjs` files, never the gate's other tests.** Its tests of PF3's pipeline code failed scope otherwise (also in DECISIONS).
