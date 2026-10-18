@@ -79,6 +79,41 @@ describe('Woodland: spawns, dead zones and the flag (M33d, acceptance 1)', () =>
   });
 });
 
+describe('Woodland: West Hill, the meadow swell and the dry ravine (WL3, acceptance 1–3)', () => {
+  // Plan metres (x east, z north from the south-west corner) to the terrain's height.
+  const plan = (x: number, z: number): number => terrainHeightAt(terrain, x - WOODLAND_LAYOUT.halfX, WOODLAND_LAYOUT.halfZ - z)!;
+  /** Height over the field's own slope: the mean of the ground `d` m either side along x (the hill and swell are narrower). */
+  const over = (x: number, z: number, d: number): number => plan(x, z) - (plan(x - d, z) + plan(x + d, z)) / 2;
+
+  it('raises West Hill to about 3.4 m at its middle and 2.2 m at its ends (it was 2.6 m all along)', () => {
+    expect(over(22, 44, 14)).toBeGreaterThan(3.1);
+    expect(over(22, 44, 14)).toBeLessThan(3.7);
+    for (const z of [28, 60]) {
+      expect(over(22, z, 14)).toBeGreaterThan(1.9);
+      expect(over(22, z, 14)).toBeLessThan(2.5);
+    }
+  });
+
+  it('has a 0.6 m swell on the meadow at plan (46, 53)', () => {
+    const ring = (plan(46 - 9, 53) + plan(46 + 9, 53) + plan(46, 53 - 9) + plan(46, 53 + 9)) / 4;
+    expect(plan(46, 53) - ring).toBeGreaterThan(0.45);
+    expect(plan(46, 53) - ring).toBeLessThan(0.75);
+  });
+
+  it('digs the creek into a dry ravine about 2.2 m deep past the meadow, with a bed 3 m wide or more, and 1 m deep by the hill', () => {
+    const bedZ = (x: number): number => 12 + 3 * Math.sin(x / 14);
+    for (const x of [50, 60, 70]) {
+      const depth = (plan(x, bedZ(x) + 9) + plan(x, bedZ(x) - 9)) / 2 - plan(x, bedZ(x));
+      expect(depth, `x ${x}`).toBeGreaterThan(2);
+      expect(depth, `x ${x}`).toBeLessThan(2.4);
+      // The bed is flat across its 3.2 m width.
+      expect(Math.abs(plan(x, bedZ(x) + 1.5) - plan(x, bedZ(x))), `x ${x}`).toBeLessThan(0.1);
+    }
+    const west = (plan(12, bedZ(12) + 9) + plan(12, bedZ(12) - 9)) / 2 - plan(12, bedZ(12));
+    expect(west).toBeLessThan(1.2);
+  });
+});
+
 describe('Woodland: the starts are hidden (M88, playtest note 13)', () => {
   const level = buildLevelRay(WOODLAND.blocks, PHYSICS.rayGridCell, terrain);
 
