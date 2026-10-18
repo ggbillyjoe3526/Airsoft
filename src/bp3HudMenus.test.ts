@@ -96,8 +96,7 @@ describe('BP3a: wiring of the presentation classes, pinned at the source', () =>
 
   it('holds the round message while the player calls their hit, and shows it again after', () => {
     const src = sources['./render/match/matchPresentation.ts']!;
-    // BP6a: and while WON, LOST or DRAW is up.
-    expect(src).toMatch(/this\.updateRoundMessage\(status === 'calling' \|\| this\.resultWordsUp\(\)\)/);
+    expect(src).toMatch(/this\.updateRoundMessage\(status === 'calling'\)/);
     expect(src).toMatch(/if \(calling\) this\.feedback\.setRoundMessage\(''\)/);
     // Changing the state rebuilds the message, so it comes back when the call ends.
     expect(src).toMatch(/shown\.calling === calling\) return/);
@@ -110,13 +109,5 @@ describe('BP3a: wiring of the presentation classes, pinned at the source', () =>
     const match = sources['./render/match/matchPresentation.ts']!;
     expect(match).toMatch(/new MatchBoard\(container, true\)/);
     expect(match).toMatch(/this\.extraction !== undefined, r\.run\.reserve, this\.tags\)/);
-  });
-});
-
-describe('the stamp\'s click line (bug pass BP6a)', () => {
-  it('sits under the stamp out of the flow, so the word doesn\'t move up when it appears', () => {
-    const rule = /\.round-result-hint\s*\{([^}]*)\}/.exec(hudCss('round'))?.[1] ?? '';
-    expect(rule).toMatch(/position:\s*absolute/);
-    expect(rule).toMatch(/top:\s*100%/);
   });
 });

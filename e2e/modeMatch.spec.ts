@@ -99,15 +99,13 @@ async function endScreens(page: Page, headline: RegExp): Promise<void> {
 /** A mode played in rounds: a round each way, then the match. */
 async function roundsMatch(page: Page): Promise<void> {
   const banner = page.locator('.hitfx-round');
-  // The banner waits while WON or LOST is up (HUD.roundResultTime, bug pass BP6a): 2 s of sim, longer drawn in software.
-  const afterStamp = { timeout: 20_000 };
   const ours = await putOut(page, 1);
   expect(ours.winner, 'the other team out: your round').toBe(0);
-  await expect(banner).toHaveText(/\S/, afterStamp);
+  await expect(banner).toHaveText(/\S/);
   await nextRound(page);
   const theirs = await putOut(page, 0);
   expect(theirs.winner, 'your team out: their round').toBe(1);
-  await expect(banner).toHaveText(/\S/, afterStamp);
+  await expect(banner).toHaveText(/\S/);
   await nextRound(page);
   const last = await putOut(page, 1, true);
   expect(last.phase, 'one win short, the other team out: the match').toBe('matchOver');
@@ -220,8 +218,7 @@ test('Overtime: a level time-out puts the flag up with its banner, clock and str
       { timeout: 60_000 },
     )
     .toBe('overtimeFlag');
-  // After the WON or LOST stamp's 2 s of sim (bug pass BP6a).
-  await expect(page.locator('.hitfx-round')).toHaveText(/(Flag touched · your team wins the round|Beta touched the flag · your team loses the round)/, { timeout: 20_000 });
+  await expect(page.locator('.hitfx-round')).toHaveText(/(Flag touched · your team wins the round|Beta touched the flag · your team loses the round)/);
   expect((await flagState()).overtimeFlag.up, 'the flag stays up through the pause').toBe(true);
   await nextRound(page);
   expect((await flagState()).overtimeFlag.up, 'and is down for the next round').toBe(false);

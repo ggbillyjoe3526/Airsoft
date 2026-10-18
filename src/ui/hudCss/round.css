@@ -111,14 +111,8 @@
   }
 }
 
-/* "Click for the next round" (or the results), small under the round while a click would move on. Out of the flow, so
-   the word doesn't move up when it appears (bug pass BP6a). */
+/* "Click for the next round" (or the results), small under the round while a click would move on. */
 .round-result-hint {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  translate: -50% 0;
-  white-space: nowrap;
   margin-top: 10px;
   font: 700 15px/1.2 var(--ui-font);
   letter-spacing: var(--ls-caps);
