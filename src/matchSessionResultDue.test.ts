@@ -33,9 +33,11 @@ describe('MatchSession.takeResultDue', () => {
   it('is due at once after a click on a decided match (RE1), and a second click owes no second screen', () => {
     const s = session(50, 50);
     let continued = 0;
-    Object.assign(s, { state: { time: 50.6, round: { phase: 'matchOver' } }, match: { resultContinued: () => continued++ } });
+    let held = 0;
+    Object.assign(s, { state: { time: 50.6, round: { phase: 'matchOver' } }, match: { resultContinued: () => continued++ }, input: { holdFireUntilReleased: () => held++ } });
     (s as unknown as { continueFromResult(): void }).continueFromResult();
     expect(continued).toBe(1);
+    expect(held).toBe(1); // the click that moved on fires nothing (BP6b)
     // Due now, give or take the rounding of time minus the delay (at worst one tick, 1/60 s, later).
     const now = s.takeResultDue();
     s.state.time += 1 / 60;
