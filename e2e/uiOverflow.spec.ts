@@ -275,6 +275,35 @@ for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]] as const
         (document.querySelector('.hud-hop') as HTMLElement).hidden = true;
       });
       await expectFits(page, `HUD at size ${size}`);
+      // BP6b: the WON / LOST word starts below a two-line round banner (half-time, a named winner) at the HUD's 80 % and 100 %.
+      const gap = await page.evaluate(async () => {
+        const banner = document.querySelector('.hitfx-round') as HTMLElement;
+        const stamp = document.querySelector('.round-result') as HTMLElement;
+        const word = stamp.querySelector('.round-result-word') as HTMLElement;
+        const was = { cls: banner.className, text: banner.textContent ?? '', hidden: stamp.hidden, word: word.textContent ?? '' };
+        banner.textContent = 'Flag touched · your team wins the round · half-time, ends swap · next round in 4';
+        banner.className = "hitfx-round show";
+        stamp.hidden = false;
+        word.textContent = 'LOST';
+        // Its round under it and the click line: the word was centred on all three before, so it sat highest with them.
+        (stamp.querySelector('.round-result-caption') as HTMLElement).textContent = 'Round 4';
+        const hint = stamp.querySelector('.round-result-hint') as HTMLElement;
+        hint.hidden = false;
+        hint.textContent = 'Click to continue';
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        for (const a of document.getAnimations()) a.finish();
+        const br = banner.getBoundingClientRect();
+        const wr = word.getBoundingClientRect();
+        const clear = wr.top - br.bottom;
+        banner.className = was.cls;
+        banner.textContent = was.text;
+        stamp.hidden = was.hidden;
+        word.textContent = was.word;
+        hint.hidden = true;
+        return clear;
+      });
+      // At 150 % the same words wrap to three lines in the banner's 730 px, which the word does not clear (advisory, BP6b QA).
+      if (size <= 1) expect(gap, `HUD size ${size}: the result word clears a two-line round banner`).toBeGreaterThanOrEqual(0);
     }
 
     // The pause menu over the match (a hidden tab pauses it, as the smoke test does).
