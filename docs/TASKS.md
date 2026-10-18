@@ -22,8 +22,7 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 
 **The owner's Dev 6 playtest list (2026-10-16).** These are his 34 items, taken in Beta 1 on his word, small
 additions included (`docs/DECISIONS.md`). Seven threads build them, one block each, and they come before the blocks
-below. The item numbers are his. Where an older block overlaps one of these, the owner's item wins:
-- UX1 overlaps MR1 and HD1.
+below. The item numbers are his. Where an older block overlaps one of these, the owner's item wins.
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
 
@@ -110,7 +109,7 @@ attempts: 0
 ## PF1 · No shader hitches mid-match
 tier: core
 perf: required
-touches: src/matchSession.ts, src/render/flagRenderer.ts, src/render/characterRenderer.ts, src/render/externalModels.ts, src/render/viewmodel.ts, src/render/renderer.ts
+touches: src/matchSession.ts, src/render/match/flagRenderer.ts, src/render/figures/characterRenderer.ts, src/render/figures/externalModels.ts, src/render/replicas/viewmodel.ts, src/render/renderer.ts
 contract: none
 acceptance:
   1. Each first-use hitch is measured before and after with `?perf` on a cold cache, and recorded: the first overtime flag, first tossed magazine, first 2x scope aim, first figure fade, the shadow depth shaders and the post stack's pipelines.
@@ -145,19 +144,6 @@ acceptance:
 status: open
 attempts: 0
 
-## UX1 · Menus at 4K and small windows; HUD clashes at 1280 px
-tier: ui
-perf: skip
-touches: src/ui/menus/menus.css, src/ui/menus/css/, src/style.css, src/ui/hud.css, src/ui/hudCss/, src/ui/flagMarker.ts, src/ui/holdMarker.ts, src/render/viewmodel.ts
-contract: none
-acceptance:
-  1. Menu type and controls scale from the window height, as `hudScale` does (DECISIONS: a Beta task). At 3840×2160 and 100 % OS scaling, body text is about 1.5×; 1280×720 is unchanged.
-  2. Menu scrolling is measured again at 1280×720 (the row predates M100), and no main menu page scrolls there. New game fits at 900×600.
-  3. Edge markers pointing almost the same way don't overlap, and the Attack / Defend pole marker at the screen's edge shows which way to turn.
-  4. At 1280×720 the held pistol's grip clears the ammo panel, and at HUD size 120 % or more the widest score bar clears the minimap.
-status: open
-attempts: 0
-
 ## BT1 · Bot quirks from the backlog (after playtest)
 tier: core
 perf: skip
@@ -189,73 +175,6 @@ attempts: 0
 `/mnt/project-files/audit/repo-audit-2026-10-16.md`, in the order to run them. Each one waits until the playtest
 threads' branches it touches have merged (ST1, MR1, HD1, MV1, BD1, MS1, TT1), so none conflicts with them. DX2 takes
 over DC1's known-issues tidy-up. DX0, the quick wins, is the audit thread's own pull request.
-
-## DX4 · Tooling and CI: one build per pull request, balanced shards, a formatter (audit B1, B2, B3)
-tier: ui
-perf: skip
-touches: .github/workflows/check.yml, package.json, package-lock.json, .prettierrc, .prettierignore, pipeline/build-cached.mjs, pipeline/gate.mjs, src/ai/, vite.config.ts
-contract: none
-acceptance:
-  1. A pull request's CI builds the e2e and production bundles once and hands them to the browser shards (an artifact or a cache keyed on the sources); each browser shard no longer builds.
-  2. The slow shards finish within about a minute of each other: the Woodland Extraction balance guard is split or the shard count raised.
-  3. Prettier is a dev dependency with `printWidth: 140`, single quotes and trailing commas as the code already has them; `npm run format:check` runs on CI once the one-off format commit is in (that commit is made only after the Dev 6 playtest branches merge, and the owner has said yes to the formatter).
-  4. The 13 `eslint-disable` comments for an uninstalled linter become plain comments that keep their reason.
-  5. `npm run t` finishes under two minutes on the owner's desktop and under four in the cloud container, with no test dropped (any file still over 20 s is in `slow` or has a smaller fixture).
-status: open
-attempts: 0
-
-## DX5 · App root: one preferences object and one session interface (audit A1 step one, A2, B7)
-tier: core
-perf: required
-touches: src/game.ts, src/matchSession.ts, src/rangeSession.ts, src/settings/, src/ui/menus/savedChoices.ts, src/ui/crosshair.ts, src/ui/hitMarkerLook.ts, src/ui/hudSettings.ts, src/ui/menus/menus.ts, src/render/matchPresentation.ts, src/render/combatPresentation.ts
-contract: none
-acceptance:
-  1. A `HudPrefs` object (or the name the thread picks) holds every HUD and accessibility preference once; `Game`, `Menus`, both sessions and the presentations read it by reference, so a new preference is added in one place and the `set*` forwarders in `game.ts` and `matchSession.ts` are gone.
-  2. `MatchSession` and `RangeSession` implement one `Session` interface for what `Game` calls on both; `game.ts` has no `instanceof MatchSession` where the interface answers.
-  3. The typed `load*` and `save*` helpers live under `src/settings/`, with `src/settings/README.md` naming them; the UI files keep only what draws.
-  4. Every setting still loads, applies live and saves as before (the settings tests and the smoke test pass unchanged apart from import paths), and a save from 0.1 Dev 6 loads.
-  5. `game.ts` is under 1,300 lines.
-status: open
-attempts: 0
-
-## DX6 · Render: the folder regrouped, the prop builders as data, no per-frame vault rays (audit A3, A8 part, B4, B9 part)
-tier: core
-perf: required
-touches: src/render/, src/sim/vault.ts, src/sim/character.ts, src/sim/simulation.ts, src/matchSession.ts, pipeline/cycles.mjs, e2e/
-contract: none
-acceptance:
-  1. `src/render/` is grouped as its README describes: `field/`, `figures/`, `replicas/`, `light/`, `effects/` (names the thread picks), each with a README; `post/` and `webgpu/` keep theirs. Pure moves: no behaviour change, the import-cycle check and every test pass, and `render/README.md` is the index of the subfolders.
-  2. `mapMeshes.ts`'s prop builders (containers, pallets, racks, gabions, IBCs, skips, generators, barriers and the rest) live in a `mapPieces/` table, leaving merge, restyle and dispose behind; `mapMeshes.ts` is under 400 lines.
-  3. The vault prompt reads the simulation's per-tick answer (on the character or an event) and `combatPresentation.ts` casts no rays.
-  4. The six HUD marker updaters in `matchPresentation.ts` share one project-and-pin helper.
-  5. The perf gate is green on every matrix entry, and the Low frame-time, draw-call and heap lines are unchanged within noise.
-status: open
-attempts: 0
-
-## DX7 · Bots: the hub files split, two sources of truth closed (audit A8 part, B5, B6, B13)
-tier: core
-perf: required
-touches: src/ai/, src/config/bots.ts, src/config/, src/ui/devSettings.ts, src/pool/, src/progress/
-contract: none
-acceptance:
-  1. Hearing and round planning leave `ai/botController.ts` for modules of their own (as `squadOrders.ts` and `magShare.ts` already did); `botController.ts` is under 600 lines and every headless guard passes with the same seeds.
-  2. `config/bots.ts` is split by concern (movement, senses, squad, extraction, skill), each file under 300 lines, with `config/README.md` naming them and `config/bots.ts` re-exporting so no importer changes.
-  3. A malformed row in any root table (`pool.md`, `stats.md`, `levels.md`, `bots.md`, `bot-kits.md`, `callouts.md`) shows in the Dev tab's diagnostics and the console, not the console alone.
-  4. The six root tables live in one `data/` folder, named in `README.md` › Layout and `docs/ARCHITECTURE.md`, with every import and test path updated.
-status: open
-attempts: 0
-
-## DX8 · Game: the play flow and the dev glue out of the composition root (audit A1 step two; optional, after DX5)
-tier: core
-perf: required
-touches: src/game.ts, src/core/, src/matchFlow.ts, src/ui/menus/menus.ts
-contract: none
-acceptance:
-  1. Play, enter, resume, pause and leave live in a `PlayFlow` module (name the thread's) with its own tests; the dev and report glue in a module of its own; `Game` keeps the loop, the lifecycle and the wiring.
-  2. `game.ts` is under 800 lines and imports under 50 modules.
-  3. Pause, resume, restart and return to menu leave the same state as before (the session tests and the smoke test pass), and the frame loop's crash guard is unchanged.
-status: open
-attempts: 0
 
 ## BP6 · Beta 1 bug pass (when William says go)
 tier: core

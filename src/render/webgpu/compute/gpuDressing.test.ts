@@ -37,7 +37,7 @@ function setup(webgpu = false): { dressing: GpuDressing; compute: ReturnType<typ
   return { dressing: new GpuDressing(renderer, webgpu), compute, render, freed };
 }
 
-/** A scene holding `map`'s group as render/mapMeshes.ts builds it: the map on it, its terrain mesh coloured. */
+/** A scene holding `map`'s group as render/field/mapMeshes.ts builds it: the map on it, its terrain mesh coloured. */
 function sceneOf(map: MapData): { scene: THREE.Scene; group: THREE.Group } {
   const scene = new THREE.Scene();
   const group = new THREE.Group();

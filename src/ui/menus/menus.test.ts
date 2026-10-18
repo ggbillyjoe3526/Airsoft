@@ -17,7 +17,7 @@ import { GAME_POOL } from '../../pool/gamePool';
 import { EMPTY_FIT, kitSlot } from '../../pool/kit';
 import { backTarget, escResumes, moreBelow, screenWhenStopped, tabAfterKey } from './menuNav';
 import { describeRules, type MatchRulesText } from './rulesText';
-import { loadFov, loadMap, loadSavedQuality } from './savedChoices';
+import { loadFov, loadMap, loadSavedQuality } from '../../settings/savedChoices';
 
 /** Joining words that stay lower case in a title-case label ("Cross and Dot"). */
 const SMALL_WORDS = new Set(['and', 'or', 'to', 'of']);

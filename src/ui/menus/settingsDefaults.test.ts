@@ -6,7 +6,8 @@ import { retroLookOf } from '../../config/look';
 import { loadDevEnabled } from '../../settings/dev';
 import { loadRetroSettings } from '../../settings/retroLook';
 import { SETTINGS_KEY, SETTINGS_VERSION, saveSetting } from '../../settings/storage';
-import { loadAimMode, loadCrouchMode, loadLook, loadScoreboardSize, loadSoundCueColour } from './savedChoices';
+import { loadAimMode, loadCrouchMode, loadLook } from '../../settings/savedChoices';
+import { loadScoreboardSize, loadSoundCueColour } from '../../settings/hudPrefs';
 
 // ST1 (William's Dev 6 playtest, 2026-10-16, items 4-8, 18, 20 and 34): the new defaults, read from an empty save, and a
 // save that picked otherwise keeping its pick.

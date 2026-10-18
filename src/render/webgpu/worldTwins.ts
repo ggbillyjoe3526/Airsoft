@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { type NodeMaterial, PMREMGenerator, type WebGPURenderer } from 'three/webgpu';
-import { disposeEnvironmentScene, type EnvironmentLook, ReplicaSheen, skyEnvironmentScene } from '../replicaSheen';
+import { disposeEnvironmentScene, type EnvironmentLook, ReplicaSheen, skyEnvironmentScene } from '../replicas/replicaSheen';
 import { REPLICA_SHEEN } from '../../config/render';
 import { beamTwin, copyOnto, flamesTwin, smokeTwin } from './effectNodes';
 import { figureTwin } from './figureNodes';

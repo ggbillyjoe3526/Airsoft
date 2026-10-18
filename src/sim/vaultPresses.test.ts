@@ -15,7 +15,7 @@ import type { GameEvent } from './events';
 import { createSimContext, stepSimulation } from './simulation';
 import { createGameState } from './state';
 import { vec3 } from './vec';
-import { cancelVault, createVaultState, vaultingCommand, withVaultPresses } from './vault';
+import { cancelVault, createVaultState, findVault, vaultingCommand, withVaultPresses } from './vault';
 
 /**
  * What a vault does with the controls (BP5): a trigger or aim held through one is no new pull or aim press after it,
@@ -200,6 +200,45 @@ describe('the controls through a vault (BP5)', () => {
     expect(stuckAt).toBeNull();
     expect(run.player.status).toBe('out');
     expect(Math.hypot(run.player.position.x, run.player.position.z - 8)).toBeLessThan(0.5);
+    run.world.dispose();
+  });
+});
+
+describe("the tick's vault answer, for the prompt (DX6)", () => {
+  beforeAll(async () => {
+    await initPhysics();
+  });
+
+  it('is what asking after the tick with its command gives, true in reach of the wall, false through the vault', () => {
+    const run = setUp();
+    const check = createVaultState();
+    run.settle(10);
+    expect(run.player.vault.ready).toBe(false); // too far from the wall
+    run.cmd.forward = 1;
+    let readyTicks = 0;
+    while (run.player.position.z + 2 > 0.3 + R) {
+      run.tick();
+      expect(run.player.vault.ready).toBe(findVault(run.player, run.cmd, MOVEMENT, BODY, run.world, check));
+      if (run.player.vault.ready) readyTicks++;
+    }
+    expect(readyTicks).toBeGreaterThan(0);
+    expect(run.player.vault.ready).toBe(true);
+    run.cmd.jump = true;
+    run.tick();
+    expect(run.player.vault.active).toBe(true);
+    expect(run.player.vault.ready).toBe(false);
+    // Bots and everyone else get the same answer: the one standing in the open has none.
+    expect(run.state.characters[1]!.vault.ready).toBe(false);
+    run.world.dispose();
+  });
+
+  it('is false once you are hit', () => {
+    const run = setUp();
+    run.cmd.forward = 1;
+    while (!run.player.vault.ready) run.tick();
+    eliminate(run.player, 1, run.state.characters, run.ctx.targets.elimination);
+    run.tick();
+    expect(run.player.vault.ready).toBe(false);
     run.world.dispose();
   });
 });

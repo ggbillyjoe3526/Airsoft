@@ -5,7 +5,7 @@
    countdown between rounds keep a size that fits one line at 1280 px, and a longer one (half-time, a named winner)
    wraps into two even lines rather than leave the countdown alone on the second. Shown by .show alone, when the game
    says (its timing is HUD.roundStartMessageTime, config/renderView.ts); it waits while you call your hit, so it never
-   shows under the "HIT!" stamp (BP3, render/matchPresentation.ts). Its gap under the score bar grows with the HUD, as
+   shows under the "HIT!" stamp (BP3, render/match/matchPresentation.ts). Its gap under the score bar grows with the HUD, as
    the OUT tag in it does (BP3). */
 .hitfx-round {
   position: absolute;

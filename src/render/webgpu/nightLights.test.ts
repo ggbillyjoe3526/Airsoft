@@ -11,9 +11,9 @@ import { WOODLAND } from '../../map/woodland';
 import { fitParts, type WorldQuery } from '../../sim/armament';
 import { createCharacter } from '../../sim/character';
 import { vec3 } from '../../sim/vec';
-import { resolveLighting } from '../lightingPreset';
-import { addLightPools } from '../lightPools';
-import { TorchBeams } from '../torchBeams';
+import { resolveLighting } from '../light/lightingPreset';
+import { addLightPools } from '../light/lightPools';
+import { TorchBeams } from '../light/torchBeams';
 import ClusteredLightsNode from 'three/examples/jsm/tsl/lighting/ClusteredLightsNode.js';
 import { clusters, NightLighting, NightLightsNode } from './nightLights';
 

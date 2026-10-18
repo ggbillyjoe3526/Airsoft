@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_FEED_CORNER, DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE, type FeedCorner } from '../config/matchInfo';
 import { MemoryStorage } from '../pool/testStorage';
 import { flushSettings, SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
-import { hudSettings, loadFeedCorner } from './hudSettings';
+import { hudSettings } from './hudSettings';
+import { loadFeedCorner } from '../settings/hudPrefs';
 import { type FakeElement, fakeDocument, findAll } from './testSupport';
 
 /** Dev 6 playtest item 32 (QA): Settings › HUD › Feed position saves and loads. */

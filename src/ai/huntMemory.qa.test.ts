@@ -162,11 +162,11 @@ describe('a hunting bot whose goal its team checked meanwhile turns to another (
     // Two seeds of 150 s keep this file to seconds in the fast project. One was enough until Woodland's lanes lost
     // their points at the fort's baffles (M88 QA, 2026-10-11): on seed 1 the blind bots' longest stale walk is now 1.8
     // s. Seeds 1 and 4 since MS1 (2026-10-16): with Woodland's bushes cut to crouch height its bots see each other
-    // sooner, and on seed 2 no bot hunts at all (the premise below), where seed 4 hunts for 6 600 ticks. Seeds 1 and 3
-    // since RE1 (2026-10-17): the longer pause between rounds moves each seed's later rounds, and on seed 4 bots now
-    // hunt for 42 ticks; seed 3 hunts for 3 000 (blind bots' longest stale walk 2.6 s).
-    const before = [staleWalks(1, true), staleWalks(3, true)];
-    const now = [staleWalks(1, false), staleWalks(3, false)];
+    // sooner, and on seed 2 no bot hunts at all (the premise below), where seed 4 hunts for 6 600 ticks. Seeds 1 and 6
+    // since MV2 (2026-10-17): with the holstered run at 5.4 m/s, seed 4's bots hunt for 297 ticks and seed 1's blind
+    // longest walk is 1.78 s; seed 6's is 5.5 s, over 5 600 ticks of hunting either way.
+    const before = [staleWalks(1, true), staleWalks(6, true)];
+    const now = [staleWalks(1, false), staleWalks(6, false)];
     console.log(`QA M87 stale hunt walks: without the re-pick ${JSON.stringify(before)}, with it ${JSON.stringify(now)}`);
     // The measure is not blind: told nothing, bots walk on for seconds to spots their team has seen empty.
     expect(Math.max(...before.map((r) => r.longest))).toBeGreaterThan(2);

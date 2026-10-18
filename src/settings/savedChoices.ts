@@ -1,0 +1,284 @@
+import { DEFAULT_REALISTIC_COLOURS, DEFAULT_ROBOTS, type LookSettings, REALISTIC_COLOUR_CHOICES, ROBOT_CHOICES } from '../config/look';
+import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, defaultTeammateDifficulty, TEAMMATE_DIFFICULTIES } from '../config/bots';
+import {
+  AIM_MODES,
+  CROUCH_MODES,
+  type CrouchMode,
+  DEFAULT_AIM_MODE,
+  DEFAULT_CROUCH_MODE,
+  DEFAULT_RAW_INPUT,
+  DEFAULT_SPRINT_MODE,
+  type HoldMode,
+  INVERT_MOUSE,
+  MOUSE,
+  MOUSE_DPI,
+  RAW_INPUT,
+  SPRINT_MODES,
+} from '../config/controls';
+import {
+  DEFAULT_MATCH_RULES,
+  DEFAULT_RULESET,
+  FIRE_MODE_CHOICES,
+  FRIENDLY_FIRE_CHOICES,
+  KIT_CHOICES,
+  MAGAZINE_CHOICES,
+  type MatchRules,
+  MINIMAP_HEARD_CHOICES,
+  OVERTIME_CHOICES,
+  RICOCHETS_COUNT_CHOICES,
+  ROUND_TIME_SETTING,
+  RULESETS,
+  type RulesetId,
+  TEAM_SIZE_CHOICES,
+  TIME_OUT_CHOICES,
+  WINS_NEEDED_CHOICES,
+} from '../config/matchRules';
+import { RECORDS_KEY } from '../config/matchInfo';
+import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../config/modes';
+import { AIMING } from '../config/optics';
+import { frameRateCapFromSaved, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES } from '../config/graphics';
+import { FOV_SETTING, type FrameRateCap, type LightingPresetId, QUALITY_CHOICES, type QualityChoice, type QualitySettings, RENDER } from '../config/render';
+import { DEFAULT_RENDERER, RENDERER_IDS, type RendererChoice } from '../config/rendererPick';
+import { DEFAULT_WHEEL_SELECT, WHEEL_SELECT_MODES, type WheelSelect } from '../config/squad';
+import { DEFAULT_TEAM_PICK, TEAM_PICKS, type TeamPickId } from '../config/teams';
+import { lightingChoices, parseLightingPick } from '../map/lightingChoice';
+import { DEFAULT_MAP, MAPS, type MapId, mapData, mapLoaded } from '../map/maps';
+import { DEFAULT_PRACTICE_PLACE, PRACTICE_PLACES, type PracticePlaceId } from '../map/practicePlaces';
+import type { PlayerInput } from '../input/playerInput';
+import type { NewGamePicks } from '../newGamePicks';
+import { browserStorage, loadChoice, loadSetting, numberIn, oneOf } from './storage';
+
+/** The choices the menus save in the browser, each read back here with its default. */
+
+/**
+ * New game's picks as saved: the map, the mode, the opponents' and your teammates' difficulty (M20), your team (M98), the
+ * ruleset and the Match pop-up's rules (M39). `Game` holds them and the Match screen changes them.
+ */
+export function loadNewGamePicks(): NewGamePicks {
+  const difficulty = loadDifficulty();
+  return { map: loadMap(), mode: loadMode(), difficulty, teammateDifficulty: loadTeammateDifficulty(difficulty), team: loadTeamPick(), ruleset: loadRuleset(), rules: loadMatchRules() };
+}
+
+/** The opponents' bot difficulty (saved as `difficulty`, the one level every bot had before M20). */
+export function loadDifficulty(): Difficulty {
+  return loadChoice('difficulty', DIFFICULTIES, DEFAULT_DIFFICULTY);
+}
+
+/**
+ * Your bot teammates' difficulty (M20). Until one is saved it follows the opponents' (`opponents`, the saved
+ * `difficulty`) through defaultTeammateDifficulty: the same level, as every bot had before M20, except that Easy
+ * opponents give Normal teammates (audit AI-03). Either way a returning player's standard matches still count for the
+ * records (countsForRecords treats that default pair as standard).
+ */
+export function loadTeammateDifficulty(opponents: Difficulty = loadDifficulty()): Difficulty {
+  return loadChoice('teammateDifficulty', TEAMMATE_DIFFICULTIES, defaultTeammateDifficulty(opponents));
+}
+
+/** Whether a teammate difficulty has been picked and saved (until then it follows the opponents', M20). */
+export function hasSavedTeammateDifficulty(): boolean {
+  return loadSetting<Difficulty | null>('teammateDifficulty', oneOf(TEAMMATE_DIFFICULTIES.map((d) => d.id)), null) !== null;
+}
+
+/**
+ * The Match pop-up's rules (M20), each with its default, and Custom's switches (M39; off, as the game always played, until
+ * one is saved). Strict marshal is inert and never saved: off here, set only by a ruleset.
+ */
+export function loadMatchRules(): MatchRules {
+  const d = DEFAULT_MATCH_RULES;
+  return {
+    winsNeeded: Number(loadChoice('winsNeeded', WINS_NEEDED_CHOICES, String(d.winsNeeded))),
+    roundTime: loadSetting('roundTime', roundTimeIn, d.roundTime),
+    teamSize: Number(loadChoice('teamSize', TEAM_SIZE_CHOICES, String(d.teamSize))),
+    friendlyFire: loadChoice('friendlyFire', FRIENDLY_FIRE_CHOICES, d.friendlyFire ? 'on' : 'off') === 'on',
+    ricochetsCount: loadChoice('ricochets', RICOCHETS_COUNT_CHOICES, d.ricochetsCount ? 'on' : 'off') === 'on',
+    winByTwo: loadChoice('overtime', OVERTIME_CHOICES, d.winByTwo ? 'on' : 'off') === 'on',
+    timeOutToMorePlayers: loadChoice('timeOut', TIME_OUT_CHOICES, d.timeOutToMorePlayers ? 'morePlayers' : 'draw') === 'morePlayers',
+    heardOnMinimap: loadChoice('minimapHeard', MINIMAP_HEARD_CHOICES, d.heardOnMinimap ? 'on' : 'off') === 'on',
+    semiAutoOnly: loadChoice('fireModes', FIRE_MODE_CHOICES, d.semiAutoOnly ? 'semi' : 'any') === 'semi',
+    realcap: loadChoice('magazines', MAGAZINE_CHOICES, d.realcap ? 'realcap' : 'carried') === 'realcap',
+    factoryKit: loadChoice('matchKit', KIT_CHOICES, d.factoryKit ? 'factory' : 'own') === 'factory',
+    strictMarshal: d.strictMarshal,
+  };
+}
+
+/** The Rules picker's ruleset (M39): Skirmish until another is saved. */
+export function loadRuleset(): RulesetId {
+  return loadChoice('ruleset', RULESETS, DEFAULT_RULESET);
+}
+
+/** A saved round time: in range and on the slider's half-minute steps. */
+function roundTimeIn(raw: unknown): number | undefined {
+  const v = numberIn(ROUND_TIME_SETTING.min, ROUND_TIME_SETTING.max)(raw);
+  return v !== undefined && (v - ROUND_TIME_SETTING.min) % ROUND_TIME_SETTING.step === 0 ? v : undefined;
+}
+
+export function loadMode(): MatchMode {
+  return loadChoice('mode', MATCH_MODES, DEFAULT_MODE);
+}
+
+/** Settings › Controls as saved, laid onto the PlayerInput that holds them (the menus' rows change them there). */
+export function loadControls(): Pick<PlayerInput, 'crouchMode' | 'aimMode' | 'sprintMode' | 'invertY' | 'sensitivity' | 'aimSensitivity' | 'wheelSelect'> {
+  return { crouchMode: loadCrouchMode(), aimMode: loadAimMode(), sprintMode: loadSprintMode(), invertY: loadInvertMouse(), sensitivity: loadSensitivity(), aimSensitivity: loadAimSensitivity(), wheelSelect: loadWheelSelect() };
+}
+
+/** The crouch key's behaviour (hold or toggle). */
+export function loadCrouchMode(): CrouchMode {
+  return loadChoice('crouch', CROUCH_MODES, DEFAULT_CROUCH_MODE);
+}
+
+/** The aim button's behaviour (toggle or hold). */
+export function loadAimMode(): HoldMode {
+  return loadChoice('aimMode', AIM_MODES, DEFAULT_AIM_MODE);
+}
+
+/** The sprint key's behaviour (hold or toggle). */
+export function loadSprintMode(): HoldMode {
+  return loadChoice('sprintMode', SPRINT_MODES, DEFAULT_SPRINT_MODE);
+}
+
+/** How the order wheel gives an order (M23): hover by default. */
+export function loadWheelSelect(): WheelSelect {
+  return loadChoice('orderWheel', WHEEL_SELECT_MODES, DEFAULT_WHEEL_SELECT);
+}
+
+/** Invert mouse: off unless the player turned it on. */
+export function loadInvertMouse(): boolean {
+  return loadChoice('invertMouse', INVERT_MOUSE, 'off') === 'on';
+}
+
+/** The mouse's DPI as the player entered it, for the cm/360 figure. */
+export function loadMouseDpi(): number {
+  return loadSetting('mouseDpi', numberIn(MOUSE_DPI.min, MOUSE_DPI.max), MOUSE_DPI.default);
+}
+
+/** The map picked on New game. */
+export function loadMap(): MapId {
+  return loadChoice('map', MAPS, DEFAULT_MAP);
+}
+
+/** Where Practice is played (M94): the range, or a map. */
+export function loadPracticePlace(): PracticePlaceId {
+  return loadChoice('practicePlace', PRACTICE_PLACES, DEFAULT_PRACTICE_PLACE);
+}
+
+/**
+ * Each map's Day or Night pick (M34d), saved as `lighting.<map id>`: only for maps that offer more than one preset and
+ * only a preset the map offers; a map without a saved pick plays its first (MapData.lighting). A dev map whose data
+ * isn't loaded yet (M50) keeps any preset saved for it: lightingPicked checks it against the map once it is.
+ */
+export function loadLightingPicks(storage = browserStorage()): Partial<Record<MapId, LightingPresetId>> {
+  const picks: Partial<Record<MapId, LightingPresetId>> = {};
+  for (const m of MAPS) {
+    const offered = mapLoaded(m.id) ? lightingChoices(mapData(m.id)) : null;
+    if (offered && offered.length < 2) continue;
+    const pick = loadSetting(`lighting.${m.id}`, parseLightingPick, undefined, storage);
+    if (pick !== undefined && (!offered || offered.includes(pick))) picks[m.id] = pick;
+  }
+  return picks;
+}
+
+/** The field of view (horizontal degrees on a 16:9 screen). */
+export function loadFov(): number {
+  return loadSetting('fov', numberIn(FOV_SETTING.min, FOV_SETTING.max), RENDER.horizontalFov16x9);
+}
+
+/**
+ * The render quality picked on Settings → Graphics → Quality (M14): a preset or 'custom', or null if none has been
+ * saved: then the game picks one for the visit (config/render.ts startingQuality).
+ */
+export function loadSavedQuality(storage = browserStorage()): QualityChoice | null {
+  return loadSetting<QualityChoice | null>('quality', oneOf(QUALITY_CHOICES.map((q) => q.id)), null, storage);
+}
+
+/**
+ * The Custom rows as saved (`graphics.<field>`, config/graphics.ts): only the fields saved with a value their row
+ * offers; config/render.ts resolveQuality fills the rest from High.
+ */
+export function loadCustomQuality(storage = browserStorage()): Partial<QualitySettings> {
+  const custom: Record<string, unknown> = {};
+  for (const row of GRAPHICS_ROWS) {
+    const v = loadSetting(graphicsKey(row.field), (raw) => parseStored(row, raw), undefined, storage);
+    if (v !== undefined) custom[row.field] = v;
+  }
+  return custom as Partial<QualitySettings>;
+}
+
+/**
+ * The frame-rate choice (Settings → Graphics; 0 = Unlimited, the default). Every id an earlier build saved reads back as
+ * itself, any other number as the nearest choice (G5, config/graphics.ts frameRateCapFromSaved).
+ */
+export function loadFrameRateCap(storage = browserStorage()): FrameRateCap {
+  return loadSetting('frameRateCap', frameRateCapFromSaved, 0, storage);
+}
+
+/**
+ * The Renderer row (Settings → Graphics, WebGPU overhaul W1): Auto unless the player picked another. Every save before
+ * W1 has none and reads as Auto: WebGPU where the browser gives a hardware adapter, WebGL otherwise (config/rendererPick.ts).
+ */
+export function loadRendererChoice(storage = browserStorage()): RendererChoice {
+  return loadSetting('renderer', oneOf(RENDERER_IDS), DEFAULT_RENDERER, storage);
+}
+
+/** The FPS readout (Settings → Graphics): off unless the player turned it on. */
+export function loadShowFps(): boolean {
+  return loadChoice('showFps', SHOW_FPS_CHOICES, 'off') === 'on';
+}
+
+export function loadSensitivity(): number {
+  return loadSetting('sensitivity', numberIn(MOUSE.minSensitivity, MOUSE.maxSensitivity), MOUSE.defaultSensitivity);
+}
+
+/** Mouse sensitivity while aiming, as a multiple of the normal one. */
+export function loadAimSensitivity(): number {
+  return loadSetting('aimSensitivity', numberIn(AIMING.minSensitivity, AIMING.maxSensitivity), AIMING.defaultSensitivity);
+}
+
+/** The Match screen's "Your team" (M98, saved as `playerTeam`: 'alpha' or 'beta'); Alpha until another is picked. */
+export function loadTeamPick(): TeamPickId {
+  return loadChoice('playerTeam', TEAM_PICKS, DEFAULT_TEAM_PICK);
+}
+
+/** Settings › Look (G1): robots mixed in with humans (on unless turned off) and Realistic colours (off unless turned on). */
+export function loadLook(): LookSettings {
+  return {
+    robots: loadChoice('robots', ROBOT_CHOICES, DEFAULT_ROBOTS ? 'on' : 'off') === 'on',
+    realisticColours: loadChoice('realisticColours', REALISTIC_COLOUR_CHOICES, DEFAULT_REALISTIC_COLOURS ? 'on' : 'off') === 'on',
+  };
+}
+
+/** Whether the practice range's timed challenge is on (M93): off until the player turns it on. */
+export function loadPracticeChallenge(): boolean {
+  return loadSetting('practiceChallenge', (raw) => (typeof raw === 'boolean' ? raw : undefined), false);
+}
+
+/** Whether the tutorial was played to the end (M16). */
+export function loadTutorialDone(): boolean {
+  return loadSetting('tutorialDone', (raw) => (typeof raw === 'boolean' ? raw : undefined), false);
+}
+
+/**
+ * Whether a first match was started (M100; saved as `matchStarted`, false on a clean save): the title offers the Tutorial
+ * only before that. A save from before the flag counts as started when it already holds records, so a returning player
+ * isn't pointed at the tutorial again.
+ */
+export function loadMatchStarted(storage = browserStorage()): boolean {
+  if (loadSetting('matchStarted', (raw) => (typeof raw === 'boolean' ? raw : undefined), false, storage)) return true;
+  try {
+    return storage?.getItem(RECORDS_KEY) != null;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The tutorial's step to resume at (audit POOL-14): its id ('' or nothing saved: from the beginning). A step index
+ * saved by the first build of this (a number) is still read, as an index.
+ */
+export function loadTutorialStep(): string | number {
+  return loadSetting<string | number>('tutorialStep', (raw) => (typeof raw === 'string' || (typeof raw === 'number' && Number.isInteger(raw) && raw >= 0) ? raw : undefined), '');
+}
+
+/** Raw mouse input (Settings → Controls, audit UI-20): on unless the player turned it off. */
+export function loadRawInput(): boolean {
+  return loadChoice('rawInput', RAW_INPUT, DEFAULT_RAW_INPUT) === 'on';
+}

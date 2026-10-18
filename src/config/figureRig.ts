@@ -28,7 +28,7 @@ export const FIGURE_RIG = {
    */
   lowerBones: ['Root', 'Hips', 'Thigh_L', 'Shin_L', 'Foot_L', 'Toe_L', 'Thigh_R', 'Shin_R', 'Foot_R', 'Toe_R'] as readonly string[],
   /** The bones the drawing reads or moves itself. */
-  bones: { hips: 'Hips', spine: 'Spine', chest: 'Chest', grip: 'Grip_R', hand: 'Hand_L', arms: ['UpperArm_L', 'UpperArm_R'] as readonly string[] },
+  bones: { hips: 'Hips', spine: 'Spine', chest: 'Chest', grip: 'Grip_R', hand: 'Hand_L' },
   /** The parts in the files, by role (each has `_LOD1` and `_LOD2` copies, except where the file lacks one). */
   parts: {
     human: {
@@ -59,7 +59,7 @@ export const FIGURE_RIG = {
   lodGive: 0.5,
   /**
    * The layer of a figure's shadow twin (BD1): the body at its coarsest level of detail, in one draw, seen only by the
-   * shadow-casting lights' cameras (their `shadow.camera.layers`, render/lighting.ts and render/torchBeams.ts), never by
+   * shadow-casting lights' cameras (their `shadow.camera.layers`, render/light/lighting.ts and render/light/torchBeams.ts), never by
    * the view. The body's own materials would cost a shadow draw each.
    */
   shadowLayer: 2,
@@ -83,16 +83,6 @@ export const FIGURE_RIG = {
    * more than `crouched` of the way down (sim/figureLegs.ts).
    */
   backStep: { share: 0.1, crouched: 0.5 },
-  /**
-   * The first-person body (your own figure seen when you look down): the model drawn this far behind the eyes (metres)
-   * so the camera is never inside the chest, with the head and arms left out (the hands and replica in view are the
-   * first-person ones). The arms are folded into the shoulders by scaling their bones to `armScale`. It is drawn only
-   * while the bottom of the view reaches within `margin` of its `highest` point below the eyes, or in a vault (BD1),
-   * which spares its 20,000 triangles while you look ahead. `highest` is measured over the clips (the angle below the
-   * eyes, ahead of them, of the body's highest vertex): standing, the sprint's knee; crouched, the crouch walk's.
-   * `margin` covers a lean's camera roll (RENDER.leanCameraRoll) and the eyes' bob.
-   */
-  firstPerson: { back: 0.17, armScale: 1e-3, highest: { standing: -72 * DEG, crouched: -53 * DEG }, margin: 10 * DEG },
   /** Thrown-away magazines out at most (the oldest goes first); each lies for its sidecar lifetime. */
   thrownMagazines: { max: 12 },
   /**
@@ -116,7 +106,7 @@ export const FIGURE_RIG = {
 /**
  * Each figure's hit shape (HV1; owner, 2026-10-16: "fit to each figure"; config/hits.ts FigureHitShape): its points on
  * its own bones, so the volume follows the figure through every clip. Fitted to the drawn figure on every pose by
- * render/riggedHitVolume.test.ts, which holds each to M85's bar (at most 4 % of the drawn body missed and 3 % of the
+ * render/figures/riggedHitVolume.test.ts, which holds each to M85's bar (at most 4 % of the drawn body missed and 3 % of the
  * volume thin air); the human's covers all four heads, with and without the pack.
  */
 export const FIGURE_HIT_SHAPES: Readonly<Record<FigureRigKind, FigureHitShape>> = {

@@ -5,11 +5,11 @@ import { attribute, normalLocal, vec4 } from 'three/tsl';
 import { DRESSING } from '../../../config/dressing';
 import { GPU_FOREST } from '../../../config/gpuDressing';
 import { createRng } from '../../../sim/rng';
-import { detailedTree, painted } from '../../atmosphere';
+import { detailedTree, painted } from '../../light/atmosphere';
 
 /**
  * The tree stand-ins' pictures (WebGPU overhaul W5; drawn by forestStandIns.ts): the game's own tree shapes (the
- * detailed ring's pines and broadleaves, render/atmosphere.ts detailedTree, in the treeline's greens) taken by the node renderer itself from
+ * detailed ring's pines and broadleaves, render/light/atmosphere.ts detailedTree, in the treeline's greens) taken by the node renderer itself from
  * GPU_FOREST.views sides each, into two atlases of GPU_FOREST.tile-pixel squares, a row a variant and a column a side:
  * their colour (sRGB in 8 bits, the shapes' flat paint, unlit) and their normals in the tree's own frame (each facet's,
  * as the ring's flat shading has them), so the stand-ins are lit by the scene's own lights where they stand. Each

@@ -9,7 +9,7 @@ import type { LevelTable } from '../progress/levels';
  * fault in it. `gameContent.ts` builds the game's own.
  */
 
-/** The names a replica's model table draws (render/replicaParts.ts REPLICA_PART_TABLES), by kind. */
+/** The names a replica's model table draws (render/replicas/replicaParts.ts REPLICA_PART_TABLES), by kind. */
 export interface DrawTable {
   /** `<category>:<key>` for optics, grips, lasers, barrels and lights ('optic:redDot'). */
   parts: readonly string[];
@@ -50,7 +50,7 @@ export type PartCategory = 'optic' | 'grip' | 'laser' | 'magazine' | 'barrel' | 
 
 export const PART_CATEGORIES: readonly PartCategory[] = ['optic', 'grip', 'laser', 'magazine', 'barrel', 'muzzle', 'light', 'power'];
 
-/** The model table a replica is drawn from (render/replicaModels.ts buildReplicaModels picks it the same way). */
+/** The model table a replica is drawn from (render/replicas/replicaModels.ts buildReplicaModels picks it the same way). */
 export function drawTableOf(r: ReplicaConfig): string {
   return r.look.viewmodel ?? (r.look.model === 'pistol' ? 'pistol' : 'aeg');
 }

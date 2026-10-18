@@ -8,10 +8,14 @@ holds no magic numbers.
 - Replicas and gear: `replicas.ts`, `glowBBs.ts` (glowing BBs: on night fields, always or never, M33b), `attachments.ts`
   (grips, magazines, barrels, muzzles), `optics.ts`, `lasers.ts`,
   `torches.ts`; `schemes.ts`, `characters.ts`, `figureRig.ts` (the rigged Blender figures, BF1), `replicaFinish.ts` for
-  how they look. `statsFile.ts` reads `stats.md` and
+  how they look. `statsFile.ts` reads `data/stats.md` and
   `gameStats.ts` holds `GAME_STATS`; the modules above lay it over their built-in numbers (`withStats`, `overlay`).
-- Bots: `bots.ts` (behaviour and difficulties), `adaptiveDifficulty.ts` (adaptive difficulty's steps, limits, weights
-  and words, and which skill numbers blend, AD1), `squad.ts` (orders, order wheel), `nav.ts`. `botsFile.ts` reads
+- Bots: `bots.ts` (the difficulties, `BOT_BEHAVIOUR` and `botConfig`; import from it) gathers the tuning split by
+  concern (DX7): `botsSenses.ts` (sight, hearing, reaction, aim, firing), `botsMovement.ts` (lanes, hunting, cover,
+  strafing, the holster), `botsSquad.ts` (team plans, routes, the flag, overtime, Pro's tuning), `botsExtraction.ts`
+  (the home team's guards, patrols and hunters) and `botsSkill.ts` (`BotSkill`, `BOT_SKILL` per difficulty). Also
+  `adaptiveDifficulty.ts` (adaptive difficulty's steps, limits, weights and words, and which skill numbers blend, AD1),
+  `squad.ts` (orders, order wheel), `nav.ts`. `botsFile.ts` reads
   `bots.md` (BN1: the roster of names and what each personality changes) and `botPersonalities.ts` holds
   `BOT_PERSONALITIES`. `calloutsFile.ts` reads `callouts.md` (CL1: what the bots call and how often) and
   `calloutLines.ts` holds `CALLOUT_LINES`; `callouts.ts` has the feed's and radio click's numbers and the setting.
@@ -26,12 +30,13 @@ holds no magic numbers.
 - Sound, input and UI: `audio.ts`, `sounds.ts`, `controls.ts`, `menus.ts`, `menuArt.ts`, `savedLoadouts.ts` (slot count and words, SL1), `minimap.ts`, `matchInfo.ts`, `hudText.ts` (the HUD's words),
   `teams.ts`, `tutorial.ts`, `accessibility.ts`, `itemPictures.ts`.
 - Content and saving: `content.ts` (public or dev tags), `contentRules.ts` (the content checks' ranges, budgets,
-  balance band and exception registers: `docs/content/README.md`), `dev.ts` (Dev settings), `save.ts`, `assets.ts`.
+  balance band and exception registers: `docs/content/README.md`), `dev.ts` (Dev settings), `dataTables.ts` (the six `data/` tables' problems, for the console and the Dev tab, DX7), `save.ts`, `assets.ts`.
 - Build and pipeline: `buildVersion.ts` (the version comes from git through `vite.config.ts` and `.git_archival.txt`;
   nothing to bump), `chunkBudget.ts`, `page.ts`, `precompress.ts`, `rapierWasm.ts` (Rapier's WebAssembly as a plain
   file in builds, IM3), `perfScript.ts`, `crash.ts`, `loading.ts`.
 - Tests: `render.test.ts`, `graphics.test.ts`, `stats.test.ts`, `content.test.ts`, `dev.test.ts`, `botsTuning.test.ts`,
-  `rulesets.test.ts`, `matchRules.test.ts`, `attachments.test.ts`.
+  `rulesets.test.ts`, `matchRules.test.ts`, `attachments.test.ts`, `dataTables.test.ts` (a bad row in each `data/`
+  table reaches the Dev tab and the console), `statsDrift.test.ts` (the built-in numbers equal `stats.md`'s, audit B5).
 - Rules: a new Dev setting goes in `dev.ts`, then `Game.applyDev` reads it. A new replica or part number is a `stats.md`
   column plus a `Column` in `statsFile.ts`. A new quality field is a value on every preset, a row in `graphics.ts` and a
   `graphics.<field>` key. A default key that moves goes in `MOVED_DEFAULTS` (`controls.ts`). Match code reads

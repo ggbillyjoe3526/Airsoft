@@ -11,7 +11,7 @@ import { freeBuffer } from './compute/computeKit';
  * (`ClusteredLightsNode`, three/examples/jsm/tsl/lighting, new in 0.186). The view is cut into 32-pixel screen tiles
  * times exponential depth slices; a compute pass lists the lights reaching each cluster, and a pixel shades only its
  * cluster's lights. The light count costs no shader rebuild (the lights are a data texture), so the night maps give
- * every lamp its own light and the neon signs their spill beside WebGL's fixed pool (render/lightPools.ts, mapSigns.ts).
+ * every lamp its own light and the neon signs their spill beside WebGL's fixed pool (render/light/lightPools.ts, mapSigns.ts).
  *
  * Three's node clusters point lights only. This one is the closest equivalent for the game's lights, built on it:
  *
@@ -30,7 +30,7 @@ import { freeBuffer } from './compute/computeKit';
  * buffers in a pixel shader: the node renderer there (`?forceWebGL`) keeps Three's own lights, as WebGL does.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- TSL's node types don't follow its own swizzles and helpers. */
+/* `any` from here to the end-of-`any` line: TSL's node types don't follow its own swizzles and helpers. */
 type AnyNode = any;
 
 /** The parts of Three's clustered node this one reads and replaces (not in its type). */
@@ -335,4 +335,4 @@ export class NightLighting extends Lighting {
     this.made.dispose();
   }
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
+/* end-of-`any` line */

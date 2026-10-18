@@ -13,7 +13,7 @@ import { NodeRetroFilter } from './webgpu/post/nodeRetro';
  * main chunk holds of the retro filter and the node path.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- the Renderer's fields are private; the tests read them. */
+/* `any` in this file: the Renderer's fields are private; the tests read them. */
 
 const later = (): Promise<void> => new Promise((done) => setTimeout(done, 0));
 

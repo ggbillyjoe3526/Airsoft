@@ -118,8 +118,8 @@ function hudOverlaps(): string[] {
   };
   const ammo = textBox('.hud-mag');
   if (!ammo) return ['no ammo count in the HUD'];
-  // Inside the panel: the count against the chips, the name, the spare line and the status line.
-  const parts = ['.hud-mode', '.hud-replica-name', '.hud-spare', '.hud-status'];
+  // Inside the panel: the count against the chips, the spare line and the status line.
+  const parts = ['.hud-mode', '.hud-spare', '.hud-status'];
   for (const sel of parts) {
     for (const e of document.querySelectorAll(sel)) {
       if (!shown(e)) continue;
@@ -132,7 +132,7 @@ function hudOverlaps(): string[] {
   const box = [panel.left, panel.top, panel.right, panel.bottom];
   // And the count and every part of the panel stay inside it.
   if (ammo[2]! > panel.right + 1 || ammo[0]! < panel.left - 1) out.push('the ammo count is outside the panel');
-  for (const e of document.querySelectorAll('.hud-mode, .hud-replica-name')) {
+  for (const e of document.querySelectorAll('.hud-mode, .hud-mags i')) {
     const r = e.getBoundingClientRect();
     if (r.right > panel.right + 1 || r.left < panel.left - 1) out.push(`${e.className} leaves the panel`);
   }
@@ -218,12 +218,12 @@ for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]] as const
     await setup.getByRole('button', { name: 'Start match', exact: true }).click();
     await page.waitForSelector('.hud-replica', { state: 'visible', timeout: 60_000 });
     await page.waitForTimeout(1000);
-    type Game = { airsoft: { hudSize: number; showHudLook: () => void; state: { characters: { armament: { active: number; ammo: { mag: number }[] } }[] } } };
+    type Game = { airsoft: { prefs: { hudSize: number }; hudLook: { show: () => void }; state: { characters: { armament: { active: number; ammo: { mag: number }[] } }[] } } };
     for (const size of [1, 0.8, 1.5]) {
       await page.evaluate((s) => {
         const g = (window as unknown as Game).airsoft;
-        g.hudSize = s;
-        g.showHudLook();
+        g.prefs.hudSize = s;
+        g.hudLook.show();
       }, size);
       for (const mag of [60, 200, 1200, 12000]) {
         await page.evaluate((m) => {
@@ -233,6 +233,32 @@ for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]] as const
         await expect(page.locator('.hud-mag')).toHaveText(String(mag), { timeout: 10_000 });
         expect(await page.evaluate(hudOverlaps), `HUD size ${size}, ${mag} BBs loaded`).toEqual([]);
       }
+      // The longest hop-up readout and a belt of twelve spare magazines (they wrap) still sit inside the 176 px panel.
+      await page.evaluate(() => {
+        const a = (window as unknown as Game).airsoft.state.characters[0]!.armament as unknown as { ammo: { pouch: number[] }[]; active: number };
+        const ammo = a.ammo[a.active]!;
+        ammo.pouch = [30, 0, 5, 30, 30, 30, 30, 30, 30, 30, 30, 30];
+        const hop = document.querySelector('.hud-hop') as HTMLElement;
+        hop.hidden = false;
+        hop.querySelector('.hud-hop-value')!.textContent = '100%';
+        hop.querySelector('.hud-hop-reach')!.textContent = 'Too much · floats';
+      });
+      await expect(page.locator('.hud-mags i')).toHaveCount(12);
+      const inside = await page.evaluate(() => {
+        const panel = document.querySelector('.hud-replica')!.getBoundingClientRect();
+        const bad: string[] = [];
+        for (const e of document.querySelectorAll('.hud-hop, .hud-hop > *, .hud-mags i, .hud-status, .hud-spare, .hud-mode')) {
+          const r = e.getBoundingClientRect();
+          if (r.width > 0 && (r.right > panel.right + 1 || r.left < panel.left - 1 || r.bottom > panel.bottom + 1 || r.top < panel.top - 1)) bad.push(e.className);
+        }
+        const hop = document.querySelector('.hud-hop') as HTMLElement;
+        if (hop.scrollWidth > hop.clientWidth + 1) bad.push('hop readout overflows');
+        return bad;
+      });
+      expect(inside, `HUD size ${size}: twelve spare magazines and the hop readout`).toEqual([]);
+      await page.evaluate(() => {
+        (document.querySelector('.hud-hop') as HTMLElement).hidden = true;
+      });
       await expectFits(page, `HUD at size ${size}`);
     }
 

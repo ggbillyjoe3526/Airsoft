@@ -91,7 +91,7 @@ export function replicaCompatibility(inputs: ContentInputs, replica: Asset): Che
   const parts = partsFitting(inputs, replica);
   const tableName = drawTableOf(r);
   const table = inputs.drawTables[tableName];
-  if (!table) out.push(result('compatibility', 'replica.model', item, 'fail', `Its model table "${tableName}" doesn't exist (render/replicaParts.ts REPLICA_PART_TABLES).`));
+  if (!table) out.push(result('compatibility', 'replica.model', item, 'fail', `Its model table "${tableName}" doesn't exist (render/replicas/replicaParts.ts REPLICA_PART_TABLES).`));
   else {
     const missing: string[] = [];
     for (const p of parts) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import kitsText from '../../bot-kits.md?raw';
+import kitsText from '../../data/bot-kits.md?raw';
 import { BOT_PERSONALITIES } from '../config/botPersonalities';
 import { BOT_KIT_SUIT_LEAN, DIFFICULTIES, type Difficulty } from '../config/bots';
 import { type BotKitTable, botKitSeed, kitsFor, kitWeights, pickBotKit, readBotKits } from './botKit';

@@ -61,7 +61,7 @@
   grid-template-areas: 'pic' 'words' 'chips';
   gap: var(--sp-2);
   width: 100%;
-  min-height: clamp(300px, 36vh, 430px);
+  min-height: clamp(300px, 36 * var(--vh), 430px);
   padding: var(--sp-4) var(--sp-5);
   font: inherit;
   color: var(--paper);

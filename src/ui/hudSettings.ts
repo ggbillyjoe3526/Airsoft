@@ -1,8 +1,6 @@
 import {
   AMMO_COUNTER_CHOICES,
   type AmmoCounterMode,
-  DEFAULT_AMMO_COUNTER,
-  DEFAULT_FEED_CORNER,
   FEED_CORNERS,
   type FeedCorner,
   HIT_FEED_MODES,
@@ -13,11 +11,10 @@ import {
   WHAT_GOT_YOU_MODES,
   type WhatGotYouMode,
 } from '../config/matchInfo';
-import { CALLOUT_CHOICES, type CalloutsMode, DEFAULT_CALLOUTS } from '../config/callouts';
-import { DEFAULT_MAG_PROMPTS, MAG_PROMPT_CHOICES, type MagPromptsMode } from '../config/magShare';
-import { DEFAULT_MINIMAP_TURN, MINIMAP_TURN_CHOICES, type MinimapTurn } from '../config/minimap';
-import { DEFAULT_PING_MARKERS, PING_MARKER_CHOICES, type PingMarkersMode } from '../config/pings';
-import { browserStorage, loadSetting, oneOf } from '../settings/storage';
+import { CALLOUT_CHOICES, type CalloutsMode } from '../config/callouts';
+import { MAG_PROMPT_CHOICES, type MagPromptsMode } from '../config/magShare';
+import { MINIMAP_TURN_CHOICES, type MinimapTurn } from '../config/minimap';
+import { PING_MARKER_CHOICES, type PingMarkersMode } from '../config/pings';
 import { menuRow, rangeControl } from './menus/menuParts';
 import { OptionPicker } from './optionPicker';
 
@@ -43,36 +40,6 @@ export interface HudSettingsOptions {
   magPrompts?: { initial: MagPromptsMode; onChange: (mode: MagPromptsMode) => void };
   /** The replica panel's BB counts (AC1). No row without it. */
   ammoCounter?: { initial: AmmoCounterMode; onChange: (mode: AmmoCounterMode) => void };
-}
-
-/** Settings › HUD › Minimap (M83): Rotating (as it always was) unless the player picked Fixed. */
-export function loadMinimapTurn(storage = browserStorage()): MinimapTurn {
-  return loadSetting('minimapTurn', oneOf(MINIMAP_TURN_CHOICES.map((c) => c.id)), DEFAULT_MINIMAP_TURN, storage);
-}
-
-/** Settings › HUD › Feed position (Dev 6 playtest item 32): top right unless the player moved it. */
-export function loadFeedCorner(storage = browserStorage()): FeedCorner {
-  return loadSetting('feedCorner', oneOf(FEED_CORNERS.map((c) => c.id)), DEFAULT_FEED_CORNER, storage);
-}
-
-/** Settings › HUD › Callouts (CL1): on unless the player turned them off. */
-export function loadCallouts(storage = browserStorage()): CalloutsMode {
-  return loadSetting('callouts', oneOf(CALLOUT_CHOICES.map((c) => c.id)), DEFAULT_CALLOUTS, storage);
-}
-
-/** Settings › HUD › Ping markers (PG1): on unless the player turned them off. */
-export function loadPingMarkers(storage = browserStorage()): PingMarkersMode {
-  return loadSetting('pingMarkers', oneOf(PING_MARKER_CHOICES.map((c) => c.id)), DEFAULT_PING_MARKERS, storage);
-}
-
-/** Settings › HUD › Mag hand-off (MG1): on unless the player turned it off. */
-export function loadMagPrompts(storage = browserStorage()): MagPromptsMode {
-  return loadSetting('magPrompts', oneOf(MAG_PROMPT_CHOICES.map((c) => c.id)), DEFAULT_MAG_PROMPTS, storage);
-}
-
-/** Settings › HUD › Ammo counter (AC1): on unless the player turned it off. */
-export function loadAmmoCounter(storage = browserStorage()): AmmoCounterMode {
-  return loadSetting('ammoCounter', oneOf(AMMO_COUNTER_CHOICES.map((c) => c.id)), DEFAULT_AMMO_COUNTER, storage);
 }
 
 /** The HUD tab's rows (Settings → HUD, M24), each saved and applied as it changes. */

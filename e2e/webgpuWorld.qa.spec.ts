@@ -170,7 +170,7 @@ test.describe('Woodland at night on the node renderer', () => {
       const r = (window as Any).airsoft.renderer;
       const tagged: Any[] = [];
       r.scene.traverse((o: Any) => {
-        // Each pool's CPU module (render/gpuPools.ts), as the node renderer's particle drivers find it.
+        // Each pool's CPU module (render/effects/gpuPools.ts), as the node renderer's particle drivers find it.
         const owner = r.node.particles.ownerOf(o);
         if (owner) tagged.push({ name: o.name, owner, o });
       });

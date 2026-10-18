@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GPU_FOREST } from '../../../config/gpuDressing';
 import { terrainMaxX, terrainMaxZ } from '../../../map/terrain';
 import { WOODLAND } from '../../../map/woodland';
-import { skylineClear } from '../../skyline';
+import { skylineClear } from '../../dressing/skyline';
 import { forestCount, hillHeight, placeForest } from './forestLayout';
 
 /** Where the tree stand-ins beyond the fence stand (W5). */

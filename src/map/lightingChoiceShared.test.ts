@@ -12,11 +12,11 @@ import { NAV } from '../config/nav';
 import { LIGHTING_PRESETS, QUALITY, SURFACES, type SurfaceTextureId } from '../config/render';
 import { buildNavGrid } from '../nav/navGrid';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
-import { addLighting } from '../render/lighting';
-import { resolveLighting } from '../render/lightingPreset';
-import { MapMeshCache } from '../render/mapMeshCache';
-import { type MapLook, mapLookOf, texturesFor } from '../render/mapMeshes';
-import type { SurfaceTextures } from '../render/proceduralTextures';
+import { addLighting } from '../render/light/lighting';
+import { resolveLighting } from '../render/light/lightingPreset';
+import { MapMeshCache } from '../render/field/mapMeshCache';
+import { type MapLook, mapLookOf, texturesFor } from '../render/field/mapMeshes';
+import type { SurfaceTextures } from '../render/field/proceduralTextures';
 import { DEPOT } from './depot';
 import { lightingChoices, mapUnderLighting } from './lightingChoice';
 import type { MapData } from './mapTypes';
@@ -111,7 +111,8 @@ describe('the map a match is given is never written into (M63, audit REN-01)', (
       for (const mode of ['elimination', 'attackDefend'] as const) playMatch(15, 7, undefined, BOTS, mode, ROUNDS, map);
     }
     expectUntouched();
-  });
+    // About 3 s alone: past the 5 s default under the gate's load (DX4), so the same room as the test above.
+  }, 20_000);
 
   it('sets up and plays an Extraction run under each pick, writing nothing', () => {
     for (const map of played) {

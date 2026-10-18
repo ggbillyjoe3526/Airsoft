@@ -80,7 +80,7 @@ export const FIGURE = {
     gaiter: 0.8,
   },
   /**
-   * The team camo printed on the detailed figure's clothes and on your first-person sleeves (render/figureCamo.ts; G11).
+   * The team camo printed on the detailed figure's clothes and on your first-person sleeves (render/figures/figureCamo.ts; G11).
    * Drawn per pixel from the part's own position, so a blotch keeps a crisp, anti-aliased edge however coarse the mesh
    * (the per-vertex print it replaces smeared into a faint shade on 10-sided limbs). Three crossed waves of the position,
    * gently warped so the blotches are organic, give a value `n` in about ±3: above `darkAt` is the dark tone, below
@@ -131,7 +131,7 @@ export const FIGURE = {
     high: { limb: [10, 4], head: [14, 8], shell: [18, 8], joint: [10, 6], band: [12, 2], cylinder: 12, overhaul: true },
   },
   /**
-   * The detailed figure's finishes (FA8, render/figureFinish.ts): [roughness, metalness] per vertex on the figure's one
+   * The detailed figure's finishes (FA8, render/figures/figureFinish.ts): [roughness, metalness] per vertex on the figure's one
    * material. Fabric stays matte; goggle lenses, visors and helmet shells are moulded and glossy; robot shells satin;
    * replicas toy polymer with painted-steel barrels. Shapes on top: bevels this much lighter (`edgeLight`), cuffs and
    * soles `cuffShade` and `soleShade` of their colour, lids `lidLight` lighter.

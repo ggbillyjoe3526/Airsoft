@@ -1,36 +1,34 @@
-import { AUDIO } from '../config/audio';
 import type { BotBehaviour, BotConfig, BotSkill } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import { WHAT_GOT_YOU } from '../config/matchInfo';
-import { FLAG, unknownMode } from '../config/modes';
 import { type BodyConfig, MOVEMENT } from '../config/movement';
-import { NOISE } from '../config/noise';
 import { NAV } from '../config/nav';
 import type { ReplicaConfig } from '../config/replicas';
 import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
-import { botSeed, planSeed } from '../core/seed';
-import { beginRoute, cellX, cellZ, createNavSearch, endRoute, floorAt, type NavGrid, type NavSearch, stepRoute } from '../nav/navGrid';
+import { botSeed } from '../core/seed';
+import { beginRoute, cellX, cellZ, createNavSearch, endRoute, type NavGrid, type NavSearch, stepRoute } from '../nav/navGrid';
 import { vaultLinksOf } from '../nav/vaultLinks';
-import { shotHeardScale, type WorldQuery } from '../sim/armament';
+import type { WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
 import { createHitFacts, type HitFacts, recordHitFacts } from '../sim/hitFacts';
-import { createRng, type RngState, rngNext } from '../sim/rng';
-import { blockedShare } from '../sim/soundPath';
+import { rngNext } from '../sim/rng';
 import type { GameState } from '../sim/state';
-import { copy, length3, type Vec3, vec3 } from '../sim/vec';
+import { copy, type Vec3, vec3 } from '../sim/vec';
 import { type AngleFeatures, angleFeaturesOf } from './angleFeatures';
 import { RunRoles } from './extractionRoles';
-import { type Bot, type BotWorld, createBot, lastSeenAt, pick, resetBot } from './bot';
+import { type Bot, type BotWorld, createBot, pick } from './bot';
 import { thinkBot } from './botBrain';
 import type { CoverBlock } from './cover';
-import { bodyPoint, eyeOf, OPEN_SIGHT, type SightConditions, seesSpot } from './perception';
+import { characterById, hearEvent } from './hearing';
+import { OPEN_SIGHT, type SightConditions, seesSpot } from './perception';
 import { endOrder, heldCentre, holdPoint, placeHold, startOrder } from './squadOrders';
-import { anchorHolding, type BotIdentity, personalSkill } from './personality';
+import { type BotIdentity, personalSkill } from './personality';
 import { MagShare, type MagAskResult } from './magShare';
 import { aimPing, type Ping, pingSight, takePing } from './pings';
-import { assignLanes, pickTeamPlan, shuffledLanes, takeOwnLanes, type TeamPlan } from './teamPlan';
+import { pickRaiser, pickRetakers, RoundPlanner } from './roundPlanner';
+import type { TeamPlan } from './teamPlan';
 
 /** Score of a sector nobody has visited this round: older than any real visit. */
 const NEVER = -1e6;
@@ -73,10 +71,10 @@ export interface BotControllerOptions {
 /**
  * Runs every bot: before each simulation tick it writes each bot's PlayerCommand (bots are just
  * another controller); after each tick it lets bots hear what happened (gunfire, near misses,
- * teammates being hit). Route searches are rationed per tick and handed out round-robin. It also
+ * teammates being hit: ai/hearing.ts). Route searches are rationed per tick and handed out round-robin. It also
  * remembers, per team, when each part of the map was last visited or seen empty (M87), so bots hunt where nobody has
- * looked for a while, and plans each round per team: which lanes its bots take (TeamPlan) and how far
- * ahead of the team a bot may get.
+ * looked for a while, and has each round planned per team (ai/roundPlanner.ts): which lanes its bots take (TeamPlan)
+ * and how far ahead of the team a bot may get.
  */
 export class BotController {
   readonly bots: Bot[] = [];
@@ -86,12 +84,8 @@ export class BotController {
   private features: AngleFeatures | undefined;
   private readonly search: NavSearch;
   private readonly commandsById = new Map<number, PlayerCommand>();
-  private readonly chest = vec3();
-  private readonly ear = vec3();
   private readonly held = vec3();
   private readonly lookedAt = vec3();
-  /** Where a hit call points to (AI-09). */
-  private readonly callGuess = vec3();
   /**
    * Per player who gave one, the squad order in force (one source for the HUD and for giving it again). `ownSpot`: a
    * Hold here given looking at nothing, so each holds where it stood.
@@ -109,26 +103,13 @@ export class BotController {
   private readonly sectorCols: number;
   private readonly sectorRows: number;
   private readonly visited: Float64Array[];
-  /** Per team, the middle of its spawns this round (teams swap ends at half-time). */
-  private readonly spawnCentre: Vec3[] = [vec3(), vec3()];
-  /** Per team, the unit direction (x, z) from its spawn towards the enemy's this round. */
-  private readonly attackDir: { x: number; z: number }[] = [
-    { x: 1, z: 0 },
-    { x: -1, z: 0 },
-  ];
-  /** Per team, the way its enemy's spawn is (yaw) this round. */
-  private readonly enemyYaw: number[] = [0, 0];
-  /** Per team, the end of the map it starts from this round. */
-  private readonly ends: number[] = [0, 1];
+  /** Each round's team plans, where each team starts and its own random stream (ai/roundPlanner.ts). */
+  private readonly planner: RoundPlanner;
   /**
    * The facts of the last hit on a player (a character no bot drives), for the "what got you" card (M41): filled in
    * `observe` the tick the hit comes in, from the shooter's own state; reused, never reallocated.
    */
   readonly lastHit: HitFacts = createHitFacts();
-  /** The team plans' own random stream (separate from each bot's). */
-  private readonly planRng: RngState;
-  /** Per team, this round's plan. */
-  readonly plans: TeamPlan[] = ['split', 'split'];
   /** The magazine hand-off (MG1, ai/magShare.ts): who asks whom, and who brings one. */
   readonly mags: MagShare;
   /** Extraction (M46): the home team's jobs in the run; undefined in the other modes. */
@@ -146,7 +127,7 @@ export class BotController {
     this.sectorRows = Math.ceil((nav.rows * nav.cell) / cfg.huntSectorSize);
     this.visited = [0, 1].map(() => new Float64Array(this.sectorCols * this.sectorRows).fill(Number.NEGATIVE_INFINITY));
 
-    this.planRng = createRng(planSeed(opts.seed));
+    this.planner = new RoundPlanner(opts.seed);
     this.teamCfg = [...(opts.teamCfg ?? [cfg, cfg])];
     this.pingSight = pingSight(cfg);
 
@@ -164,10 +145,10 @@ export class BotController {
       loadout: opts.loadout,
       cfg,
       round: state.round,
-      enemyYaw: this.enemyYaw,
+      enemyYaw: this.planner.enemyYaw,
       huntPoint: (bot, out) => this.huntPoint(bot, out),
-      aheadOfTeam: (bot) => this.aheadOfTeam(bot),
-      inEnemyHalf: (bot) => this.inEnemyHalf(bot),
+      aheadOfTeam: (bot) => this.planner.aheadOfTeam(bot, this.world),
+      inEnemyHalf: (bot) => this.planner.inEnemyHalf(bot),
       squadNews: (team, out) => this.run?.newsFor(team, out) ?? Number.NEGATIVE_INFINITY,
       markVisited: (bot, point) => {
         this.visited[bot.character.team]![this.sectorOf(point.x, point.z)] = this.world.time;
@@ -202,6 +183,11 @@ export class BotController {
   private angleFeatures(): AngleFeatures {
     this.features ??= angleFeaturesOf(this.opts.nav, this.opts.tallCover, this.world.sight?.foliage ?? [], this.opts.cfg);
     return this.features;
+  }
+
+  /** Per team, this round's plan (ai/roundPlanner.ts). */
+  get plans(): readonly TeamPlan[] {
+    return this.planner.plans;
   }
 
   /** @internal For tests that drive one bot step (shootBot, reloadBot) by hand: the world the bots think in. */
@@ -246,8 +232,8 @@ export class BotController {
     // was hit last tick, so the bots wait a tick.
     if (!walkOffRouteDue(state.characters)) this.planRoutes();
     this.updateOrders();
-    this.pickRetakers();
-    this.pickRaiser();
+    pickRetakers(w);
+    pickRaiser(w, this.botCharacters);
     this.run?.update(this.bots, w);
     this.mags.update(w);
     // Each bot decides with its own team's skill (Bot.skill, set at creation); w.cfg is the shared behaviour.
@@ -378,65 +364,6 @@ export class BotController {
   }
 
   /**
-   * Attack / Defend: the `retakers` defending bots in play nearest the pole are the ones who go and pull
-   * the flag down once it's off the bottom; the rest hold their posts, so tagging the pole doesn't empty
-   * every lane. Re-picked every tick, so if a retaker is hit the next nearest takes over.
-   */
-  private pickRetakers(): void {
-    const r = this.world.round;
-    const pole = r.flag.position;
-    for (const b of this.bots) {
-      const c = b.character;
-      b.retake = false;
-      // A bot under a squad order isn't picked: it does what it was told, and the next nearest goes.
-      if (r.mode !== 'attackDefend' || r.attackers < 0 || c.team === r.attackers || !isInPlay(c) || b.order !== 'none') continue;
-      const d = Math.hypot(c.position.x - pole.x, c.position.z - pole.z);
-      let closer = 0;
-      for (const o of this.bots) {
-        const oc = o.character;
-        if (o === b || oc.team !== c.team || !isInPlay(oc) || o.order !== 'none') continue;
-        const od = Math.hypot(oc.position.x - pole.x, oc.position.z - pole.z);
-        if (od < d || (od === d && oc.id < c.id)) closer++;
-      }
-      b.retake = closer < this.world.cfg.retakers;
-    }
-  }
-
-  /**
-   * Attack / Defend (audit AI-06): of the attacking bots in play that have swept their lane, one raises the flag and the
-   * others guard the pole from cover; a second raiser adds nothing (the rope goes up no faster). The raiser is the bot
-   * in flag mode nearest the pole, the current one kept unless another is raiserSwitchMargin nearer; one drawn into a
-   * fight or into cover elsewhere hands the rope over, so a guard never waits on a raiser that is busy or far off.
-   * Nobody raises while a teammate who isn't a bot (the player) is already at the pole.
-   */
-  private pickRaiser(): void {
-    const r = this.world.round;
-    let raiser: Bot | undefined;
-    // Bots in flag mode first, then anyone else; then the nearest to the pole, the raiser counted raiserSwitchMargin nearer.
-    let bestRank = Number.POSITIVE_INFINITY;
-    let best = Number.POSITIVE_INFINITY;
-    for (const b of this.bots) {
-      const keep = b.raiser;
-      b.raiser = false;
-      const c = b.character;
-      if (r.mode !== 'attackDefend' || c.team !== r.attackers || !isInPlay(c) || !b.laneDone || b.order !== 'none') continue;
-      const rank = b.mode === 'flag' ? 0 : 1;
-      const d = Math.hypot(c.position.x - r.flag.position.x, c.position.z - r.flag.position.z) - (keep ? this.world.cfg.raiserSwitchMargin : 0);
-      if (rank < bestRank || (rank === bestRank && d < best)) {
-        bestRank = rank;
-        best = d;
-        raiser = b;
-      }
-    }
-    if (!raiser) return;
-    for (const c of this.world.characters) {
-      if (c.team !== r.attackers || !isInPlay(c) || this.botCharacters.has(c)) continue;
-      if (Math.hypot(c.position.x - r.flag.position.x, c.position.z - r.flag.position.z) <= FLAG.radius) return;
-    }
-    raiser.raiser = true;
-  }
-
-  /**
    * A player was hit (M41): writes what `shooter`'s bot knew into `lastHit`. Whether it was holding an angle and how long
    * the victim had been in its view come from its contact with the victim; friendly fire or a ricochet leaves both unknown.
    */
@@ -463,7 +390,6 @@ export class BotController {
   observe(state: Readonly<GameState>): void {
     const time = state.time;
     for (const e of state.events) {
-      const cfg = this.world.cfg;
       if (e.type === 'roundStart') {
         for (const v of this.visited) v.fill(Number.NEGATIVE_INFINITY);
         this.given.clear(); // resetBot ends every bot's order
@@ -475,319 +401,42 @@ export class BotController {
           b.overtimeAt = time + pick(b.rng, b.skill.overtimeReaction);
           b.overtimeFlank = rngNext(b.rng) < b.skill.flankChance;
         }
-      } else if (e.type === 'shot') {
-        const shooter = this.character(state, e.characterId);
-        // A silencer (M29b) shortens how far the shot carries.
-        if (shooter) this.hear(shooter.team, e.position, shooter.position, time, shooter.position, cfg.hearingDistance * shotHeardScale(shooter), shooter.id);
-      } else if (e.type === 'characterHit') {
-        // Teammates near someone who calls a hit turn towards where it came from; not from a BB fired by someone hit
-        // since (they are walking off, not where the threat is). A "HIT!" tells them which way the BB came, not how far
-        // (AI-09): the guess is back along the BB's path from the victim, no further than gunfire carries.
-        const victim = this.character(state, e.victimId);
-        const shooter = this.character(state, e.shooterId);
-        if (victim && shooter && !this.botCharacters.has(victim)) this.recordHit(victim, shooter, e.ricochet, time);
-        if (victim && shooter && isInPlay(shooter) && victim.team !== shooter.team) {
-          const g = this.callGuess;
-          const flat = Math.hypot(e.direction.x, e.direction.z);
-          const back = Math.min(cfg.hearingDistance, Math.hypot(shooter.position.x - victim.position.x, shooter.position.z - victim.position.z));
-          g.x = victim.position.x - (flat > 1e-6 ? (e.direction.x / flat) * back : 0);
-          g.y = victim.position.y;
-          g.z = victim.position.z - (flat > 1e-6 ? (e.direction.z / flat) * back : 0);
-          this.hear(shooter.team, victim.position, victim.position, time, g, cfg.hearingDistance, shooter.id, undefined, true);
-        }
-      } else if (e.type === 'ricochetTick') {
-        // A ricochet that doesn't count still tells its victim they're under fire, unless it was their own (SIM-07).
-        if (e.victimId === e.shooterId) continue;
-        for (const b of this.bots) {
-          if (b.character.id !== e.victimId) continue;
-          b.suppressedAt = time;
-          b.lastThreatAt = time;
-        }
-      } else if (e.type === 'footstep') {
-        const walker = this.character(state, e.characterId);
-        const range =
-          e.kind === 'sprint'
-            ? cfg.footstepHearingSprint
-            : e.kind === 'vault'
-              ? cfg.footstepHearingVault
-              : e.kind === 'land'
-                ? cfg.footstepHearingLand
-                : e.kind === 'rattle'
-                  ? cfg.footstepHearingRattle
-                  : cfg.footstepHearingRun;
-        // Steps on noisy ground carry further (NP1): gravel, steel plate.
-        const carry = e.surface ? NOISE.ground[e.surface] : 1;
-        if (walker && isInPlay(walker)) this.hear(walker.team, walker.position, walker.position, time, walker.position, range * carry, walker.id);
-      } else if (e.type === 'propNoise') {
-        // NP1: someone ran into a noisy prop, heard as far as the prop carries, from them; or a BB of theirs rang off one,
-        // heard where it rang, and only by a bot with no fresher news (a look that never pulls one off a fight).
-        const maker = this.character(state, e.characterId);
-        if (maker && isInPlay(maker)) {
-          if (e.shot) this.hear(maker.team, e.position, e.position, time, e.position, e.range, maker.id, undefined, false, true);
-          else this.hear(maker.team, e.position, maker.position, time, maker.position, e.range, maker.id);
-        }
       } else if (e.type === 'returned') {
         // Extraction (M45): an opponent back in a wave sets out afresh from its regen point.
         for (const b of this.bots) {
           if (b.character.id !== e.characterId) continue;
-          this.sendBack(b);
+          this.planner.sendBack(b, this.world);
           this.run?.returned(b, this.bots, this.world); // its job on the home team (M46)
         }
       } else if (e.type === 'caseOpened') {
         // Extraction (M46): the case's guards move on.
         this.run?.caseOpened(e.case, this.bots, this.world);
-      } else if (e.type === 'caseNoise') {
-        // Extraction (M44): a case being opened carries as far as its kind's Heard m (pool.md Caches), walls muffling it.
-        const opener = this.character(state, e.characterId);
-        if (opener && isInPlay(opener)) this.hear(opener.team, e.position, opener.position, time, opener.position, e.range, opener.id);
-      } else if (e.type === 'bbImpact') {
-        // Only enemy fire suppresses: a bot's own BB (or a teammate's) landing near it is no threat.
-        const shooter = this.character(state, e.ownerId);
-        for (const b of this.bots) {
-          if (shooter && shooter.team === b.character.team) continue;
-          const p = bodyPoint(b.character, this.opts.hits, cfg.aimHeightFraction, this.chest);
-          if (length3(e.position.x - p.x, e.position.y - p.y, e.position.z - p.z) <= cfg.suppressionRadius) {
-            b.suppressedAt = time;
-            b.lastThreatAt = time;
-            // A near miss gives away roughly where it came from, however far off the shot was (AI-04): the bot hears the
-            // BB land by its own feet, so the range test always passes.
-            if (shooter && isInPlay(shooter)) this.hear(shooter.team, b.character.position, shooter.position, time, shooter.position, Number.POSITIVE_INFINITY, shooter.id, b);
-          }
+      } else {
+        if (e.type === 'characterHit') {
+          // A hit on a player: what the shooter knew, for the "what got you" card (M41).
+          const victim = characterById(state, e.victimId);
+          const shooter = characterById(state, e.shooterId);
+          if (victim && shooter && !this.botCharacters.has(victim)) this.recordHit(victim, shooter, e.ricochet, time);
         }
+        // Gunfire, hit calls, footsteps, noisy props, cases being opened, near misses (ai/hearing.ts).
+        hearEvent(e, state, this.world);
       }
     }
     this.mags.observe(state.events, state.characters, time);
   }
 
-  /**
-   * Bots not on `shooterTeam` within `range` of `heardAt` (gunfire, a hit call, footsteps, a near miss) learn roughly
-   * where the source (character `sourceId`) is; `only`: just that bot. The guess is off by up to hearingError ×
-   * distance and is kept while the noise keeps coming from about there (bursts and nearby shooters don't make it jump).
-   * A bot fighting someone else keeps it aside for when that fight is over (AI-15); one already watching the source
-   * learns nothing. Hearing is not sight: it never skips a bot's reaction when the shooter then appears. Walls between
-   * the bot and whoever made the sound (standing at `sourceFeet`) shorten the range (wallHearing, M22).
-   */
-  /**
-   * Those of the other team within `range` of `heardAt` (walls muffle it) hear a noise from `shooterPos`. `only` limits
-   * it to one bot; `call` marks a teammate's hit call, which a bot that heard it and plays as a team (M38) goes to trade
-   * (see tradeTime). A teamPlay bot shares where it heard someone with its teamPlay teammates (M38). A `faint` noise (a
-   * BB ringing off a prop, NP1) is heard only by a bot with nobody in sight and nothing seen or heard within
-   * hearingContactTime, and isn't shared: it draws an idle bot's look, never one busy with real news.
-   */
-  private hear(shooterTeam: number, heardAt: Vec3, sourceFeet: Vec3, time: number, shooterPos: Vec3, range: number, sourceId: number, only?: Bot, call = false, faint = false): void {
-    const cfg = this.world.cfg;
-    for (const b of this.bots) {
-      if (only && b !== only) continue;
-      const c = b.character;
-      if (c.team === shooterTeam || !isInPlay(c) || (b.targetVisible && b.targetId === sourceId)) continue;
-      if (faint && (b.targetVisible || time - Math.max(lastSeenAt(b), b.heardAt) < cfg.hearingContactTime)) continue;
-      const heard = Math.hypot(heardAt.x - c.position.x, heardAt.z - c.position.z);
-      if (heard > range) continue;
-      // Within the range a wall leaves, nothing to check; beyond it, cast the rays.
-      if (heard > range * cfg.wallHearing) {
-        const share = blockedShare(this.opts.query, eyeOf(c, this.opts.body, this.opts.hits, this.ear), sourceFeet, AUDIO.occlusion.rayHeights);
-        if (heard > range * (1 - share * (1 - cfg.wallHearing))) continue;
-      }
-      const dist = Math.hypot(shooterPos.x - c.position.x, shooterPos.z - c.position.z);
-      if (b.targetVisible) {
-        // Busy with someone else: remember this one for later (a flanker), but keep fighting.
-        this.guess(b, shooterPos, dist, b.heardOther);
-        b.heardOtherAt = time;
-        continue;
-      }
-      // Gunfire from within the current guess's margin of error (any shooter) is the same noise: keep
-      // the guess. Only a clearly different source makes a new one; the guess never tracks anyone.
-      const margin = dist * cfg.hearingError + cfg.replanDistance;
-      const sameNoise = b.hasLastKnown && time - b.heardAt < cfg.hearingContactTime && Math.hypot(shooterPos.x - b.lastKnown.x, shooterPos.z - b.lastKnown.z) <= margin;
-      if (!sameNoise) this.guess(b, shooterPos, dist, b.lastKnown);
-      b.hasLastKnown = true;
-      b.heardAt = time;
-      b.lastThreatAt = time;
-      if (!b.skill.teamPlay || faint) continue;
-      if (call) {
-        b.tradeAt = time;
-        b.tradeTried = false;
-      }
-      this.shareHeard(b, time);
-    }
-  }
-
-  /**
-   * Teamplay (M38): bot `b` tells its teamPlay teammates where it heard someone, the bots' version of the player's
-   * minimap patches. A teammate fighting, or with fresher news of its own, keeps its own; nobody trades on hearsay.
-   */
-  private shareHeard(b: Bot, time: number): void {
-    const cfg = this.world.cfg;
-    for (const m of this.bots) {
-      if (m === b || !m.skill.teamPlay || m.character.team !== b.character.team || !isInPlay(m.character) || m.targetVisible) continue;
-      if (m.hasLastKnown && time - Math.max(lastSeenAt(m), m.heardAt) < cfg.hearingContactTime) continue;
-      m.lastKnown.x = b.lastKnown.x;
-      m.lastKnown.y = b.lastKnown.y;
-      m.lastKnown.z = b.lastKnown.z;
-      m.hasLastKnown = true;
-      m.heardAt = time;
-      m.lastThreatAt = time;
-    }
-  }
-
-  /**
-   * A heard guess of `source` (`dist` metres from bot `b`) into `out`: off by up to hearingError × dist, on the floor
-   * there (another level's floor if the noise came from one; the bot's own height off the grid).
-   */
-  private guess(b: Bot, source: Vec3, dist: number, out: Vec3): void {
-    const angle = rngNext(b.rng) * Math.PI * 2;
-    const off = Math.sqrt(rngNext(b.rng)) * dist * this.world.cfg.hearingError;
-    out.x = source.x + Math.cos(angle) * off;
-    out.z = source.z + Math.sin(angle) * off;
-    const floor = floorAt(this.opts.nav, out.x, source.y, out.z);
-    out.y = Number.isNaN(floor) ? b.character.position.y : floor;
-  }
-
-  /**
-   * A fresh round for every bot: per team, pick a plan, deal out the lanes in a random order, and have
-   * bots that share a lane set off a moment apart. In Attack / Defend, defenders don't advance: each holds
-   * the first point of its lane (nearest home), or the second (see defendForwardChance), and they never
-   * stack all on one lane. Attackers walk their lane only as far as the first point past the middle of
-   * the map, then head for the pole.
-   */
+  /** A fresh round: each team's plan and lanes (ai/roundPlanner.ts), and in Extraction the home team's jobs. */
   private planRound(): void {
-    this.measureEnds();
-    const cfg = this.world.cfg;
-    const round = this.world.round;
-    // What the mode asks of the bots (CT3: every mode answers here): the lanes alone, the flag, or the run's jobs.
-    let objective = false;
-    let run = false;
-    switch (round.mode) {
-      case 'elimination':
-        break;
-      case 'attackDefend':
-        objective = round.attackers >= 0;
-        break;
-      case 'extraction':
-        run = true;
-        break;
-      default:
-        unknownMode(round.mode);
-    }
-    for (let team = 0; team < this.plans.length; team++) {
-      const members = this.bots.filter((b) => b.character.team === team);
-      const defending = objective && team !== round.attackers;
-      const attacking = objective && team === round.attackers;
-      let plan = pickTeamPlan(this.planRng, cfg);
-      if (defending && plan === 'stack') plan = 'pair'; // three bots holding one lane point would stand in a heap
-      this.plans[team] = plan;
-      const lanes = assignLanes(plan, members.length, shuffledLanes(this.planRng, this.opts.lanes.length));
-      // A personality that keeps a lane of its own (BN1, the flanker) leaves a shared lane for the free one furthest from
-      // its team's. Not on defence: defenders hold the points they were dealt.
-      if (!defending) takeOwnLanes(members.map((b) => b.style.ownLane), lanes, this.opts.lanes);
-      const onLane = new Map<number, number>();
-      members.forEach((b, i) => {
-        const lane = lanes[i]!;
-        const ahead = onLane.get(lane) ?? 0;
-        onLane.set(lane, ahead + 1);
-        let hold = 0;
-        for (let k = 0; k < ahead; k++) hold += pick(b.rng, cfg.laneFollowDelay);
-        let points = Number.POSITIVE_INFINITY;
-        if (defending) {
-          const shared = lanes.filter((l) => l === lane).length > 1;
-          const forward = ahead === 0 && (shared || rngNext(this.planRng) < cfg.defendForwardChance);
-          // Bots that play as a team (M38) both hold a shared lane's forward point, in a crossfire (see crossfireSpot).
-          points = forward || (shared && b.skill.teamPlay) ? 2 : 1;
-        } else if (attacking) {
-          points = this.pointsToMidfield(team, lane);
-        } else if (round.mode === 'elimination' && b.style.holdUntil !== null) {
-          // An anchor (BN1) walks its lane only to the last point short of the middle, and holds there (anchorHolding).
-          points = Math.max(1, this.pointsToMidfield(team, lane) - 1);
-        }
-        resetBot(b, lane, hold, cfg, points);
-      });
-    }
+    const run = this.planner.plan(this.world);
     // Extraction (M46): the home team plays the run by jobs, not lanes. The run is the match's one round, so its clock
     // now is the run's length.
     this.run = undefined;
     if (run) {
+      const round = this.world.round;
       const home = 1 - round.run.squadTeam;
       this.run = new RunRoles(home, round.clock, this.cfgOf(home));
-      this.run.start(this.bots, this.world, this.spawnCentre[round.run.squadTeam]!, this.opts.insertionBerth);
+      this.run.start(this.bots, this.world, this.planner.spawnCentre[round.run.squadTeam]!, this.opts.insertionBerth);
     }
-  }
-
-  /** Where each team starts this round (its spawns' middle and end), and which way its enemy is. */
-  private measureEnds(): void {
-    const chars = this.world.characters;
-    for (let team = 0; team < 2; team++) {
-      const centre = this.spawnCentre[team]!;
-      let n = 0;
-      centre.x = 0;
-      centre.z = 0;
-      for (const c of chars) {
-        if (c.team !== team) continue;
-        centre.x += c.spawnPosition.x;
-        centre.z += c.spawnPosition.z;
-        this.ends[team] = c.end;
-        n++;
-      }
-      centre.x /= Math.max(1, n);
-      centre.z /= Math.max(1, n);
-    }
-    const [blue, orange] = this.spawnCentre as [Vec3, Vec3];
-    this.enemyYaw[0] = Math.atan2(-(orange.x - blue.x), -(orange.z - blue.z));
-    this.enemyYaw[1] = Math.atan2(-(blue.x - orange.x), -(blue.z - orange.z));
-    const span = Math.max(1e-6, Math.hypot(orange.x - blue.x, orange.z - blue.z));
-    const ux = (orange.x - blue.x) / span;
-    const uz = (orange.z - blue.z) / span;
-    this.attackDir[0]!.x = ux;
-    this.attackDir[0]!.z = uz;
-    this.attackDir[1]!.x = -ux;
-    this.attackDir[1]!.z = -uz;
-  }
-
-  /**
-   * How many of `lane`'s points `team` walks to reach the first one past the middle of the map (all of
-   * them if none is): attackers go for the pole from there.
-   */
-  private pointsToMidfield(team: number, lane: number): number {
-    const points = this.opts.lanes[lane];
-    if (!points) return Number.POSITIVE_INFINITY;
-    const home = this.spawnCentre[team]!;
-    const dir = this.attackDir[team]!;
-    const enemy = this.spawnCentre[1 - team]!;
-    const half = Math.hypot(enemy.x - home.x, enemy.z - home.z) / 2;
-    const n = points.length;
-    for (let k = 0; k < n; k++) {
-      // Walking order: from end 0 the points go first to last, from end 1 last to first (see resetBot).
-      const p = points[this.ends[team] === 0 ? k : n - 1 - k]!;
-      if ((p.x - home.x) * dir.x + (p.z - home.z) * dir.z >= half) return k + 1;
-    }
-    return n;
-  }
-
-  /** How far `c` is from its spawn towards the enemy side (metres). */
-  private progress(c: Character): number {
-    const home = this.spawnCentre[c.team]!;
-    const dir = this.attackDir[c.team]!;
-    return (c.position.x - home.x) * dir.x + (c.position.z - home.z) * dir.z;
-  }
-
-  /** True if `bot` stands more than halfway from its spawns to the enemy's. */
-  private inEnemyHalf(bot: Bot): boolean {
-    const team = bot.character.team;
-    const home = this.spawnCentre[team]!;
-    const enemy = this.spawnCentre[1 - team]!;
-    return this.progress(bot.character) > Math.hypot(enemy.x - home.x, enemy.z - home.z) / 2;
-  }
-
-  /** True if `bot` is more than teamSpread ahead of its rearmost teammate bot in play (players don't hold bots back). */
-  private aheadOfTeam(bot: Bot): boolean {
-    const me = bot.character;
-    let rear = Number.POSITIVE_INFINITY;
-    for (const b of this.bots) {
-      const c = b.character;
-      // Bots under a squad order go their own way, and an anchor holds short of the middle (BN1): nobody waits for them.
-      if (c === me || c.team !== me.team || !isInPlay(c) || b.order !== 'none' || anchorHolding(b, this.world)) continue;
-      rear = Math.min(rear, this.progress(c));
-    }
-    return this.progress(me) - rear > this.world.cfg.teamSpread;
   }
 
   /**
@@ -802,8 +451,8 @@ export class BotController {
     const w = this.world;
     const cfg = w.cfg;
     const visited = this.visited[bot.character.team]!;
-    const home = this.spawnCentre[bot.character.team]!;
-    const enemy = this.spawnCentre[1 - bot.character.team]!;
+    const home = this.planner.spawnCentre[bot.character.team]!;
+    const enemy = this.planner.spawnCentre[1 - bot.character.team]!;
     // huntsMiddle (Pro since M40, every level since M71): the middle of the map, between the two ends, rather than the
     // far end.
     const middle = bot.skill.huntsMiddle;
@@ -860,30 +509,6 @@ export class BotController {
     const i = Math.min(this.sectorCols - 1, Math.max(0, Math.floor((x - nav.minX) / size)));
     const j = Math.min(this.sectorRows - 1, Math.max(0, Math.floor((z - nav.minZ) / size)));
     return j * this.sectorCols + i;
-  }
-
-  /**
-   * A bot back in play mid-round (an Extraction wave, M45): what it knew is forgotten, and it walks a random lane on
-   * from that lane's point nearest its regen point, towards the other end, as if it had come that far.
-   */
-  private sendBack(b: Bot): void {
-    const lanes = this.opts.lanes;
-    const lane = lanes.length > 0 ? Math.floor(rngNext(this.planRng) * lanes.length) : 0;
-    resetBot(b, lane, 0, this.world.cfg);
-    const points = lanes[lane];
-    if (!points || points.length === 0) return;
-    const p = b.character.position;
-    let nearest = 0;
-    for (let i = 1; i < points.length; i++) {
-      if (Math.hypot(points[i]!.x - p.x, points[i]!.z - p.z) < Math.hypot(points[nearest]!.x - p.x, points[nearest]!.z - p.z)) nearest = i;
-    }
-    // laneIndex is the point last reached: the nearest one comes next.
-    b.laneIndex = nearest - b.laneDir;
-  }
-
-  private character(state: Readonly<GameState>, id: number): Character | undefined {
-    for (const c of state.characters) if (c.id === id) return c;
-    return undefined;
   }
 
   /**

@@ -1,10 +1,11 @@
 import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
 import { LOADING } from '../../config/loading';
-import { MENU_TEXT } from '../../config/menus';
+import { MENU_TEXT, menuScale } from '../../config/menus';
 import type { QualityChoice, QualitySettings } from '../../config/render';
 import { OnDemand } from '../../core/onDemand';
 import type { NewGamePicks } from '../../newGamePicks';
 import { SavedLoadouts } from '../../pool/savedLoadouts';
+import { type HudPrefKey, type HudPrefs, motionReduced, setHudPref } from '../../settings/hudPrefs';
 import { saveSetting } from '../../settings/storage';
 import type { ArmoryScreen } from './armoryScreen';
 import { Backdrop, type MenuHint, type NavPlace, TopBar } from './chrome';
@@ -15,10 +16,10 @@ import { backTarget, escResumes, type MenuScreen, type SettingsOrigin } from './
 import { el, watchScroll } from './menuParts';
 import { PauseScreen } from './pauseScreen';
 import { PlayPicks } from './playModel';
-import { loadMatchStarted } from './savedChoices';
+import { loadMatchStarted, loadMouseDpi } from '../../settings/savedChoices';
 import { ResultScreen } from './resultScreen';
 import { playView } from './playView';
-import type { SettingsScreen } from './settingsScreen';
+import type { SettingsOptions, SettingsScreen } from './settingsScreen';
 import { type PlayView, SetupScreen } from './setupScreen';
 import { type MatchSummary, SummaryScreen } from './summaryScreen';
 import type { MenusOptions } from './menusOptions';
@@ -139,8 +140,17 @@ export class Menus {
     this.root.append(this.backdrop.root, this.topBar.root);
     parent.appendChild(this.root);
     window.addEventListener('keydown', this.onKeyDown);
+    window.addEventListener('resize', this.showScale);
+    this.showScale();
     this.refreshViews();
   }
+
+  /** The menus' size for the window (UX1, config/menus.ts › menuScale): `--menu-zoom`, one CSS zoom over them all. Again on resize. */
+  private readonly showScale = (): void => {
+    const parent = this.root.parentElement;
+    const scale = menuScale(parent?.clientWidth || window.innerWidth, parent?.clientHeight || window.innerHeight);
+    this.root.style.setProperty('--menu-zoom', String(scale));
+  };
 
   /** The screen on show (while the menus are). */
   get screen(): MenuScreen {
@@ -270,6 +280,7 @@ export class Menus {
 
   dispose(): void {
     window.removeEventListener('keydown', this.onKeyDown);
+    window.removeEventListener('resize', this.showScale);
     // Nothing opens once the menus are gone, from the background fetch or a screen still being fetched.
     this.lazyScreens.cancelPreload();
     this.asked++;
@@ -361,13 +372,11 @@ export class Menus {
       const { SettingsScreen } = this.fetched();
       const s = (this.settings = new SettingsScreen({
         bindings: o.bindings,
-        controls: o.controls,
+        controls: controlRows(o.controls),
         fov: o.fov,
         graphics: o.graphics,
         audio: o.audio,
-        crosshair: o.crosshair,
-        accessibility: o.accessibility,
-        hud: o.hud,
+        ...prefRows(o.prefs),
         // Realistic colours also changes how the menus draw the replicas.
         look: { ...o.look, onChange: (look) => ((this.realistic = look.realisticColours), o.look.onChange(look), this.refreshViews()) },
         // The Play screen's note on the records follows the Dev settings.
@@ -705,4 +714,52 @@ function typing(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return true;
   return target instanceof HTMLInputElement && !['checkbox', 'radio', 'range', 'button'].includes(target.type);
+}
+
+/**
+ * Settings › Gameplay's crosshair and hit marker rows and the Accessibility and HUD tabs on the one HudPrefs (DX5): each
+ * row starts from its preference as it is now and changes it there, then says which changed. Reduced motion starts
+ * from what applies (the system's setting until the player picks, audit UI-07).
+ */
+function prefRows(prefs: MenusOptions['prefs']): Pick<SettingsOptions, 'crosshair' | 'accessibility' | 'hud'> {
+  const p = prefs.values;
+  const row = <K extends HudPrefKey>(key: K) => ({ initial: p[key], onChange: (value: HudPrefs[K]) => (setHudPref(p, key, value), prefs.onChange(key)) });
+  return {
+    crosshair: { ...row('crosshair'), hitMarker: row('hitMarker') },
+    accessibility: {
+      reducedMotion: { ...row('reducedMotion'), initial: motionReduced(p), follow: prefs.followMotion },
+      teamColours: row('teamColours'),
+      soundCues: row('soundCues'),
+      soundCueSize: row('soundCueSize'),
+      soundCueColour: row('soundCueColour'),
+    },
+    hud: {
+      hudSize: row('hudSize'),
+      scoreboardSize: row('scoreboardSize'),
+      hudOpacity: row('hudOpacity'),
+      hitFeed: row('hitFeed'),
+      feedCorner: row('feedCorner'),
+      whatGotYou: row('whatGotYou'),
+      minimapTurn: row('minimapTurn'),
+      callouts: row('callouts'),
+      pingMarkers: row('pingMarkers'),
+      magPrompts: row('magPrompts'),
+      ammoCounter: row('ammoCounter'),
+    },
+  };
+}
+
+/** Settings › Controls on the input and the pointer lock that hold them: each row starts from what is in use and changes it there. */
+function controlRows({ input, pointer }: MenusOptions['controls']): SettingsOptions['controls'] {
+  return {
+    sensitivity: { initial: input.sensitivity, onChange: (v) => (input.sensitivity = v) },
+    aimSensitivity: { initial: input.aimSensitivity, onChange: (v) => (input.aimSensitivity = v) },
+    dpi: { initial: loadMouseDpi() },
+    invertMouse: { initial: input.invertY, onChange: (on) => (input.invertY = on) },
+    rawInput: { initial: pointer.rawInput, onChange: (on) => (pointer.rawInput = on), status: () => pointer.rawStatus, watch: (fn) => pointer.onRawStatus(fn) },
+    crouch: { initial: input.crouchMode, onChange: (m) => (input.crouchMode = m) },
+    aim: { initial: input.aimMode, onChange: (m) => (input.aimMode = m) },
+    sprint: { initial: input.sprintMode, onChange: (m) => (input.sprintMode = m) },
+    wheelSelect: { initial: input.wheelSelect, onChange: (m) => (input.wheelSelect = m) },
+  };
 }

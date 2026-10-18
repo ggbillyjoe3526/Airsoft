@@ -41,7 +41,7 @@ const drawn = (page: Page): Promise<Record<string, boolean>> =>
   });
 
 /**
- * What the tree ring's mesh carries besides the ring (render/skyHost.ts's `skyPart`): 1 the skyline's lights, 2 the
+ * What the tree ring's mesh carries besides the ring (render/dressing/skyHost.ts's `skyPart`): 1 the skyline's lights, 2 the
  * plane. They ride the ring's draw call (G9 perf), so a scene has no mesh of their own to look for.
  */
 const ringCarries = (page: Page): Promise<number[]> =>
@@ -108,7 +108,7 @@ test('Neon Heights on Medium draws its steam and its plane, its junk and puddle 
   expect(scene['map-junk']).toBe(true);
   expect(scene['map-puddles']).toBe(true);
   expect(scene['steamPlumes']).toBe(true);
-  // The skyline's lights and the plane are drawn by the tree ring's mesh (one draw call; render/skyHost.ts).
+  // The skyline's lights and the plane are drawn by the tree ring's mesh (one draw call; render/dressing/skyHost.ts).
   expect(scene['trees']).toBe(true);
   expect(await ringCarries(page)).toEqual([1, 2]);
   // The plane's flight is made (hidden between passes; the ring draws it).

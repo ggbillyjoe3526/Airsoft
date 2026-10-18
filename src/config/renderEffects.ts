@@ -135,7 +135,7 @@ export const IMPACT_GRIT = {
 } as const;
 
 /**
- * Leaves knocked out of a bush by a BB (Dev 6 item 44, render/leafFlecks.ts): a BB the leaves stop sends `perStop` of them
+ * Leaves knocked out of a bush by a BB (Dev 6 item 44, render/effects/leafFlecks.ts): a BB the leaves stop sends `perStop` of them
  * fluttering out, one that brushes through an edge `perBrush`, at every quality (they say where your BB went). Each is a
  * small leaf `size` metres long (never under `minAngularSize` radians on screen), thrown out at `speed` m/s, mostly back
  * towards the shooter's side (`toward`) and up (`up`), then falling under `gravity` but held back by the air (`drag`,
@@ -205,7 +205,7 @@ export const GAS_PUFFS: PuffConfig & { muzzleSpeed: number; portScale: number; p
 };
 
 /**
- * Dust motes drifting in the sunlight round you (M14, render/dustMotes.ts): how many is the quality preset's
+ * Dust motes drifting in the sunlight round you (M14, render/effects/dustMotes.ts): how many is the quality preset's
  * (QualitySettings.dustMotes, at most `max`: the Custom row's top); they fill a cube `box` metres across centred on the
  * camera, wrapping round it as you move. Reduced motion turns them off.
  */
