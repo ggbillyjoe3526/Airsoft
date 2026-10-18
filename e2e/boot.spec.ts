@@ -8,8 +8,9 @@ import { renders } from './rendererRow';
  * down the scope, switches the graphics quality to Medium and back to Low mid-match, ends the match (summary, result, Play
  * Again) and keeps running without a page error.
  *
- * Uses `?nolock` (no pointer lock; automated browsers can't take it): the fire button and wheel work without
- * the lock there, but the real lock flow, mouse look and Esc to pause stay manual tests. SwiftShader draws only
+ * Uses `?nolock` (no pointer lock): the fire button and wheel work without the lock there. The real lock flow is
+ * `release.spec.ts`; mouse look, the wheel's pointer and Esc itself stay hand checks (Esc releases the lock in the
+ * browser, out of reach of a synthetic key press). SwiftShader draws only
  * a few frames a second, so the simulation runs slower than real time: assert on page text, never on frames,
  * and poll rather than wait fixed times. It loads with no `?quality=`, as a player would: the game sees SwiftShader
  * draws in software and starts on Low itself (audit M-02), since the art pass (M14) on Medium or High draws too slowly

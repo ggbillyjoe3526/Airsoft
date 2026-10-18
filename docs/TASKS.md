@@ -5,6 +5,9 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 (`docs/records/<id>.md`) and its CHANGELOG line remain. The planning thread writes blocks; the build thread sets
 `status` and `attempts` once, in its records commit (no status-only commits).
 
+**Frozen after 0.1 Beta 1 (owner, 2026-10-18).** It is this repository's last build: no block below has started, and
+none will be built here (`docs/HANDOFF.md`).
+
 **0.1 Beta 1 (owner, 2026-10-16).** Fixes, balance, performance and polish, with no features. The blocks come from
 `docs/ROADMAP.md` › Beta, `docs/KNOWN_ISSUES.md` and the owner's Dev 6 playtest (2026-10-16, rulings in
 `docs/DECISIONS.md`). The draft and the backlog triage are in the project's shared files
@@ -150,14 +153,3 @@ attempts: 0
 `/mnt/project-files/audit/repo-audit-2026-10-16.md`, in the order to run them. Each one waits until the playtest
 threads' branches it touches have merged (ST1, MR1, HD1, MV1, BD1, MS1, TT1), so none conflicts with them. DX2 takes
 over DC1's known-issues tidy-up. DX0, the quick wins, is the audit thread's own pull request.
-
-## BP6 · Beta 1 bug pass (when William says go)
-tier: core
-perf: required
-touches: src/
-contract: none
-acceptance:
-  1. The standard bug pass (`docs/PROCESS.md` › Bug pass) over everything Beta 1 changed, on every public map, mode and difficulty.
-  2. Every KNOWN_ISSUES row in a public area is checked against the build.
-status: open
-attempts: 0

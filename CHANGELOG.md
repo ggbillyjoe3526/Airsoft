@@ -73,6 +73,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **KI1** · The summary's records grid after a Tournament match shows that rule set's records
 - **KI1** · The Tutorial's switch-replica step no longer counts a rifle BB still in the air
 - **KI1** · Practice's timed challenge on a map times a target from where you stand
+- **BP6d** · The Red Laser's Customise line says it tightens the spread aimed and from the hip, as it always has, not only hip fire
 - **KI1** · The first overtime flag, first tossed magazine and first 2x scope aim no longer hitch as they load
 - **KI1** · Fewer post effects stall the first frame of a match
 - **KI1** · Wall grime starts at each block's own foot, upper floors included

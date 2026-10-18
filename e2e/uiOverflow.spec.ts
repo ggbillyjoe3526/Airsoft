@@ -155,7 +155,7 @@ async function expectFits(page: Page, where: string): Promise<void> {
 // The three sizes the criterion names (1280 x 720 is the smallest the menus are made for).
 for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]] as const) {
   test(`no text runs out of its box at ${width} x ${height} and the ammo panel touches nothing in a match`, async ({ page }) => {
-    test.setTimeout(150_000);
+    test.setTimeout(300_000);
     const errors: string[] = [];
     page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
     await page.setViewportSize({ width, height });
@@ -242,7 +242,8 @@ for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]] as const
           const a = (window as unknown as Game).airsoft.state.characters[0]!.armament;
           a.ammo[a.active]!.mag = m;
         }, mag);
-        await expect(page.locator('.hud-mag')).toHaveText(String(mag), { timeout: 10_000 });
+        // A frame at 2560 x 1440 in SwiftShader can take over 10 s on a loaded CI runner (BP6d: twice on one shard).
+        await expect(page.locator('.hud-mag')).toHaveText(String(mag), { timeout: 30_000 });
         expect(await page.evaluate(hudOverlaps), `HUD size ${size}, ${mag} BBs loaded`).toEqual([]);
       }
       // The longest hop-up readout and a belt of twelve spare magazines (they wrap) still sit inside the 176 px panel.
