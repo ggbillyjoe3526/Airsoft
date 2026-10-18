@@ -1,3 +1,5 @@
+import { MOVEMENT } from './movement';
+
 /**
  * The bots' senses, reaction and trigger (DX7: one of the files config/bots.ts gathers into BOT_BEHAVIOUR): what they
  * see and hear and how soon, how they aim and how they fire. Shared by every difficulty; the skill per level is
@@ -107,6 +109,12 @@ export const BOT_SENSES = {
    * spread the bot shoots with now (M92): walking, it is wider (Character.spreadScale).
    */
   friendlySpreadSigmas: 2,
+  /**
+   * ...and a teammate on the move is checked where they would be had they sped up to this pace (m/s, running) in the
+   * way they are heading while the BBs fly: one strafing in a close duel speeds up across the line between shots (RE1:
+   * Depot, Elimination with ricochets counting, seed 2, a teammate at 2.7 m/s and rising stepped into a BB in flight).
+   */
+  friendlyMateSpeed: MOVEMENT.runSpeed,
   /**
    * ...and this far (metres) past the target too: a BB that misses keeps flying, so a teammate just
    * behind the target in the line of fire is as much in the way as one in front. 25 since G11 (15 before): a fresh
