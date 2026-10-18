@@ -11,7 +11,9 @@ in `docs/PROCESS.md`.
   2026-10-06): fixes, balance and polish from the owner's playtests only. The small additions in his Dev 6 playtest
   list are the exception, on his word.
 - **Last tag:** `0.1-dev.6`, on 2026-10-16. The owner creates tags.
-- **Next:** the 0.1 Beta 1 tag. The owner's Dev 6 playtest list (34 items) and the Beta 1 blocks are in `docs/TASKS.md`.
+- **Next:** the 0.1 Beta 1 tag, the last build of this repository. After it, development ceases here and continues in
+  a new repository as an installable game built with Godot and Blender, restarting at 0.1 Dev 1 (owner, 2026-10-18).
+  The plan below carries over to it; the handover pack is `docs/handover/README.md`.
 - **The release path** (owner, 2026-10-12): 0.1 Dev 6, 0.1 Beta, then 0.1.0 opens Early Access to the public. Themed
   updates follow (Replica, Modes, Maps, Progression and any more), up to 1.0, the full launch. See
   [Early Access](#early-access-the-themed-updates).
