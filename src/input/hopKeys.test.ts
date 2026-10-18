@@ -32,6 +32,22 @@ describe('hop-up keys', () => {
     expect(frame('hopDown')).toBe(-1);
   });
 
+  it('two taps inside one slow frame turn two notches (bug pass BP6a, as the fire selector since KI1)', () => {
+    const counts = new Map<Action, number>([['hopUp', 2]]);
+    const kb = { isDown: () => false, wasPressed: (a: Action) => (counts.get(a) ?? 0) > 0, pressCount: (a: Action) => counts.get(a) ?? 0 } as unknown as Keyboard;
+    const pointer = { consumeDelta: () => {}, consumeWheelSteps: () => 0 } as unknown as PointerLock;
+    const input = new PlayerInput(kb, pointer, MOVEMENT);
+    const cmd = createCommand();
+    input.update(0, 2);
+    input.fillCommand(cmd);
+    expect(cmd.hopUpSteps).toBe(2);
+    counts.clear();
+    counts.set('hopDown', 3);
+    input.update(0, 2);
+    input.fillCommand(cmd);
+    expect(cmd.hopUpSteps).toBe(-3);
+  });
+
   it('both in one frame cancel out', () => {
     expect(setup().frame('hopUp', 'hopDown')).toBe(0);
   });

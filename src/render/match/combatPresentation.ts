@@ -128,6 +128,9 @@ export class CombatPresentation {
   private playing = false;
   /** The round in play started behind a screen (round 1 of a match, set up before play): whistle on Play. */
   private startWhistleOwed = true;
+  /** The round waits for the warm-up's draws (PF1, `warmShaders` with `hold`): the start whistle waits with it (bug pass BP6a). */
+  private holding = false;
+  private disposed = false;
   /** How far the player's sight is raised to their eye (0..1): eases over sim/aiming.ts aimRaiseTime. */
   private aimBlend = 0;
   /** The sight last raised (an optic, or iron sights, M84): switching away eases out of its zoom rather than snapping. */
@@ -289,7 +292,12 @@ export class CombatPresentation {
     if (!playing) this.vaultPrompt.update(false, false, Infinity);
     this.sfx.setPaused(!playing);
     this.playing = playing;
-    if (playing && this.startWhistleOwed) this.startWhistleOwed = !this.sfx.roundStartWhistle();
+    this.blowOwedWhistle();
+  }
+
+  /** The start whistle, if a round set up behind a screen still owes it and play is under way. */
+  private blowOwedWhistle(): void {
+    if (this.playing && !this.holding && !this.disposed && this.startWhistleOwed) this.startWhistleOwed = !this.sfx.roundStartWhistle();
   }
 
   toggleBbPaths(): void {
@@ -499,7 +507,13 @@ export class CombatPresentation {
   warmShaders(hidden: readonly THREE.Object3D[] = [], poses: readonly WarmStage[] = [unstaged], hold = false): Promise<void> {
     const shown = [...hidden, ...this.magTosses.warmTargets(), ...this.viewmodel.warmTargets(), ...this.dressing.warmTargets()];
     const everySlot = poses.map((pose): WarmStage => (run) => this.viewmodel.withEverySlotShown(() => pose(run)));
-    return this.renderer.warmShaders(this.overlay, shown, everySlot, hold);
+    if (hold) this.holding = true;
+    return this.renderer.warmShaders(this.overlay, shown, everySlot, hold).then(() => {
+      if (!hold) return;
+      // The round starts now (MatchSession runs its first tick), so its whistle blows now, not as the picture froze.
+      this.holding = false;
+      this.blowOwedWhistle();
+    });
   }
 
   /** Draws the frame; the held replica only when the camera is in first person. */
@@ -508,6 +522,7 @@ export class CombatPresentation {
   }
 
   dispose(): void {
+    this.disposed = true;
     this.bbs.dispose();
     this.magTosses.dispose();
     this.puffs.dispose();

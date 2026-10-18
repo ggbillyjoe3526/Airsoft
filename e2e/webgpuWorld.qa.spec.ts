@@ -138,8 +138,10 @@ test.describe('Woodland at night on the node renderer', () => {
     const result = await s.page().evaluate(async () => {
       const q = (window as Any).__qa;
       q.reduceMotion(true);
-      await q.sleep(300);
       const motes = q.find((o: Any) => o.name === 'dustMotes');
+      // The motes go on the next frame, which can take longer than 300 ms in software drawing under load (bug pass BP6a).
+      await q.sleep(300);
+      for (let i = 0; i < 50 && motes.visible; i++) await q.sleep(100);
       const flies = q.find((o: Any) => o.name === 'fireflies');
       const before = Array.from(flies.geometry.getAttribute('position').array as Float32Array);
       const restore = q.showOnly('fireflies');

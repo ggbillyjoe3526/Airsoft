@@ -55,7 +55,7 @@ import { ExitRenderer } from './exitRenderer';
 import type { FigureModel } from '../figures/externalModels';
 import { FlagRenderer } from './flagRenderer';
 import type { ProbeGrid } from '../light/probeGrid';
-import { EdgePins, type EdgeStep, edgeAngle, projectMarker, type ScreenMarker } from './screenMarker';
+import { type EdgeFloor, EdgePins, type EdgeStep, edgeAngle, projectMarker, type ScreenMarker } from './screenMarker';
 import { SpectatorCamera } from './spectatorCamera';
 import type { FigureRigs } from '../figures/figureRig';
 import { type FigureCrowd, HUMAN_CROWD } from '../figures/figureMix';
@@ -85,6 +85,8 @@ export class MatchPresentation {
   private markerTowards = 0;
   /** This frame's edge-pinned markers (pings, the flag, exits, the hold marker), laid out a label apart (KI1). */
   private readonly edgePins = new EdgePins();
+  /** Where edge markers may start beside the minimap (Minimap.pinFloor), filled each time one is placed. */
+  private readonly edgeFloor: EdgeFloor = { left: 0, top: 0 };
   private readonly edgeStep: EdgeStep = { down: 0, across: 0 };
   private readonly feed: HitFeed;
   /** WON or LOST at a round's end (Dev 6 playtest item 33) and the line saying a click moves on. */
@@ -898,7 +900,7 @@ export class MatchPresentation {
     const at = projectMarker(anchor, camera, this.view.width, this.view.height, edge, out);
     if (!pin) return at;
     this.markerTowards = edgeAngle(at, this.view.width, this.view.height);
-    return this.edgePins.place(this.minimap.clearPinned(at, edge), this.view.width, this.view.height, this.edgeStep);
+    return this.edgePins.place(this.minimap.clearPinned(at, edge), this.view.width, this.view.height, this.edgeStep, this.minimap.pinFloor(edge, this.edgeFloor));
   }
 
   /** "OUT · hit by Beta 2", rebuilt only when who hit you changes. */

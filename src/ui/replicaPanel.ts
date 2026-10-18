@@ -83,7 +83,7 @@ export class ReplicaPanel {
   /**
    * Settings › HUD › Ammo counter (AC1): false takes the loaded count and the spare line away (replica.css) and draws each
    * spare's box full while it holds any BBs and hollow once empty, with no low stripes and no mark on the one a reload
-   * takes; the status line still says Empty, Last magazine and Out of BBs. Every box is redrawn the next frame.
+   * takes; the status line still says Last magazine and Out of BBs. Every box is redrawn the next frame.
    */
   setCounts(shown: boolean): void {
     if (this.counts === shown) return;
