@@ -10,7 +10,7 @@ import { lightingChoices, lightingPicked, mapUnderLighting, mapUnderPreset, play
 import { NEON_HEIGHTS } from './map/neonHeights';
 import { WOODLAND } from './map/woodland';
 import { MemoryStorage } from './pool/testStorage';
-import { SpectatorCamera } from './render/spectatorCamera';
+import { SpectatorCamera } from './render/match/spectatorCamera';
 import { SETTINGS_KEY } from './settings/storage';
 import { createCharacter } from './sim/character';
 import { vec3 } from './sim/vec';

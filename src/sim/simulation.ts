@@ -25,7 +25,7 @@ import { stepTorch } from './torch';
 import { createRng } from './rng';
 import { type RoundContext, type RoundRules, stepRound } from './round';
 import type { GameState } from './state';
-import { stepVault, tryVault, vaultingCommand, withVaultPresses } from './vault';
+import { createVaultState, stepVault, stepVaultReady, tryVault, type VaultState, vaultingCommand, withVaultPresses } from './vault';
 import { copy, type Vec3, vec3 } from './vec';
 import { type WindState, windAt } from './wind';
 
@@ -85,6 +85,8 @@ export interface SimContext extends SimServices {
   vaultCommand: PlayerCommand;
   /** The first command after a vault, with the presses made during it (BP5, sim/vault.ts withVaultPresses). */
   afterVaultCommand: PlayerCommand;
+  /** Where the tick's vault answer puts the vault it finds (DX6, sim/vault.ts stepVaultReady); never read. */
+  vaultCheck: VaultState;
   muzzle: Muzzle;
   /** Reused every tick; the state-dependent fields are filled in by stepSimulation. */
   armament: ArmamentContext;
@@ -102,6 +104,7 @@ export function createSimContext(services: SimServices): SimContext {
     eliminatedCommand: createCommand(),
     vaultCommand: createCommand(),
     afterVaultCommand: createCommand(),
+    vaultCheck: createVaultState(),
     muzzle: { eye: vec3(), yaw: 0, pitch: 0, spreadScale: 1, kickScale: 1 },
     armament: {
       ballistics: services.ballistics,
@@ -199,6 +202,8 @@ export function stepSimulation(
     stepWalkCycle(c, ctx.hits); // the legs' swing, for their hit volumes and the drawn figure (M85)
     stepLean(c, cmd, ctx.body, ctx.hits, ctx.movement, ctx.query, dt);
     stepAccuracy(c, ctx.movement, dt);
+    // Would a Jump press vault now (DX6)? The tick's answer, for the prompt.
+    stepVaultReady(c, cmd, inPlay, ctx.movement, ctx.body, ctx.query, ctx.vaultCheck);
     if (!inPlay) {
       stepElimination(c, ctx.hits, dt);
       continue;

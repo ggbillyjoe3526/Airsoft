@@ -21,7 +21,7 @@ let minimapCaptions: string[] = [];
 
 beforeAll(async () => {
   vi.resetModules();
-  vi.doMock('./render/combatPresentation', () => ({
+  vi.doMock('./render/match/combatPresentation', () => ({
     CombatPresentation: class {
       setLighting(): void {}
       skipStartWhistle(): void {}
@@ -30,7 +30,7 @@ beforeAll(async () => {
       dispose(): void {}
     },
   }));
-  vi.doMock('./render/rangeTargetsRenderer', () => ({
+  vi.doMock('./render/match/rangeTargetsRenderer', () => ({
     RangeTargetsRenderer: class {
       object = new THREE.Group();
       setReceiveShadows(): void {}
@@ -38,7 +38,7 @@ beforeAll(async () => {
       dispose(): void {}
     },
   }));
-  vi.doMock('./render/torchBeams', () => ({
+  vi.doMock('./render/light/torchBeams', () => ({
     TorchBeams: class {
       object = new THREE.Group();
       reserved = 0;
@@ -68,14 +68,14 @@ beforeAll(async () => {
     lastShotText: () => '',
     challengeText: () => '',
   }));
-  vi.doMock('./render/lighting', () => ({ addLighting: () => ({ reserveLights() {}, dispose() {} }) }));
-  vi.doMock('./render/figureMix', () => ({ figureCrowd: () => [], playerArms: () => undefined }));
+  vi.doMock('./render/light/lighting', () => ({ addLighting: () => ({ reserveLights() {}, dispose() {} }) }));
+  vi.doMock('./render/figures/figureMix', () => ({ figureCrowd: () => [], playerArms: () => undefined }));
   vi.doMock('./pool/loadoutModel', () => ({ bbGlowFor: () => ({ player: [], others: false }), kitPaint: () => ({}) }));
   await (await import('./physics/physicsWorld')).initPhysics();
   ({ RangeSession } = await import('./rangeSession'));
 });
 afterAll(() => {
-  for (const m of ['./render/combatPresentation', './render/rangeTargetsRenderer', './render/torchBeams', './ui/minimap', './ui/rangeReadout', './render/lighting', './render/figureMix', './pool/loadoutModel']) vi.doUnmock(m);
+  for (const m of ['./render/match/combatPresentation', './render/match/rangeTargetsRenderer', './render/light/torchBeams', './ui/minimap', './ui/rangeReadout', './render/light/lighting', './render/figures/figureMix', './pool/loadoutModel']) vi.doUnmock(m);
   vi.resetModules();
 });
 

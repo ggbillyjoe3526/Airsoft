@@ -1,7 +1,7 @@
 import type { DressingPuddle, MapDressing, SkylinePiece } from './mapTypes';
 
 /**
- * Woodland's set dressing (G9, MapData.dressing; render/mapDressing.ts and render/woodsDressing.ts place it): the floor
+ * Woodland's set dressing (G9, MapData.dressing; render/dressing/mapDressing.ts and render/dressing/woodsDressing.ts place it): the floor
  * of a wood in autumn. Leaf litter drifts round the trunks, logs, boulders and the fence; fallen branches, twigs and
  * sawn logs lie against their feet; mud and puddles lie in the tracks, the creek bed and the camp clearings; moss and a
  * damp band grow on the boulders, logs and trunks; a dark treeline and low wooded hills stand beyond the fence; and
@@ -52,7 +52,7 @@ const POOLS = [
 /**
  * Beyond the fence: a band of dark conifers close behind it on all four sides, and low wooded hills further out (the
  * tree ring beyond them starts 92 m from the middle, so they fill the gap between the fence and the ring without
- * standing in it). Trees of the ring may stand on a hill or behind a treeline (render/skyline.ts skylineClear).
+ * standing in it). Trees of the ring may stand on a hill or behind a treeline (render/dressing/skyline.ts skylineClear).
  */
 const SKYLINE: SkylinePiece[] = [
   // The treelines, 6 m beyond the fence on each side.
@@ -72,14 +72,14 @@ const SKYLINE: SkylinePiece[] = [
 
 export const WOODLAND_DRESSING: MapDressing = {
   seed: 5209,
-  // The wood's floor (render/woodsDressing.ts): leaf drifts round roughly a third of the squares that lie by a foot,
+  // The wood's floor (render/dressing/woodsDressing.ts): leaf drifts round roughly a third of the squares that lie by a foot,
   // and a fallen branch, twigs or a sawn log in about a fifth of the slots along those feet.
   woods: { leaves: 0.28, fallen: 0.2 },
-  // Moss and a damp band on the hard cover (render/natureShapes.ts): a cool green, strongest on tops and north faces.
+  // Moss and a damp band on the hard cover (render/field/natureShapes.ts): a cool green, strongest on tops and north faces.
   moss: { colour: 0x4e6b3a, share: 0.5 },
   puddles: POOLS,
   skyline: SKYLINE,
-  // Fireflies over the field by night (render/fireflies.ts), gathering round the bushes.
+  // Fireflies over the field by night (render/dressing/fireflies.ts), gathering round the bushes.
   fireflies: { count: 150 },
   // The dust in the air and underfoot: a cool woodland grey-green rather than Depot's concrete.
   motes: { tint: 0xc9d2bc },

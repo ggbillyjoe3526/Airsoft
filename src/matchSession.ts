@@ -41,7 +41,7 @@ import type { SquadCommand } from './config/squad';
 import { dayColours, type TeamColours } from './config/teams';
 import { BuildTiming } from './core/buildTiming';
 import { caseSeed, runSeed } from './core/seed';
-import { figureCrowd, playerArms } from './render/figureMix';
+import { figureCrowd, playerArms } from './render/figures/figureMix';
 import { EventLog } from './core/eventLog';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
@@ -49,16 +49,16 @@ import type { MapData } from './map/mapTypes';
 import { playableMode } from './map/playableMode';
 import { buildNavGrid, type NavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
-import { LeanViewEase, updateFirstPersonCamera } from './render/cameraRig';
-import { CombatPresentation } from './render/combatPresentation';
-import { ContactShadows } from './render/contactShadows';
-import { bakedLightFor, bakedLightMode } from './render/bakedLight';
-import { addLighting, type Daylight } from './render/lighting';
-import { resolveLighting } from './render/lightingPreset';
-import { mapLookOf } from './render/mapMeshes';
-import { MatchPresentation } from './render/matchPresentation';
-import type { ProbeGrid } from './render/probeGrid';
-import { TorchBeams } from './render/torchBeams';
+import { LeanViewEase, updateFirstPersonCamera } from './render/match/cameraRig';
+import { CombatPresentation } from './render/match/combatPresentation';
+import { ContactShadows } from './render/light/contactShadows';
+import { bakedLightFor, bakedLightMode } from './render/light/bakedLight';
+import { addLighting, type Daylight } from './render/light/lighting';
+import { resolveLighting } from './render/light/lightingPreset';
+import { mapLookOf } from './render/field/mapMeshes';
+import { MatchPresentation } from './render/match/matchPresentation';
+import type { ProbeGrid } from './render/light/probeGrid';
+import { TorchBeams } from './render/light/torchBeams';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
 import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
@@ -187,7 +187,7 @@ export class MatchSession implements Session {
   private readonly daylight: Daylight;
   /** The map's light as resolved (M33f): a night preset gives the bots their torches and draws the beams (M33h). */
   private readonly lighting: LightingPreset;
-  /** The map's baked bounce light (G6, render/bakedLight.ts), or null when it has none. */
+  /** The map's baked bounce light (G6, render/light/bakedLight.ts), or null when it has none. */
   private readonly probes: ProbeGrid | null;
   /** The map's built meshes (G9: the dressing's neon flicker is a uniform on its junk mesh). */
   private mapGroup: Group;
@@ -295,7 +295,7 @@ export class MatchSession implements Session {
     // An Extraction run is one "round" of the map's run time (sim/round.ts); there is nothing to win twice.
     this.rounds = this.extraction && map.extraction ? { ...roundRulesFor(setup.rules), roundTime: map.extraction.runTime, winsNeeded: 1, winBy: 1 } : roundRulesFor(setup.rules);
     // With the rigged figures drawn (BD1: unless they couldn't be loaded), the legs' hit volumes follow theirs (IM8): the human's
-    // legs, which the robot shares but for a couple of centimetres crouched (render/riggedHitVolume.test.ts measures both),
+    // legs, which the robot shares but for a couple of centimetres crouched (render/figures/riggedHitVolume.test.ts measures both),
     // with any clip the human's file lacks taken from the robot's (FigureRigs.legs).
     // Their head, chest and hips follow each figure's own upper body (HV1), the human's or the robot's (Character.figure,
     // set from the crowd below).
@@ -653,7 +653,7 @@ export class MatchSession implements Session {
     this.match.showMagHandoff(mag);
     this.match.showMinimap(holding ? this.holdSpot : null);
     // The vault prompt (M102) only from your own eyes.
-    this.combat.frame(dt, alpha, this.input.yaw, pitch, spectating ? undefined : this.playerCommand);
+    this.combat.frame(dt, alpha, this.input.yaw, pitch, !spectating);
     // High's shadow map follows the view (REN-08), the spectator's too.
     this.daylight.follow(this.renderer.camera, dt);
     this.combat.render(!spectating);

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { REPLICA_KEYS } from '../../pool/pool';
-import type { ItemSubject, PictureSubject } from '../../render/itemPictures';
+import type { ItemSubject, PictureSubject } from '../../render/replicas/itemPictures';
 import { fakeDocument } from '../testSupport';
 import { type PictureSource, PictureSlot } from './menuPictures';
 

@@ -61,7 +61,7 @@ export const POST = {
   /**
    * Reflections (render/webgpu/post/nodeReflections.ts): screen-space, only on reflective surfaces. A mesh is reflective when its
    * `userData.reflective` is a strength above 0 (G8's puddles), or its name starts with one of `meshNames` (the map's
-   * merged glass, render/mapMeshes.ts, at `glass`). The reflected ray walks `steps` steps of up to `maxDistance` metres
+   * merged glass, render/field/mapMeshes.ts, at `glass`). The reflected ray walks `steps` steps of up to `maxDistance` metres
    * in all, takes a hit within `thickness` metres behind the depth, refines it `refine` times, and fades out over
    * `edgeFade` of the screen at the edges.
    */

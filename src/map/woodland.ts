@@ -10,16 +10,15 @@ import { woodlandExtraction } from './woodlandExtraction';
 
 /**
  * "Woodland" (M33, the owner's pick, 2026-10-04; concept sketch v1 approved at 18:07 with its defaults): a wide wood at
- * night, 120 × 80 m (six Depots), mostly open, with sparse cover: trees, boulders and logs. Still being built: dev
- * content (M35, map/maps.ts), listed only while the Dev tab's Dev content switch is on.
+ * night, 120 × 80 m (six Depots), mostly open, with sparse cover: trees and logs (no boulders since WL2). Still being
+ * built: dev content (M35, map/maps.ts), listed only while the Dev tab's Dev content switch is on.
  *
  * The ground (map/terrain.ts) rises gently from end 0 to the Knoll, so one team starts downhill and the other uphill;
  * the ends swap at half-time. Three lanes run west to east (plan coordinates, as on the sketch: x 0–120 to the east,
  * z 0–80 to the north; see toWorld):
  * - 1 Pine Belt (north, z 62–80): close pines and a forest track, the long way round to the Knoll's wooded north
  *   shoulder. Cover everywhere, sight short.
- * - 2 Meadow (mid, z 25–62): open grass with boulders (crouch and full cover), a lone oak, two fallen trees and a
- *   woodpile. The fast, exposed way.
+ * - 2 Meadow (mid, z 25–62): open grass with fallen trunks (crouch cover) and a woodpile. The fast, exposed way.
  * - 3 Creek (south): along the north bank of a dry stream bed 0.7 m below the field, past the hunter's cabin (two log
  *   rooms with doors, a window and a low west wall you vault), then up a sunken track to the Knoll's south side.
  * - The Knoll (x 86–116, z 30–64): a hill 3.8 m over the field's slope, its top +6.5 m, with a log fort around the
@@ -53,8 +52,23 @@ const SINK = 0.03;
 const CABIN_WALL = 0.4;
 /** MS1: 3 m (was 2.6), so a body vaulting the west wall clears the roof over it (M102). */
 const CABIN_HEIGHT = 3.0;
+/** A tin roof's shape (m) and paint: its ridge's height over the walls' top, and how far its eaves reach past them. */
+interface TinRoof {
+  readonly ridge: number;
+  readonly overhang: number;
+  readonly paint: number;
+}
 /** MS1: the cabin's tin roof: its ridge `ridge` m over the walls' top, the eaves `overhang` m out, in weathered grey `paint` (rust red read as a team colour). */
-const CABIN_ROOF = { ridge: 1.4, overhang: 0.45, paint: 0x5d5a52 } as const;
+const CABIN_ROOF: TinRoof = { ridge: 1.4, overhang: 0.45, paint: 0x5d5a52 };
+/** WL2: the fort's hut gets the cabin's tin roof, its ridge lower over the hut's 4 m span (owner: "doesn't have a roof"). */
+const HUT_ROOF: TinRoof = { ...CABIN_ROOF, ridge: 0.9 };
+/** The fort's hut (plan x0..x1 × z0..z1), behind its east gap, and its walls' height (WL2: "a little bit taller", was 2.4). */
+const HUT = { x0: 104, x1: 107, z0: 45.5, z1: 49.5, height: 3 } as const;
+/**
+ * WL2: the fort's outer log walls (were full height, 2.4 m): chest high, under a standing eye (MOVEMENT.standEyeHeight
+ * 1.62), so a defender stands to shoot over them and ducks behind them. At crouch height (1.2) Hard attackers won 76 %.
+ */
+const FORT_WALL = 1.5;
 const WINDOW_SILL = CROUCH;
 const WINDOW_TOP = 2.0;
 
@@ -86,8 +100,24 @@ const EAST_FALL = 0.75;
  * metres all round (half a cosine), gentle enough to walk over anywhere.
  */
 const RISE = { x: 22, z0: 28, z1: 60 };
-const RISE_HEIGHT = 2.6;
-const RISE_FALL = 10;
+/**
+ * WL3, West Hill (owner, 2026-10-17: "a small hill (enough to stop the other side immediately seeing them)"): the
+ * crest is RISE_PEAK m at its middle and RISE_END m at its two ends (was 2.6 m all along), with a longer RISE_FALL
+ * (was 10 m) so its steepest face stays under a ramp's slope.
+ */
+const RISE_END = 2.2;
+const RISE_PEAK = 3.4;
+const RISE_FALL = 12.5;
+/** The West Hill crest's height at plan z: RISE_END at z0 and z1, RISE_PEAK half way (half a sine). */
+const riseCrest = (z: number): number => RISE_END + (RISE_PEAK - RISE_END) * Math.sin(Math.PI * Math.min(1, Math.max(0, (z - RISE.z0) / (RISE.z1 - RISE.z0))));
+
+/**
+ * WL3: a low swell on the meadow (owner: "any other elevation changes should be small"), SWELL m high, by the meadow
+ * lane's west half. The concept had a second at (66, 37): with both, the downhill end won 37.5 % of Pro Elimination's
+ * decided rounds (40–60 %), with this one alone 45.8 %.
+ */
+const SWELLS = [{ x: 46, z: 53 }] as const;
+const SWELL = { height: 0.6, top: 1.5, fall: 6 } as const;
 
 /** The Knoll: a flat top of radius KNOLL_TOP round its centre, falling off over KNOLL_FALL metres. */
 const KNOLL = { x: 101, z: 47 };
@@ -95,10 +125,18 @@ const KNOLL_HEIGHT = 3.8;
 const KNOLL_TOP = 6;
 const KNOLL_FALL = 13.5;
 
-/** The creek: its bed follows z = 12 + 3·sin(x / 14), 0.7 m down, 2 m wide, with 2.8 m banks; it ends before the Knoll. */
-const CREEK_DEPTH = 0.7;
-const CREEK_BED = 1;
-const CREEK_BANK = 2.8;
+/**
+ * The creek: its bed follows z = 12 + 3·sin(x / 14) and it ends before the Knoll. WL3 (owner: "one side of the map should
+ * have a more significant elevation change") made it a dry ravine, CREEK_DEPTH m down with a 3.2 m bed and 8 m banks
+ * (was 0.7 m, 2 m and 2.8 m), so the creek lane along its north bank sits lower than the meadow. It is CREEK_DEPTH_WEST m deep
+ * west of CREEK_DEEPENS[0] and deepens to CREEK_DEPTH by CREEK_DEEPENS[1], so where West Hill's south end falls towards
+ * it the two slopes together stay under a ramp's.
+ */
+const CREEK_DEPTH = 2.2;
+const CREEK_DEPTH_WEST = 1;
+const CREEK_DEEPENS = [20, 40] as const;
+const CREEK_BED = 1.6;
+const CREEK_BANK = 8;
 const CREEK_END = [86, 94] as const;
 const creekZ = (x: number): number => 12 + 3 * Math.sin(x / 14);
 
@@ -138,12 +176,14 @@ function woodlandHeight(x: number, z: number): number {
       : x <= SLOPE_X1
         ? WEST_LIFT + ((SLOPE_RISE - WEST_LIFT) * (x - SLOPE_X0)) / (SLOPE_X1 - SLOPE_X0)
         : SLOPE_RISE + EAST_RISE * Math.min(1, (x - SLOPE_X1) / (SIZE_X - SLOPE_X1)) - EAST_FALL * smoothstep(EAST_TOP_X, SIZE_X, x);
-  const rise = dip(segmentDistance(x, z, { x: RISE.x, z: RISE.z0 }, { x: RISE.x, z: RISE.z1 }), RISE_HEIGHT, 0, RISE_FALL);
+  const rise = dip(segmentDistance(x, z, { x: RISE.x, z: RISE.z0 }, { x: RISE.x, z: RISE.z1 }), riseCrest(z), 0, RISE_FALL);
+  const swells = SWELLS.reduce((sum, w) => sum + dip(Math.hypot(x - w.x, z - w.z), SWELL.height, SWELL.top, SWELL.fall), 0);
   const r = Math.hypot(x - KNOLL.x, z - KNOLL.z);
   const knoll = r <= KNOLL_TOP ? KNOLL_HEIGHT : r >= KNOLL_TOP + KNOLL_FALL ? 0 : (KNOLL_HEIGHT * (1 + Math.cos((Math.PI * (r - KNOLL_TOP)) / KNOLL_FALL))) / 2;
-  const creek = dip(Math.abs(z - creekZ(x)), CREEK_DEPTH, CREEK_BED, CREEK_BANK) * (1 - smoothstep(CREEK_END[0], CREEK_END[1], x));
+  const creekDepth = CREEK_DEPTH_WEST + (CREEK_DEPTH - CREEK_DEPTH_WEST) * smoothstep(CREEK_DEEPENS[0], CREEK_DEEPENS[1], x);
+  const creek = dip(Math.abs(z - creekZ(x)), creekDepth, CREEK_BED, CREEK_BANK) * (1 - smoothstep(CREEK_END[0], CREEK_END[1], x));
   const track = dip(segmentDistance(x, z, TRACK.from, TRACK.to), TRACK_DEPTH, TRACK_BED, TRACK_BANK) * (1 - smoothstep(TRACK_FADE[0], TRACK_FADE[1], x));
-  return slope + rise + knoll - creek - track;
+  return slope + rise + swells + knoll - creek - track;
 }
 
 // --- Plan to world -----------------------------------------------------------------------------------------------
@@ -200,7 +240,7 @@ const centred = (kind: BlockKind, x: number, z: number, w: number, d: number, h:
 const LANE_POINTS: readonly (readonly [number, number])[][] = [
   // Pine Belt: out of the camp's north gap, along the forest track, down the Knoll's north shoulder into the fort.
   [[13, 51], [24, 62], [38, 69.5], [55, 72], [72, 72], [86, 67], [95, 60], [101, 57], [98.3, 52.7], [98.3, 48.5]],
-  // Meadow: straight across, past the lone oak's north side, up the Knoll's west face.
+  // Meadow: straight across, past the meadow's fallen trunks, up the Knoll's west face.
   [[13, 44], [30, 46.5], [49, 47.5], [62, 46.5], [76, 46], [89, 46.5], [95.8, 44.2], [98.5, 44.2]],
   // Creek: down to the creek's north bank, past the cabin's south and east sides, up the sunken track into the fort.
   [[13, 36], [22, 24], [34, 17.5], [50, 17], [60, 16], [73, 16.5], [76, 24], [86, 29], [94, 36], [101, 37], [103.8, 41.3], [103.8, 44]],
@@ -249,27 +289,34 @@ const END1_CAMP: MapBlock[] = [
  * The log fort round the flag, open on all four sides. Just inside the west, north and south gaps a full-height log
  * baffle turns whoever comes in left or right, and the hut stands behind the east gap, so no one spot inside sees all
  * four ways in (at most two of the gaps' middles; the Pro difficulty plan's rule, owner 19:08: holding a hill is the
- * most defender-friendly setup there is).
+ * most defender-friendly setup there is). WL2 (owner, Beta 1: "make the walls around the structure on the hill lower"):
+ * the outer walls are FORT_WALL high, so you fight over them; the baffles and the hut stay taller than anyone.
  */
 const FORT: MapBlock[] = [
   // North-west corner.
-  standing('log', 94, 95, 50, 54, FULL),
-  standing('log', 95, 99.5, 53.5, 54.5, FULL),
+  standing('log', 94, 95, 50, 54, FORT_WALL),
+  standing('log', 95, 99.5, 53.5, 54.5, FORT_WALL),
   // South-west.
-  standing('log', 94, 95, 40, 44, FULL),
-  standing('log', 95, 99.5, 39.5, 40.5, FULL),
+  standing('log', 94, 95, 40, 44, FORT_WALL),
+  standing('log', 95, 99.5, 39.5, 40.5, FORT_WALL),
   // North-east.
-  standing('log', 102.5, 107.5, 53.5, 54.5, FULL),
-  standing('log', 107.5, 108.5, 50, 54.5, FULL),
+  standing('log', 102.5, 107.5, 53.5, 54.5, FORT_WALL),
+  standing('log', 107.5, 108.5, 50, 54.5, FORT_WALL),
   // South-east.
-  standing('log', 102.5, 107.5, 39.5, 40.5, FULL),
-  standing('log', 107.5, 108.5, 39.5, 44, FULL),
-  // The hut, and the baffles inside the west, north and south gaps (1.6 m in from the wall).
-  standing('log', 104, 107, 45.5, 49.5, FULL),
+  standing('log', 102.5, 107.5, 39.5, 40.5, FORT_WALL),
+  standing('log', 107.5, 108.5, 39.5, 44, FORT_WALL),
+  // The baffles inside the west, north and south gaps (1.6 m in from the wall); the hut and its roof follow (WL2).
   standing('log', 96.6, 97.4, 45, 49, FULL),
   standing('log', 99, 103, 51.1, 51.9, FULL),
   standing('log', 99, 103, 42.1, 42.9, FULL),
+  ...hut(),
 ];
+
+/** The fort's hut: a solid block of logs under a tin roof like the cabin's (WL2), its ridge along x. */
+function hut(): MapBlock[] {
+  const walls = [standing('log', HUT.x0, HUT.x1, HUT.z0, HUT.z1, HUT.height)];
+  return [...walls, ...tinRoof(walls, HUT.x0, HUT.x1, HUT.z0, HUT.z1, HUT_ROOF)];
+}
 
 /**
  * The hunter's cabin (x 62–70.4, z 18–26.4): log walls, two rooms joined by a doorway, a door on the north side, one
@@ -308,15 +355,15 @@ function cabin(): MapBlock[] {
     wall(mid, mid + t, z0 + t, 21.8),
     wall(mid, mid + t, 23, z1 - t),
   ];
-  return [...walls, ...cabinRoof(walls, x0, x1, z0, z1)];
+  return [...walls, ...tinRoof(walls, x0, x1, z0, z1, CABIN_ROOF)];
 }
 
 /**
- * MS1: the cabin's roof, a pitched tin roof of two ramps meeting at a ridge along x, from the highest wall's top, its
- * eaves CABIN_ROOF.overhang m past the walls. Solid like the walls (BBs and sight stop on it); nobody can reach its top.
+ * MS1: a pitched tin roof (the cabin's, and since WL2 the fort hut's) of two ramps meeting at a ridge along x, from the
+ * highest wall's top, its eaves `R.overhang` m past the walls. Solid like the walls (BBs and sight stop on it); nobody
+ * can reach its top.
  */
-function cabinRoof(walls: readonly MapBlock[], x0: number, x1: number, z0: number, z1: number): MapBlock[] {
-  const R = CABIN_ROOF;
+function tinRoof(walls: readonly MapBlock[], x0: number, x1: number, z0: number, z1: number, R: TinRoof): MapBlock[] {
   const base = Math.max(...walls.map((b) => b.center.y + b.size.y / 2));
   const zm = (z0 + z1) / 2;
   const ax = x0 - R.overhang;
@@ -334,38 +381,36 @@ function cabinRoof(walls: readonly MapBlock[], x0: number, x1: number, z0: numbe
   return [half(z0 - R.overhang, zm, '-z'), half(zm, z1 + R.overhang, '+z')];
 }
 
-/** Boulders on the meadow and round the field: crouch cover, and big ones that are full cover. */
-const BOULDERS: MapBlock[] = [
-  ...(
-    [
-      [33, 56.5],
-      [52, 56],
-      [29, 50],
-      [64, 50],
-      [75, 49.5],
-      [84, 43],
-      [68, 42.5],
-      [36, 41],
-      [58, 37],
-      [22, 37.5],
-      [14, 27],
-      [44, 59],
-      [88, 52],
-    ] as const
-  ).map(([x, z]) => centred('boulder', x, z, 1.6, 1.4, CROUCH)),
-  ...(
-    [
-      [80, 37],
-      [47, 30.5],
-      [60, 53],
-      [40, 50],
-      [27, 41.5],
-    ] as const
-  ).map(([x, z]) => centred('boulder', x, z, 2.4, 2, FULL)),
-];
+/**
+ * A big log pile's footprint (m). WL2 (owner, Beta 1 playtest: "completely remove all boulders. I hate them."): the
+ * tall grey boulders on the fort's approaches became log piles of the same size and height (full cover).
+ */
+const LOG_PILE = { w: 2.4, d: 2 } as const;
 
-/** Logs: two fallen trees on the meadow, the woodpile on the forest track, a log pile above the creek and one by the track. */
+/**
+ * A fallen trunk where a big boulder stood on the meadow (WL2: no boulders), crouch cover: shorter than the meadow's
+ * two fallen trees.
+ */
+const FALLEN = { length: 4, girth: 0.9 } as const;
+
+/**
+ * Logs: two fallen trees on the meadow and six shorter trunks where its big boulders and one small one stood (WL2),
+ * the woodpile on the forest track, a log pile above the creek and one by the track. The other small boulders on the
+ * meadow went with no stand-in.
+ */
 const LOGS: MapBlock[] = [
+  ...(
+    [
+      [80, 37, 'x'],
+      [47, 30.5, 'x'],
+      [60, 53, 'x'],
+      [40, 50, 'x'],
+      // Across the West Rise's slope: lying down it, its uphill end was low enough to vault (as M102's Knoll log).
+      [27, 41.5, 'z'],
+      // Where a small boulder broke the corner-to-corner line across the meadow and the Knoll (map.sightline, 141 m).
+      [75, 50.4, 'x'],
+    ] as const
+  ).map(([x, z, along]) => (along === 'x' ? centred('log', x, z, FALLEN.length, FALLEN.girth, CROUCH) : centred('log', x, z, FALLEN.girth, FALLEN.length, CROUCH))),
   centred('log', 42.5, 39.5, 7, 0.9, CROUCH),
   centred('log', 73.5, 58.5, 7, 0.9, CROUCH),
   standing('log', 36, 42, 63, 64.5, CROUCH),
@@ -375,36 +420,34 @@ const LOGS: MapBlock[] = [
 ];
 
 /**
- * Cover on the last 20 m of each way up to the fort (the Pro difficulty plan, owner 19:08): a log pile or a boulder
+ * Cover on the last 20 m of each way up to the fort (the Pro difficulty plan, owner 19:08): a log or a log pile
  * every few metres beside the Pine Belt's descent, the Meadow's climb and the sunken track, so attackers can bound up
- * from cover to cover instead of crossing open ground under the fort's guns.
+ * from cover to cover instead of crossing open ground under the fort's guns. WL2: every boulder here is now a log pile
+ * of its size and height (as crouch cover the three full-height ones let Pro attackers fall to 39 %).
  */
 const APPROACH_COVER: MapBlock[] = [
   // Pine Belt, down the north shoulder.
   centred('log', 97, 60.9, 3, 0.9, CROUCH),
-  centred('boulder', 92, 64.5, 2.4, 2, FULL),
-  centred('boulder', 86.5, 68.9, 1.6, 1.4, CROUCH),
-  // Across the slope, clear of the boulder beside it (M55, audit SIM-05: the two once stood 0.2 m into each other). It
+  centred('log', 92, 64.5, LOG_PILE.w, LOG_PILE.d, FULL),
+  centred('log', 86.5, 68.9, 1.6, 1.4, CROUCH),
+  // Across the slope, clear of the pile beside it (M55, audit SIM-05: the two once stood 0.2 m into each other). It
   // lay down the slope until M102: its top level, it stood 1.6 m over the ground at its low end and 0.6 m at its high
   // end, where it was no cover and low enough to vault.
   centred('log', 103.6, 57.3, 2.8, 0.9, CROUCH),
-  centred('boulder', 102.6, 59.4, 1.6, 1.4, CROUCH),
+  centred('log', 102.6, 59.4, 1.6, 1.4, CROUCH),
   // Meadow, up the west face.
-  centred('boulder', 76.5, 43.7, 1.6, 1.4, CROUCH),
-  centred('boulder', 82.5, 48.8, 2.4, 2, FULL),
-  centred('boulder', 87.5, 44, 1.6, 1.4, CROUCH),
+  centred('log', 76.5, 43.7, 1.6, 1.4, CROUCH),
+  centred('log', 82.5, 48.8, LOG_PILE.w, LOG_PILE.d, FULL),
+  centred('log', 87.5, 44, 1.6, 1.4, CROUCH),
   centred('log', 91.5, 49.3, 0.9, 3, CROUCH),
   // Creek, up the sunken track.
-  // Against the meadow tree beside it (M55, audit SIM-05: the trunk grew out of it).
-  centred('boulder', 84.95, 31.8, 1.6, 1.4, CROUCH),
-  centred('boulder', 91, 31.8, 1.6, 1.4, CROUCH),
+  // Against the meadow tree beside it (M55, audit SIM-05: the trunk grew out of what was a boulder).
+  centred('log', 84.95, 31.8, 1.6, 1.4, CROUCH),
+  centred('log', 91, 31.8, 1.6, 1.4, CROUCH),
   centred('log', 93.6, 32.6, 3, 0.9, CROUCH),
   centred('log', 97.5, 34.6, 3, 0.9, CROUCH),
-  centred('boulder', 104.5, 36.5, 2.4, 2, FULL),
+  centred('log', 104.5, 36.5, LOG_PILE.w, LOG_PILE.d, FULL),
 ];
-
-/** The lone oak in the middle of the meadow: a trunk you can hide behind. */
-const OAK = centred('tree', 55, 43.5, 1.2, 1.2, 12);
 
 /** Trees standing on the meadow, picked off the sketch. */
 const MEADOW_TREES: readonly (readonly [number, number])[] = [
@@ -607,7 +650,7 @@ const GROUND: MapGround = {
 
 const SPAWNS: [SpawnPoint[], SpawnPoint[]] = [END0_SPAWNS.map(spawnAt), END1_SPAWNS.map(spawnAt)];
 
-const COVER: MapBlock[] = [...END0_CAMP, ...END1_CAMP, ...FORT, ...cabin(), ...BOULDERS, ...LOGS, ...APPROACH_COVER, OAK];
+const COVER: MapBlock[] = [...END0_CAMP, ...END1_CAMP, ...FORT, ...cabin(), ...LOGS, ...APPROACH_COVER];
 const BLOCKS: MapBlock[] = [...fence(), ...COVER, ...woods(LANE_POINTS, COVER)];
 
 /**
@@ -619,7 +662,6 @@ const AREAS: readonly (readonly [string, number, number, number, number])[] = [
   ['Fort', 94, 109, 39, 55],
   ['Cabin', 61, 72, 17, 28],
   ['Woodpile', 34, 47, 61, 68],
-  ['Oak', 50, 60, 38, 50],
   ['Sunken track', 72, 95, 20, 37],
   ['West camp', 0, 13, 0, SIZE_Z],
   ['East camp', 111, SIZE_X, 0, SIZE_Z],

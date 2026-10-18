@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { CYBER_COLOURS, SCHEMES } from '../config/schemes';
-import { createMaterials, flatColour, paintedMaterials } from '../render/replicaBuilder';
+import { createMaterials, flatColour, paintedMaterials } from '../render/replicas/replicaBuilder';
 import { schemeNamesIn } from './report/playImports';
 import { mapPalette } from './skinMaps';
 

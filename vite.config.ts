@@ -27,11 +27,11 @@ const SLOW_TESTS = [
   'src/ai/firstShots.test.ts',
   'src/ai/botRouteBudget.test.ts',
   'src/content/modePlays*.test.ts',
-  'src/render/figureHitVolume.test.ts',
+  'src/render/figures/figureHitVolume.test.ts',
   // Over 20 s each alone in the container (DX4): the sound bank's renders, team play's matches and G9's effect sweep.
   'src/audio/sfx.test.ts',
   'src/ai/teamPlay.test.ts',
-  'src/render/g9EffectsQA.test.ts',
+  'src/render/dressing/g9EffectsQA.test.ts',
 ];
 /**
  * The bot balance figures (src/ai/balance/, token plan item 22): who wins, who lands the first hit, how often the squad

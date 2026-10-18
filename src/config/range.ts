@@ -1,7 +1,7 @@
 /**
  * The practice range (M21): a walled concrete range with three lanes of targets at marked distances, opened from the
  * title screen. First guesses, to tune in play. The range's blocks are built from these numbers (map/range.ts); the
- * targets are simulated (sim/rangeTargets.ts) and drawn (render/rangeTargetsRenderer.ts) from them too. M93 added the
+ * targets are simulated (sim/rangeTargets.ts) and drawn (render/match/rangeTargetsRenderer.ts) from them too. M93 added the
  * moving targets, the new target types and the timed challenge.
  */
 
@@ -184,7 +184,7 @@ export function rangeLayout(): RangeTargetSpec[] {
   return out;
 }
 
-/** How the range's targets and markers look (render/rangeTargetsRenderer.ts). */
+/** How the range's targets and markers look (render/match/rangeTargetsRenderer.ts). */
 export const RANGE_VISUALS = {
   /** Steel plates are painted (white, as at most ranges) so they read at 60 m. */
   steelColor: 0xe6e1d3,

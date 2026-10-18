@@ -145,11 +145,11 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
 
 - **Hit volume is a body capsule plus a head sphere, no arms or replica (2026-09-30; owner, 2026-10-01).** The drawn
   figure is built from the same numbers; a crouched head top stays at or below 1.15 m, because crouch cover is 1.2 m.
-  `render/figureHitVolume.test.ts` measures it against the drawn figure on every pose (M85). **Every body stops a BB
+  `render/figures/figureHitVolume.test.ts` measures it against the drawn figure on every pose (M85). **Every body stops a BB
   (2026-10-06):** a hit BB knocks the player out and stops, with no bounce off bodies.
 - **The hit area is fitted to each rigged figure (owner, 2026-10-16, Dev 6 playtest; HV1, IM8).** Head, chest,
   shoulders, hips and legs sit on each figure's own bones (`FIGURE_HIT_SHAPES`, read from the clips as the figures
-  load); `render/riggedHitVolume.test.ts` holds every pose of both figures to M85's bar (4 % missed, 3 % thin air). A
+  load); `render/figures/riggedHitVolume.test.ts` holds every pose of both figures to M85's bar (4 % missed, 3 % thin air). A
   new figure must pass it; the built-in figures keep the built-in volume.
 - **Hit calling stays a raised hand and a sign, with no dead rag, night light or shouted "HIT!" for now (owner,
   2026-10-06).**
@@ -262,7 +262,7 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
 ## Maps and modes
 
 - **What no player can see is not drawn (owner, 2026-10-16, MS1).** Beyond a map's walls only what shows over them from
-  a lane, a spawn or a raised floor is built (`render/skylineSeen.test.ts`). Look-only fixtures hung over the field stay
+  a lane, a spawn or a raised floor is built (`render/dressing/skylineSeen.test.ts`). Look-only fixtures hung over the field stay
   out of the room a player takes up. Woodland's bushes are small and decorative (0.9 to 1.25 m): crouch cover, never
   full cover.
 - **The maps' vault walls are 0.9 m, at most 0.4 m deep, open above (M102, 2026-10-13).** Not cover: a crouched
@@ -295,6 +295,16 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   BBs (owner, 2026-10-04).** No prone, a gentle slope, one much higher end with the flag. It plays 5v5 by default and
   allows 6v6 (owner, 2026-10-06). Its long open lines are intended (the longest clear line stays under 141 m). Its
   starts are hidden from each other and the east end stands at most 2 m above the west (M88; `map/woodland.test.ts`).
+- **Woodland has no boulders, no lone oak, chest-high fort walls and a roofed hut (owner, 2026-10-17, Beta 1 playtest
+  item 30 and his tweaks: "completely remove all boulders. I hate them.").** Logs give the cover instead: log piles on
+  the fort's climbs, fallen trunks on the meadow. The fort's outer walls are 1.5 m (at 1.2 m Hard attackers won 76 % of
+  Attack / Defend); the hut is 3 m under the cabin's grey tin roof, which he picked over roofing the whole fort (WL2).
+- **Woodland's West Hill, a meadow swell and a dry ravine (owner, 2026-10-17: "a small hill (enough to stop the other
+  side immediately seeing them)… one side of the map should have a more significant elevation change"; he picked "Land
+  first" on the concept).** The West Rise's crest is 3.4 m at its middle and 2.2 m at its ends. One 0.6 m swell sits on
+  the meadow; the concept's second, at (66, 37), tipped Pro Elimination to 37.5 % for the west end. The south creek is a
+  dry ravine 2.2 m deep from plan x 40 east, easing to 1 m by the hill, so no slope passes a ramp's. The stream in its
+  bed is a later step (WL3).
 - **Neon Heights is the third field: a vertical futuristic city with Day and Night (owner, 2026-10-04).** 46 × 30 m,
   three playable floors, roofs not playable, stairs only, open windows with a 1.2 m sill, 4v4, both modes, Night first.
 - **Bushes hide you and stop BBs, but not people (2026-10-15, FO1; Claude's defaults; replaces "Bushes hide but BBs
@@ -361,7 +371,7 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   picks are the sandboxed ones. The owner can rule for a separate practice loadout.
 - **Aiming down the 2x scope looks like the red dot: the replica stays in view and the world shows round it (owner,
   2026-10-13, Dev 5 playtest note 5).** The view zooms 2× and the scope's rear glass shows the world
-  (`render/eyepiece.ts`); the dark surround is gone, so the scope's cost is its slower raise alone.
+  (`render/replicas/eyepiece.ts`); the dark surround is gone, so the scope's cost is its slower raise alone.
 
 ## Menus, HUD, settings and accessibility
 

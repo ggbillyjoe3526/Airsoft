@@ -92,10 +92,10 @@ describe('BP3a acceptance 4: every list of two options labelled On and Off in sr
 });
 
 describe('BP3a: wiring of the presentation classes, pinned at the source', () => {
-  const sources = import.meta.glob<string>(['./matchSession.ts', './render/matchPresentation.ts'], { query: '?raw', import: 'default', eager: true });
+  const sources = import.meta.glob<string>(['./matchSession.ts', './render/match/matchPresentation.ts'], { query: '?raw', import: 'default', eager: true });
 
   it('holds the round message while the player calls their hit, and shows it again after', () => {
-    const src = sources['./render/matchPresentation.ts']!;
+    const src = sources['./render/match/matchPresentation.ts']!;
     expect(src).toMatch(/this\.updateRoundMessage\(status === 'calling'\)/);
     expect(src).toMatch(/if \(calling\) this\.feedback\.setRoundMessage\(''\)/);
     // Changing the state rebuilds the message, so it comes back when the call ends.
@@ -106,7 +106,7 @@ describe('BP3a: wiring of the presentation classes, pinned at the source', () =>
     const session = sources['./matchSession.ts']!;
     expect(session).toMatch(/this\.teamSizes\(\), this\.rounds/);
     expect(session).toMatch(/const \[mine, theirs\] = this\.rosterSizes\(\);\s*return byTeam\(this\.playerTeam, mine, theirs\)/);
-    const match = sources['./render/matchPresentation.ts']!;
+    const match = sources['./render/match/matchPresentation.ts']!;
     expect(match).toMatch(/new MatchBoard\(container, true\)/);
     expect(match).toMatch(/this\.extraction !== undefined, r\.run\.reserve, this\.tags\)/);
   });

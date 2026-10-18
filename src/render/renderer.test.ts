@@ -5,13 +5,13 @@ import { ATMOSPHERE, LIGHTING_PRESETS, QUALITY, type QualitySettings, RENDER, ty
 import { DEPOT } from '../map/depot';
 import { RANGE_MAP } from '../map/range';
 import { WOODLAND } from '../map/woodland';
-import { resolveLighting } from './lightingPreset';
+import { resolveLighting } from './light/lightingPreset';
 import type { RenderBackend } from '../config/renderBackend';
 import { PostHost } from './post/postHost';
 import type { PostSetup } from './post/postStack';
 import { handOverRenderer, releaseGpuResources, Renderer, toneMappingOf, verticalFovFor, warmSurfacesInIdle, zoomedFov } from './renderer';
 import { unstaged } from './rendererParts';
-import { defaultEnvironmentLook, type EnvironmentLook, environmentKey } from './replicaSheen';
+import { defaultEnvironmentLook, type EnvironmentLook, environmentKey } from './replicas/replicaSheen';
 
 import type { NodeBackend } from './webgpu/nodeBackend';
 import type { NodeRenderer } from './webgpu/post/nodeKit';
@@ -638,7 +638,7 @@ describe('the shader warm-up runs once per session build, never per frame (M63, 
     expect(Object.keys(sources).length).toBeGreaterThan(100);
     const callers = Object.entries(sources).flatMap(([file, text]) => [...text.matchAll(/\.warmShaders\(/g)].map(() => file));
     // CombatPresentation.warmShaders hands over to Renderer.warmShaders: that and the two sessions' are the three calls.
-    expect(callers.sort()).toEqual(['/src/matchSession.ts', '/src/rangeSession.ts', '/src/render/combatPresentation.ts']);
+    expect(callers.sort()).toEqual(['/src/matchSession.ts', '/src/rangeSession.ts', '/src/render/match/combatPresentation.ts']);
     const ctor = bodyOf(sources['/src/matchSession.ts']!, '  constructor(');
     // PF1: with the ways its figures can be drawn, its first picture held as the round waits.
     const call = ctor.indexOf('this.combat.warmShaders(this.match.warmTargets(), this.match.warmPoses(), true)');
@@ -651,7 +651,7 @@ describe('the shader warm-up runs once per session build, never per frame (M63, 
     }
     expect(ctor.slice(call)).not.toMatch(/scene\.add\(/);
     // CombatPresentation's hand-over is its own method, not its frame.
-    const combat = sources['/src/render/combatPresentation.ts']!;
+    const combat = sources['/src/render/match/combatPresentation.ts']!;
     expect(bodyOf(combat, '  render(firstPerson')).not.toMatch(/warmShaders|compile/);
     expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.renderer\.warmShaders\(this\.overlay, shown, everySlot, hold\)/);
     // With every carried replica shown, not only the one in hand (Dev 6 playtest note 26: a hitch on the first switch).

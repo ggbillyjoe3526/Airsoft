@@ -17,7 +17,7 @@ import { GAME_LEVELS } from '../progress/gameLevels';
 import { newProgress, type Progress } from '../progress/progress';
 
 /**
- * M33h QA, acceptance 1: the Weapon Torch as the game itself wires it (game.ts: LoadoutModel over the whole GAME_POOL
+ * M33h QA, acceptance 1: the Weapon Torch as the game itself wires it (playSetup.ts: LoadoutModel over the whole GAME_POOL
  * with gameOwnership, and matchUsesDev over the Loadout's equipped items). With Dev content off a save that has the
  * torch (level 0, given to every save) has no Light slot, no torch in its kit and Depot counts and gives XP at every
  * difficulty; with Dev content on, Depot by day still counts and gives XP, torch fitted or not, at every difficulty.
@@ -31,13 +31,13 @@ const TORCH: ItemRef = { asset: '000020' };
 const LEVELS = DIFFICULTIES.filter((d) => d.tag === 'public').map((d) => d.id);
 const picks = (map: MapId, difficulty: Difficulty): NewGamePicks => ({ map, mode: DEFAULT_MODE, difficulty, teammateDifficulty: difficulty, ruleset: DEFAULT_RULESET, rules: { ...DEFAULT_MATCH_RULES } });
 
-/** The game's Loadout (game.ts): the whole pool, owned through gameOwnership (the player's levels) with the Dev content switch. */
+/** The game's Loadout (playSetup.ts): the whole pool, owned through gameOwnership (the player's levels) with the Dev content switch. */
 function gameLoadout(progress: Progress, dev: { on: boolean }): LoadoutModel {
   const unlocks = { unlocked: () => progress.unlocked, levelOf: (id: string) => GAME_LEVELS.unlockLevel.get(id) };
   return new LoadoutModel(GAME_POOL, gameOwnership(GAME_POOL, unlocks, () => false, () => dev.on));
 }
 
-/** game.ts equippedItems: each gear slot's replica and everything fitted to it. */
+/** playSetup.ts equippedItems: each gear slot's replica and everything fitted to it. */
 const equippedItems = (m: LoadoutModel): (ItemRef | null)[] => m.equipped().flatMap((r) => (r ? [r, ...Object.values(m.fitOf(r.asset))] : []));
 const holdsTorch = (items: readonly (ItemRef | null)[]): boolean => items.some((r) => r?.asset === TORCH.asset);
 

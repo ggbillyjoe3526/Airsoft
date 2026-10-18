@@ -34,14 +34,14 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 
 | Folder | What it owns | Key files |
 |---|---|---|
-| `src/` (root) | The app that outlives matches; one match or range session at a time | `main.ts`, `game.ts`, `session.ts`, `matchSession.ts`, `rangeSession.ts`, `matchFlow.ts`, `newGamePicks.ts` |
+| `src/` (root) | The app that outlives matches; one match or range session at a time | `main.ts`, `game.ts`, `playFlow.ts`, `session.ts`, `matchSession.ts`, `rangeSession.ts`, `matchFlow.ts`, `newGamePicks.ts` |
 | `src/sim/` | Gameplay rules, pure, fixed 60 Hz | `simulation.ts`, `state.ts`, `commands.ts`, `armament.ts`, `ballistics.ts`, `round.ts` |
 | `src/ai/` | Bots: senses, hearing, round plans, decisions, cover, squad orders, Extraction roles | `botController.ts`, `hearing.ts`, `roundPlanner.ts`, `botBrain.ts`, `bot.ts`, `perception.ts`, `cover.ts`, `squadOrders.ts` |
 | `src/nav/` | The layered walkability grid, A* routes, walk-off fields, vault links | `navGrid.ts`, `vaultLinks.ts` |
 | `src/physics/` | Rapier: level collision and the character mover | `physicsWorld.ts` |
 | `src/map/` | Map data (blocks, spawns, lanes, flag, Extraction) and map helpers | `mapTypes.ts`, `maps.ts`, `depot.ts`, `woodland.ts`, `neonHeights.ts`, `range.ts` |
 | `src/input/` | Keyboard, pointer lock, key bindings, order wheel; builds the player's command | `playerInput.ts`, `keyBindings.ts`, `keyboard.ts`, `pointerLock.ts` |
-| `src/render/` | Three.js: field meshes, figures, replicas, lighting, effects, post stack, cameras | `renderer.ts`, `matchPresentation.ts`, `combatPresentation.ts`, `mapMeshes.ts`, `characterRenderer.ts`, `viewmodel.ts` |
+| `src/render/` | Three.js, by subfolder (DX6): `field/` (with `mapPieces/`), `dressing/`, `light/`, `figures/`, `replicas/`, `effects/`, `match/`, `post/`, `webgpu/` | `renderer.ts`, `match/matchPresentation.ts`, `match/combatPresentation.ts`, `field/mapMeshes.ts`, `figures/characterRenderer.ts`, `replicas/viewmodel.ts` |
 | `src/audio/` | Web Audio: synthesised sounds, mix, 3D positioning, ambience | `audioEngine.ts`, `sfx.ts`, `dsp.ts`, `soundBank.ts`, `audioMix.ts` |
 | `src/ui/` | DOM HUD, overlays and settings tabs; the menus in `ui/menus/` | `hud.ts`, `scoreboard.ts`, `minimap.ts`, `debugOverlay.ts`, `menus/menus.ts` |
 | `src/config/` | Every tunable number and data table | `replicas.ts`, `bots.ts`, `hits.ts`, `render.ts`, `controls.ts`, `dev.ts` |
@@ -68,10 +68,22 @@ The root files in more detail:
   loading bar, reads the URL flags, probes the GPU and builds `Game`. An error before the game runs shows the crash
   pane.
 - **`Game`** (`game.ts`) is the composition root and main loop: the app that outlives matches (renderer, input, menus,
-  debug overlay, audio engine) and New game's picks. No map is loaded on the title and New game screens.
+  debug overlay, audio engine), its lifecycle (start, dispose, the crash pane) and the wiring of the parts below. No map
+  is loaded on the title and New game screens. Split out of it (DX8, audit A1):
+  - **`PlayFlow`** (`playFlow.ts`): play, enter, resume, pause, stop and leave. Play asks for the mouse lock, then builds
+    or reuses a session (`core/sessionPlan.ts`); the lock taken resumes, dropped it pauses, or skips the round once you
+    are out (`core/escSkip.ts`), or holds while the Fullscreen key's change takes it again (`ui/fullscreenPlay.ts`, IN1);
+    also the range's pause-menu buttons and the graphics context's loss. It holds the
+    session loaded (`Game.session` reads it for the console and the browser tests).
+  - **`PlaySetup`** (`playSetup.ts`): what the next Play builds from: New game's picks as they play, Practice's place,
+    each map's Day or Night, the Look settings, the Loadout and the level progress, and the flags saying they changed
+    since the session was built.
+  - **`PlayResults`** (`playResults.ts`): a decided match's records, XP and adaptive line, settled the frame it is decided
+    and shown on its result screen, and the range's timed challenge best.
+  - **`GameDev`** (`gameDev.ts`): the Dev settings in force, the Retro look and Settings › Dev's buttons.
 - **`MatchSession`** (`matchSession.ts`) is one match on one map: the field's meshes and lighting, physics, nav, the
-  simulation, the bots, and the combat and match presentation. `Game` builds it on Play and disposes it when the player
-  leaves; Play Again builds a new one with its own seed (`matchFlow.ts` `matchSeed`). What Play does is the pure
+  simulation, the bots, and the combat and match presentation. The play flow builds it on Play and disposes it when the
+  player leaves; Play Again builds a new one with its own seed (`matchFlow.ts` `matchSeed`). What Play does is the pure
   `core/sessionPlan.ts`. A decided match is recorded and its XP given once, the frame it is decided
   (`stats/settleMatch.ts`). Skip to next round (M83) runs the same per-tick body as watched play flat out over a few
   frames, showing only the round's end and the next start (`matchFlow.ts` `skipOffer`, `skipTickCap`; `config/sim.ts`
@@ -80,8 +92,8 @@ The root files in more detail:
   Its `MatchSetup` carries New game's Match rules (`config/matchRules.ts`), a bot difficulty per team and the Rules
   picker's ruleset (`RULESETS`, laid over the match panel's picks by `playedPicks` in `newGamePicks.ts`). With the Dev
   tab's Adaptive difficulty on (AD1) it also carries the other team's starting rating (`adaptivePicks.ts`): the session
-  drifts it a little after each round (`ai/adaptiveRun.ts`), and `Game` saves the next match's when the match is
-  decided.
+  drifts it a little after each round (`ai/adaptiveRun.ts`), and the results (`playResults.ts`) save the next match's
+  when the match is decided.
 - **`RangeSession`** (`rangeSession.ts`) is Practice: the player alone, no bots and no rounds, on `map/range.ts` (with
   the tutorial) or on any map (M94), whose targets stand where the other team's bots would play
   (`map/practiceSpots.ts`, kinds by `map/practiceLayout.ts`). Changing the loadout from its pause menu, or from the
@@ -90,8 +102,8 @@ The root files in more detail:
   settings, the result's timing, dispose); `kind` (`'match'` or `'range'`) tells them apart where only one has the
   answer. Both read the HUD and accessibility preferences (`settings/hudPrefs.ts` `HudPrefs`) by reference and show a
   change as play runs again (their `syncPrefs`, on `setPlaying(true)` and each frame drawn), so `Game` forwards none.
-- **`gameReport.ts`** (DX5) is the debug overlay's lines and the crash and diagnostics reports' fields, read off the
-  game through `GameReadout` (`Game.readout`) only when asked.
+- **`gameReport.ts`** (DX5) is the debug overlay's lines and the crash and diagnostics reports (`diagnosticsText`, DX8),
+  read off the game through `GameReadout` (`Game.readout`) only when asked.
 
 ## Map data
 
@@ -122,7 +134,7 @@ Maps are plain data (`map/mapTypes.ts`). One source builds both the Rapier colli
 - **Look-only data.** `signs`, `decor`, `dressing` and `bakedLight` are drawn but never read by physics, nav, cover or
   sight.
   - **`dressing`** (`MapDressing`) is a map's set dressing, in a file of its own per map (`map/depotDressing.ts`,
-    `map/woodlandDressing.ts`, `map/neonHeightsDressing.ts`). `render/mapDressing.ts` turns it into a placement the
+    `map/woodlandDressing.ts`, `map/neonHeightsDressing.ts`). `render/dressing/mapDressing.ts` turns it into a placement the
     same way every time from `dressing.seed`; `config/dressing.ts` holds the sizes, colours and what each part costs.
     The fields: `clutter` (dirt, junk and litter along block feet, `mix` picking the yard's or the street's kinds),
     `marks` (logos and wall sprays), `posters`, `puddles` (`mud` for a mud patch), `woods` (leaf litter and fallen
@@ -171,8 +183,9 @@ request. Each entry says where the contract lives, what it holds today and what 
     `caseOpened` and `caseDropped` report the cases; `returned` reports an opponent back in a wave; `torch` reports a
     weapon light switched on or off.
   - `Character.vault` holds a vault over a low obstacle (`sim/vault.ts`, M102): its plan and how far through it is,
-    and the one-shot presses made during it (`held`, BP5: reload, slot, holster, fire selector, torch, magazine, hop-up), kept
-    for the first command after it. A `footstep` of kind `vault` reports one starting (the loudest step: bots hear it
+    whether a Jump press would vault now (`ready`, the tick's answer the vault prompt reads, DX6), and the one-shot
+    presses made during it (`held`, BP5: reload, slot, holster, fire selector, torch, magazine, hop-up), kept for the
+    first command after it. A `footstep` of kind `vault` reports one starting (the loudest step: bots hear it
     from `footstepHearingVault`).
   - `GameState.magTosses` holds the magazines in the air (MG1, `sim/magShare.ts`; MAG_SHARE.maxTosses slots, made
     once): who threw it to whom, the catcher's loadout slot, its BBs, the replica it came from, its age and flight and
@@ -205,7 +218,7 @@ request. Each entry says where the contract lives, what it holds today and what 
 
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`). The fixed 60 Hz step and the order of its
   phases (a parked out-of-play character goes straight to the elimination step); randomness only from `state.rng`.
-  Per character: aim, move, walk cycle, lean, accuracy, then footsteps, replicas, the torch and a magazine toss
+  Per character: aim, move, walk cycle, lean, accuracy, the vault answer (`stepVaultReady`, DX6), then footsteps, replicas, the torch and a magazine toss
   (MG1, while the round is live); then BBs, the magazines in the air (they land or are lost) and the round. A character
   in play whose move ran hard into a noisy prop knocks it right after the move (`stepPropBump`, NP1; not during a
   vault), and a BB stopped on a ringing prop rings it in the BB step (`ringProp`, through `stepBBs`' `noise` context,
@@ -389,8 +402,8 @@ request. Each entry says where the contract lives, what it holds today and what 
     bot-kits.md the difficulty weights may bring (`kitsMayHoldDev`).
   - The dev maps' data is a chunk of its own (`map/devMaps.ts`), fetched by `loadDevMaps` once Dev content is on (at
     start when it was left on). `MapEntry` carries no data; `mapData(id)` reads what is loaded (the default map's for
-    a dev map not loaded yet). Dev content applies only once the dev maps are in (`Game.devInForce`), so a dev map is
-    never listed or played without its data.
+    a dev map not loaded yet). Dev content applies only once the dev maps are in (`gameDev.ts` `devInForce`), so a dev
+    map is never listed or played without its data.
   - The unit tests register every map before each file (`src/testSetup.ts`).
 
   Pinned by `config/content.test.ts`, `pool/contentPool.test.ts`, `map/maps.test.ts`.
@@ -420,8 +433,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   - `overtimeFlag` (OT1): Elimination's overtime flag spot (see Map data › Overtime flag).
 
   Pinned by the content toolkit's map checks on every map (`content/mapChecks.test.ts`), `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
-  `render/depotLook.test.ts` (a map using none of the woodland look's fields, M33i, builds as before),
-  `render/cityLook.test.ts` and `map/neonHeightsArt.test.ts` (Neon Heights' boxes, materials and floors).
+  `render/field/depotLook.test.ts` (a map using none of the woodland look's fields, M33i, builds as before),
+  `render/field/cityLook.test.ts` and `map/neonHeightsArt.test.ts` (Neon Heights' boxes, materials and floors).
 
 ## Working notes
 

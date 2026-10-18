@@ -14,7 +14,7 @@ let RangeSession: typeof import('./rangeSession').RangeSession;
 
 beforeAll(async () => {
   vi.resetModules();
-  vi.doMock('./render/combatPresentation', () => ({
+  vi.doMock('./render/match/combatPresentation', () => ({
     CombatPresentation: class {
       setLighting(): void {}
       skipStartWhistle(): void {}
@@ -24,7 +24,7 @@ beforeAll(async () => {
       }
     },
   }));
-  vi.doMock('./render/rangeTargetsRenderer', () => ({
+  vi.doMock('./render/match/rangeTargetsRenderer', () => ({
     RangeTargetsRenderer: class {
       object = new THREE.Group();
       setReceiveShadows(): void {}
@@ -37,15 +37,15 @@ beforeAll(async () => {
     lastShotText: () => '',
     challengeText: () => '',
   }));
-  vi.doMock('./render/lighting', () => ({ addLighting: () => ({ reserveLights() {} }) }));
-  vi.doMock('./render/figureMix', () => ({ figureCrowd: () => [], playerArms: () => undefined }));
+  vi.doMock('./render/light/lighting', () => ({ addLighting: () => ({ reserveLights() {} }) }));
+  vi.doMock('./render/figures/figureMix', () => ({ figureCrowd: () => [], playerArms: () => undefined }));
   vi.doMock('./pool/loadoutModel', () => ({ bbGlowFor: () => ({ player: [], others: false }), kitPaint: () => ({}) }));
   // The session's physics module is this fresh copy, so its Rapier is started here, after the reset.
   await (await import('./physics/physicsWorld')).initPhysics();
   ({ RangeSession } = await import('./rangeSession'));
 });
 afterAll(() => {
-  for (const m of ['./render/combatPresentation', './render/rangeTargetsRenderer', './ui/rangeReadout', './render/lighting', './render/figureMix', './pool/loadoutModel']) vi.doUnmock(m);
+  for (const m of ['./render/match/combatPresentation', './render/match/rangeTargetsRenderer', './ui/rangeReadout', './render/light/lighting', './render/figures/figureMix', './pool/loadoutModel']) vi.doUnmock(m);
   vi.resetModules();
 });
 

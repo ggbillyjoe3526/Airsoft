@@ -4,7 +4,7 @@ import { FRAME_TIMING, type RetroLook } from '../../config/render';
 import { RENDER_BACKEND, type RenderBackend } from '../../config/renderBackend';
 import type { QualitySettings } from '../../config/render';
 import type { PostSetup } from '../post/postStack';
-import type { EnvironmentLook } from '../replicaSheen';
+import type { EnvironmentLook } from '../replicas/replicaSheen';
 import type { DrawStats } from '../rendererParts';
 import { followSwappedBuffers } from './compute/computeKit';
 import { deferUniformFrees } from './deferredFrees';

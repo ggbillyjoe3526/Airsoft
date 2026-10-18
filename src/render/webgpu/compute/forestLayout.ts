@@ -1,13 +1,13 @@
 import { GPU_FOREST, type GpuDressingTier } from '../../../config/gpuDressing';
 import type { SkylinePiece } from '../../../map/mapTypes';
 import { createRng, rngNext } from '../../../sim/rng';
-import { skylineClear } from '../../skyline';
+import { skylineClear } from '../../dressing/skyline';
 
 /**
  * Where the tree stand-ins beyond the fence stand (WebGPU overhaul W5, MapDressing.forest; drawn by
  * forestStandIns.ts): scattered at random but never closer than GPU_FOREST.apart to each other, between the field's
  * bounds (GPU_FOREST.fence m out from them) and GPU_FOREST.reach m from its middle, clear of every skyline piece that
- * keeps trees off (render/skyline.ts skylineClear), on a skyline hill's slope where they stand on one. Seeded, so a
+ * keeps trees off (render/dressing/skyline.ts skylineClear), on a skyline hill's slope where they stand on one. Seeded, so a
  * map's wood is the same every time; a preset with fewer takes the first of them (the order is random, so the wood
  * thins evenly). Pure: unit-tested in forestLayout.test.ts.
  */
@@ -32,7 +32,7 @@ export interface FieldBounds {
 
 /**
  * The ground's height on the skyline's hills at (x, z) (0 off them): each hill is the top of a squashed sphere sunk a
- * metre (render/skyline.ts), so its smooth surface; the drawn one is a little lower between its vertices, which a
+ * metre (render/dressing/skyline.ts), so its smooth surface; the drawn one is a little lower between its vertices, which a
  * stand-in's foot, sunk GPU_FOREST.sink, covers.
  */
 export function hillHeight(pieces: readonly SkylinePiece[], x: number, z: number): number {

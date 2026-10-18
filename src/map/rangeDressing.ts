@@ -7,7 +7,7 @@ import type { GlowStrip, MapBlock, MapDressing } from './mapTypes';
  * The practice range in the new look (M81, playtest note 9), dressed in the art direction Depot got in G8: an airsoft
  * site's range in the countryside. Its props stand behind the firing line, in the corners, where nobody shoots (a
  * portable toilet, the replica rack, a water tank, the generator, a crate bench, a low sandbag wall to vault) and a
- * sandbag berm lies at the foot of the backstop; they are blocks like any map's, so BBs stop on them. The dressing (MapData.dressing, render/mapDressing.ts)
+ * sandbag berm lies at the foot of the backstop; they are blocks like any map's, so BBs stop on them. The dressing (MapData.dressing, render/dressing/mapDressing.ts)
  * adds dirt and junk at the walls' feet, litter, puddles, sprays and warning signs, small glow strips by the firing line,
  * and wooded hills, treelines, site huts, a water tower and a power line beyond the walls. World coordinates
  * (downrange is -z, the firing line runs across z = 0). Look only, but for the props: nothing else is read by play.
@@ -108,7 +108,7 @@ export function rangeDressing(blocks: readonly MapBlock[]): MapDressing {
 }
 
 /**
- * The wall round each distance board (render/rangeTargetsRenderer.ts draws them), kept clear of the painted signs and
+ * The wall round each distance board (render/match/rangeTargetsRenderer.ts draws them), kept clear of the painted signs and
  * the dressing's marks (MapData.keepClear): before M81 the site's roundel sat over the 30 m board on the left wall.
  * Each box runs from the wall's face as far out as the turned board reaches, along the wall as far as it does, with
  * `margin` m round it.

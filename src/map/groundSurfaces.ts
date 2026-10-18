@@ -6,7 +6,7 @@ import { terrainMaxX, terrainMaxZ } from './terrain';
 
 /**
  * A map's ground on one grid (M33i, MapData.ground): what each cell is (grass, leaf litter, earth, gravel, boards). The
- * terrain is painted from it (render/terrainMeshes.ts) and footsteps read it (M33j, audio/soundMaterials.ts), the same
+ * terrain is painted from it (render/field/terrainMeshes.ts) and footsteps read it (M33j, audio/soundMaterials.ts), the same
  * function for both, so what you see underfoot is what you hear. Pure data: no Three.js.
  */
 

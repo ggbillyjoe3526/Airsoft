@@ -1,7 +1,7 @@
 import { HITS, type HitConfig } from '../config/hits';
 import { DEFAULT_LOOK } from '../config/look';
-import { figureRigs } from '../render/figureRig';
-import { robotFigures } from '../render/figureMix';
+import { figureRigs } from '../render/figures/figureRig';
+import { robotFigures } from '../render/figures/figureMix';
 import { figureFilesForTests } from '../render/testSupport';
 import type { Character } from '../sim/character';
 

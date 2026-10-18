@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { sightConditionsOf } from '../ai/perception';
 import { LIGHTING_PRESETS } from '../config/render';
 import { MemoryStorage } from '../pool/testStorage';
-import { resolveLighting } from '../render/lightingPreset';
+import { resolveLighting } from '../render/light/lightingPreset';
 import { saveSetting, SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
 import { loadLightingPicks } from '../settings/savedChoices';
 import type { MapData } from './mapTypes';

@@ -7,7 +7,7 @@ import type { MapBlock, MapData } from '../map/mapTypes';
 import { MAPS, mapData } from '../map/maps';
 import { RANGE_MAP } from '../map/range';
 import { WOODLAND } from '../map/woodland';
-import { resolveLighting } from '../render/lightingPreset';
+import { resolveLighting } from '../render/light/lightingPreset';
 import { vec3 } from '../sim/vec';
 import { AmbientCalls } from './ambience';
 import { surfaceUnder } from '../map/underfoot';
@@ -84,7 +84,7 @@ describe('M33j QA acceptance 3: footsteps read blocks first, then the ground gri
     }
   });
 
-  it('takes, on every map, the grid the terrain is painted from (render/mapMeshes.ts: buildGroundGrid when the map has terrain)', () => {
+  it('takes, on every map, the grid the terrain is painted from (render/field/mapMeshes.ts: buildGroundGrid when the map has terrain)', () => {
     for (const entry of [...MAPS.map((m) => mapData(m.id)), RANGE_MAP]) {
       const painted = entry.terrain ? buildGroundGrid(entry) : null;
       for (const night of [false, true]) expect(soundscapeOf(entry, night).ground).toEqual(painted);

@@ -1,7 +1,7 @@
 import { DUST_MOTES, IMPACT_GRIT, type PuffConfig } from '../../../config/render';
 import { DRESSING, FIREFLIES } from '../../../config/dressing';
 import { BODY } from '../../../config/movement';
-import type { PlumeConfig } from '../../smokePlumes';
+import type { PlumeConfig } from '../../dressing/smokePlumes';
 import { length3, type Ops, saturate, smoothstep, wrap } from './kernelOps';
 
 /**

@@ -50,7 +50,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Issue | Class | Notes |
 |---|---|---|
 | Bushes stopping BBs are first guesses: 0.6 m of leaves stops a BB; one through an edge leaves up to 0.5 rad a metre off its line at 0.35 of its speed | playtest | `BALLISTICS.leaves` (FO1). Play Woodland: a shot through a bush's edge should feel like a gamble, and bots holding fire should not leave fights stuck. |
-| The hit volume is capsules, so it misses or overhangs the drawn figure by a few cm at the rim (at most 3.5% of the drawn body, 2.7% of the volume) | can wait | Built-in figures only (`render/figureHitVolume.test.ts`). |
+| The hit volume is capsules, so it misses or overhangs the drawn figure by a few cm at the rim (at most 3.5% of the drawn body, 2.7% of the volume) | can wait | Built-in figures only (`render/figures/figureHitVolume.test.ts`). |
 | Arms and replicas neither count as hits nor stop BBs: a BB through a figure's forearm flies on | document | Owner ruling (DECISIONS 2026-10-01, arm hits off). (M85) |
 | Against a bot that strafes, aiming barely raises your share of BBs that hit (Normal, 15 to 35 m: 49 / 31 / 14% hip, 51 / 25 / 14% aimed) | can wait | The strafe, not the spread, decides most misses. (M84) |
 | Tracer visibility was reviewed on paper only (no per-replica tracer setting) | can wait | Fine with three replicas; give tracers per-replica settings when more platforms arrive. (M9) |
@@ -58,7 +58,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | With Ricochets count on, bounced BBs still decide about a fifth of hits, and Attack / Defend's attackers win more of those matches | document | The owner's ruling (2026-10-10): bounced BBs lose more speed. (G12) |
 | The spacing and friendly-ricochet guards pass or fail on which fixed seeds a change reshuffles | can wait | `depotMatch.spacing` and `depotMatch.ricochet` sit near their limits. (M87) Beta 1: BT1. |
 | The wind can only be read from the dust in the air, and Low quality (and Reduced motion) shows no dust | can wait | The owner's "dust only" default (M30). On Low you learn it from your BBs' drift. |
-| A bush doesn't move when a BB goes in: only a few leaves pop out and drift down, with a rustle | can wait | `render/leafFlecks.ts` (FO1). A shiver of the bush's mesh near the hit would read better; it is one merged mesh per map. |
+| A bush doesn't move when a BB goes in: only a few leaves pop out and drift down, with a rustle | can wait | `render/effects/leafFlecks.ts` (FO1). A shiver of the bush's mesh near the hit would read better; it is one merged mesh per map. |
 | The BBs' bush is a smooth ellipsoid and the drawn one is lumpy, so a BB can rustle up to a hand's width off the drawn leaves | document | `map/foliage.ts` (shared with bots' sight); the drawn lumps sit up to 14 % of the radius either side of it. (FO1) |
 | From deep inside a bush you can still see out (its leaves are drawn from outside only), yet your BBs stop in the leaves | document | "Leaves in the way · step clear to shoot" shows when your own BB stops within 2 m of you. (FO1) |
 
@@ -149,10 +149,9 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Neon Heights (dev): the east end wins a little more of Elimination, 44.5 % to the west over seeds 1-96 | playtest | Attack / Defend is even (attackers 54 %). (M34c, M55, M57, M71, M73) |
 | Neon Heights (dev) by Day, Pro Attack / Defend: attackers win ~60 %, the top of the 40-60 % band | playtest | BP2's report read 60.3 % ±3.3 on seeds 1-32 (TE4: 57.9 %), outside but within noise. (M40, M71, M73) |
 | Neon Heights (dev) Pro Elimination sits near its band's floor: the west end wins about 41 % of decided rounds | playtest | Within noise (±3.7) of the 40 % floor by Day and Night. (M40, M71, M73, M102) |
-| Woodland (dev) Elimination at 5v5: the downhill (west) end still wins a little more, about 57 % of decided rounds at Normal | playtest | Levers if it climbs: lane-point spacing near each camp, `RISE_HEIGHT`, `EAST_FALL`. (M87, M88) Beta 1: WL1. |
+| Woodland (dev) Elimination at 5v5: the downhill (west) end's share of decided rounds has swung with each change (57 % at Normal after M88) | playtest | WL2's runs read 45.8 % to 60.0 % (±6) as its cover changed. Since WL3's West Hill: Normal 46.9 %, Hard 37.1 %, Pro 45.8 %, all in band. Levers: lane-point spacing near each camp, `RISE_PEAK`, `EAST_FALL`, the meadow swells (a second one took Pro to 37.5 %). (M87, M88, WL2, WL3) Beta 1: WL1. |
 | Depot Elimination: the east end wins a little more often in bot-only matches | can wait | West end 48 % over 64 seeds, 49 % on the guard's 16 (`src/ai/balance/depotEnds.balance.ts`). |
 | Low draws no skyline: Depot and Neon Heights show plain sky over their walls | can wait | The skyline joins the tree ring at Trees: Layered (`skylineShown`, Medium and up). (MS1) |
-| Woodland's boulders keep their collision box's silhouette: they read as stone by texture, facets and moss, not by outline | can wait | Owner rule: no point of a block's box (M33i) MS1 kept the box colliders. |
 | A map offering Day and Night with fire lights would show its fire pits cold by day | can wait | Flames, embers and lantern panes are built with the light pools, under a night preset only. (M33i) |
 | Practice range: on Low the targets are plain greybox (white discs on a post, flat plywood cut-outs) | can wait | With Map detail (Medium and up) FA7 adds scuffed plates, scoring-zone figures, chains, arms and a shelf. (M21, BP5) |
 | Practice range: a BB still in the air when its 2.5 s lifetime ends outside the walls reads as "flew out of bounds · aim lower or turn the hop-up down" | can wait | A very steep lob; rare. Playtest whether the wording fits. (M21, BP5) |
@@ -169,6 +168,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | In Extraction only you open cases; bot teammates don't loot, and the home team guards and patrols the cases but never opens or moves them | can wait | Since M46 teammates cover you while you open. (M44, M46) |
 | An Extraction teammate covering you from crouch-only cover still crouches, and crouched it can't see the way it watches | can wait | Corner spots lean out; crouch cover stays by M46's design. Standing up is an owner call. (M55, audit AI-01) |
 | Extraction's balance figures play a bot runner, which walks straight to the nearest cases and falls quicker than a careful player | document | Quick runs end before the home team hunts (`depotMatch.extractionHunters.test.ts`). The owner's playtest sets the targets. (M46, M72) |
+| Woodland's Extraction reads easy since WL2 took the boulders out: against a Normal home team 52 % of runs out (18–48 %) and 52.6 XP a minute (12–52), against Easy 73 % (39–69), on 48 runs each | document | Was 35 % and 33 XP at Normal. WL3's ground changes (West Hill, a swell, the ravine) didn't move it: WL2 read 50 % and 55 XP. The figures play a bot runner (row above). Tune it after William plays Extraction on Woodland (his Beta 1 checklist), with the case spots and the home team's holds as the levers. (WL2, WL3) |
 | Neon Heights' Extraction figure against a Normal home team reads 50 FC a minute on its 48 runs, over the 9–49 band | document | Seeds 1–48 are a high block (over 96 runs the haul is inside the band). Re-measure on more seeds in the bug pass. (BN1) |
 
 ## Figures and art

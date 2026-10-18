@@ -56,6 +56,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **MV2** · The holstered run is a little faster after the Beta 1 playtest, 5.4 m/s where MV1 first set 5.0; the sprint stays at 6.3 m/s
 - **MV2** · The firing hand on the rifle and both pistols holds the grip more naturally: the wrist sits low behind the grip, bent slightly up
 - **MV2** · Your own body is never drawn in first person; looking down, crouched or vaulting you see the ground, not your legs
+- **WL2** · Woodland: no boulders or middle oak; approach cover is log piles and crouch-high logs; fort walls 1.5 m; fort hut 3 m, tin roof
+- **WL3** · Woodland: West Hill hides the west camp from the east at start; a meadow swell; the south creek is a wider dry ravine, 2.2 m deep, 1 m by the hill
 
 ### Fixed
 - **MV1** · The first switch to your other replica in a match no longer stutters; every carried replica is ready before the round
@@ -108,6 +110,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **PF4** · Developer-only: the perf harness measures the same stretch of play every run, so its triangle counts stop swinging between runs
 - **DX7** · Developer-only: bot code and settings split by concern; six data tables move to a data folder, and bad rows show in Settings › Dev
 - **DX5** · Developer-only: one object holds all HUD and accessibility settings; match and range share one session; settings helpers move; game file trimmed
+- **DX6** · Developer-only: render code grouped into folders; vault prompt reads the simulation's answer, no HUD rays; HUD markers share one step
+- **DX8** · Developer-only: play flow, match and range setup, Dev settings and results split out of the game file; players see no change
 
 ## 0.1 Dev 6 · 2026-10-16
 

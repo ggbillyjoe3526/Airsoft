@@ -232,7 +232,7 @@ async function draw(scene, views, quality, renderer, withPost, dressing = false)
   await page.waitForFunction(() => globalThis.airsoft?.state && globalThis.airsoft.state.tick > 5, null, { timeout: 180_000 });
   // The simulation held still: the figures stay at their starts and nobody fires; the effects keep drawing.
   await page.evaluate(() => {
-    globalThis.airsoft.dev.gameSpeed = 0;
+    globalThis.airsoft.dev.inForce.gameSpeed = 0;
   });
   await page.waitForTimeout(2500);
   // The night settles as in play, the same on both pages whatever their own loops last did: each real pool light fades
@@ -311,7 +311,7 @@ async function draw(scene, views, quality, renderer, withPost, dressing = false)
           cam.lookAt(fire.x, foot + camera.lookUp, fire.z);
         }
         if (view === 'sun') {
-          // Towards the key light (render/lightingPreset.ts keyDirection), a little below it.
+          // Towards the key light (render/light/lightingPreset.ts keyDirection), a little below it.
           const k = r.lighting.key.offset;
           const kl = Math.hypot(k.x, k.y, k.z) || 1;
           const mid = { x: (blue.x + orange.x) / 2, y: (blue.y + orange.y) / 2 + camera.up, z: (blue.z + orange.z) / 2 };

@@ -3,15 +3,15 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DRESSING } from '../config/dressing';
 import { QUALITY, SURFACES } from '../config/render';
-import { buildMapMeshes, disposeMapMeshes, mapLookOf, texturesFor } from '../render/mapMeshes';
-import { placeDressing } from '../render/mapDressing';
-import { skylineGeometries } from '../render/skyline';
-import type { SurfaceTextures } from '../render/proceduralTextures';
+import { buildMapMeshes, disposeMapMeshes, mapLookOf, texturesFor } from '../render/field/mapMeshes';
+import { placeDressing } from '../render/dressing/mapDressing';
+import { skylineGeometries } from '../render/dressing/skyline';
+import type { SurfaceTextures } from '../render/field/proceduralTextures';
 import { DEPOT } from './depot';
 import { MAPS } from './maps';
 import type { MapBlock, MapData, NeonSign } from './mapTypes';
 import { NEON_HEIGHTS } from './neonHeights';
-import { neonPlate } from '../render/neonDressing';
+import { neonPlate } from '../render/dressing/neonDressing';
 import { terrainHeightAt } from './terrain';
 import { WOODLAND } from './woodland';
 
@@ -315,7 +315,7 @@ function skylineBlocksSight(map: MapData): { blocked: number; pairs: number } {
 
 describe('G9 QA: the background stays out of the field and hides nobody (acceptance 2)', () => {
   it('control: Neon Heights’ towers stand wholly outside its walls, and block no line between the teams', () => {
-    // MS1's wall units and cables hang over the field on purpose, out of every player's room (render/skylineSeen.test.ts).
+    // MS1's wall units and cables hang over the field on purpose, out of every player's room (render/dressing/skylineSeen.test.ts).
     expect(skylineInField(NEON_HEIGHTS, 0).filter((v) => v.kind !== 'wallUnit' && v.kind !== 'wire')).toEqual([]);
     expect(skylineBlocksSight(NEON_HEIGHTS)).toEqual({ blocked: 0, pairs: 25 });
   });
@@ -370,12 +370,14 @@ describe('G9 QA: the maps are exactly what main shipped, and dressing code write
   // broke a wall down to a low wall to vault on each (Depot's office, Woodland's cabin, the Capsules' front), and
   // turned a Knoll log across the slope (Woodland). Neon Heights' re-pinned by BP5, which ended the Plaza landing where
   // its stair starts. Woodland's and Depot's re-pinned by MS1: the cabin's roof, its 3 m walls on one level and its two
-  // lanterns, smaller bushes, and Depot's skyline. The named areas (CL1) and the overtime flag's spot (OT1) are left
+  // lanterns, smaller bushes, and Depot's skyline. Woodland's re-pinned by WL2: the fort hut's roof, the fort's lower
+  // walls, the lone oak and every boulder gone (log piles and fallen trunks in their place), the bushes laid anew. Re-pinned by WL3: West Hill, the meadow swell and the dry ravine (the ground, and everything
+  // standing on it). The named areas (CL1) and the overtime flag's spot (OT1) are left
   // out: they name or mark the field, they don't change it.
   it('Woodland, Neon Heights and Depot have the data they had on main (blocks, lanes, spawns, terrain, bushes, extraction)', () => {
-    expect(fingerprint(WOODLAND, ['dressing', 'areas', 'overtimeFlag'])).toBe('03c1b7df');
+    expect(fingerprint(WOODLAND, ['dressing', 'areas', 'overtimeFlag'])).toBe('08e4d7a8');
     expect(fingerprint(NEON_HEIGHTS, ['dressing', 'areas', 'overtimeFlag'])).toBe('77cc54d5');
-    expect(fingerprint(WOODLAND.blocks)).toBe('582b9012');
+    expect(fingerprint(WOODLAND.blocks)).toBe('63ba5cac');
     expect(fingerprint(NEON_HEIGHTS.blocks)).toBe('dff1039c');
     // Depot's dressing too: "Depot draws exactly as it does on main".
     expect(fingerprint(DEPOT, ['areas', 'overtimeFlag'])).toBe('a89137e4');
@@ -383,9 +385,9 @@ describe('G9 QA: the maps are exactly what main shipped, and dressing code write
 
   it('placing, building, drawing the horizon and running the effects writes nothing into either map', async () => {
     vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
-    const { DressingEffects } = await import('../render/dressingEffects');
-    const { addAtmosphere } = await import('../render/atmosphere');
-    const { resolveLighting } = await import('../render/lightingPreset');
+    const { DressingEffects } = await import('../render/dressing/dressingEffects');
+    const { addAtmosphere } = await import('../render/light/atmosphere');
+    const { resolveLighting } = await import('../render/light/lightingPreset');
     try {
       const before = [WOODLAND, NEON_HEIGHTS, DEPOT].map((m) => fingerprint(m));
       for (const map of [WOODLAND, NEON_HEIGHTS, DEPOT]) {

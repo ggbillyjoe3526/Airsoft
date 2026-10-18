@@ -20,7 +20,7 @@ function storageWith(fields: Record<string, unknown>): Storage {
   };
 }
 
-/** What Game builds from its saved settings (game.ts playedPicks). */
+/** What Game builds from its saved settings (playSetup.ts playedPicks). */
 function savedPicks(): NewGamePicks {
   return { map: DEFAULT_MAP, mode: DEFAULT_MODE, difficulty: loadDifficulty(), teammateDifficulty: DEFAULT_DIFFICULTY, ruleset: loadRuleset(), rules: loadMatchRules() };
 }

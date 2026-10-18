@@ -164,32 +164,6 @@ attempts: 0
 threads' branches it touches have merged (ST1, MR1, HD1, MV1, BD1, MS1, TT1), so none conflicts with them. DX2 takes
 over DC1's known-issues tidy-up. DX0, the quick wins, is the audit thread's own pull request.
 
-## DX6 · Render: the folder regrouped, the prop builders as data, no per-frame vault rays (audit A3, A8 part, B4, B9 part)
-tier: core
-perf: required
-touches: src/render/, src/sim/vault.ts, src/sim/character.ts, src/sim/simulation.ts, src/matchSession.ts, pipeline/cycles.mjs, e2e/
-contract: none
-acceptance:
-  1. `src/render/` is grouped as its README describes: `field/`, `figures/`, `replicas/`, `light/`, `effects/` (names the thread picks), each with a README; `post/` and `webgpu/` keep theirs. Pure moves: no behaviour change, the import-cycle check and every test pass, and `render/README.md` is the index of the subfolders.
-  2. `mapMeshes.ts`'s prop builders (containers, pallets, racks, gabions, IBCs, skips, generators, barriers and the rest) live in a `mapPieces/` table, leaving merge, restyle and dispose behind; `mapMeshes.ts` is under 400 lines.
-  3. The vault prompt reads the simulation's per-tick answer (on the character or an event) and `combatPresentation.ts` casts no rays.
-  4. The six HUD marker updaters in `matchPresentation.ts` share one project-and-pin helper.
-  5. The perf gate is green on every matrix entry, and the Low frame-time, draw-call and heap lines are unchanged within noise.
-status: open
-attempts: 0
-
-## DX8 · Game: the play flow and the dev glue out of the composition root (audit A1 step two; optional, after DX5)
-tier: core
-perf: required
-touches: src/game.ts, src/core/, src/matchFlow.ts, src/ui/menus/menus.ts
-contract: none
-acceptance:
-  1. Play, enter, resume, pause and leave live in a `PlayFlow` module (name the thread's) with its own tests; the dev and report glue in a module of its own; `Game` keeps the loop, the lifecycle and the wiring.
-  2. `game.ts` is under 800 lines and imports under 50 modules.
-  3. Pause, resume, restart and return to menu leave the same state as before (the session tests and the smoke test pass), and the frame loop's crash guard is unchanged.
-status: open
-attempts: 0
-
 ## BP6 · Beta 1 bug pass (when William says go)
 tier: core
 perf: required
