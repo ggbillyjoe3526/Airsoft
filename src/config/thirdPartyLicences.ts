@@ -68,7 +68,7 @@ SOFTWARE.`;
  */
 export function noticeText(notice: VendoredNotice, source: string): string {
   if (notice.read === 'file') return source.trim();
-  const header = source.match(/^(?:\s*\/\/.*\n)+/)?.[0] ?? '';
+  const header = source.match(/^(?:\s*\/\/.*\r?\n)+/)?.[0] ?? '';
   const copyright = header.match(/Copyright[^\n]*/)?.[0];
   if (!copyright) throw new Error(`${notice.source}: no copyright line in its header for the ${notice.name} notice`);
   return `${copyright.trim()}\n\n${MIT_TERMS}`;

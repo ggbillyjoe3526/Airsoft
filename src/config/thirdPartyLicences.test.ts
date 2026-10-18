@@ -19,6 +19,12 @@ describe('the third-party licences file (LC1)', () => {
     expect(text.endsWith(MIT_TERMS)).toBe(true);
   });
 
+  it('reads the header with Windows line endings too', () => {
+    const meshopt = VENDORED_NOTICES.find((n) => n.name === 'meshoptimizer')!;
+    const text = noticeText(meshopt, '// MIT License.\r\n// Copyright (C) 2016, by Someone\r\nvar x = 1;\r\n');
+    expect(text.split('\n')[0]).toBe('Copyright (C) 2016, by Someone');
+  });
+
   it('fails loudly when the header loses its copyright line, instead of shipping the decoder without its notice', () => {
     const meshopt = VENDORED_NOTICES.find((n) => n.name === 'meshoptimizer')!;
     expect(() => noticeText(meshopt, '// Some other header\nvar x = 1; // Copyright later in the code\n')).toThrow(/no copyright line/);
