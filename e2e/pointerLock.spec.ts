@@ -19,6 +19,16 @@ test('the mouse turns the view and picks an order on the wheel under the real po
   test.setTimeout(120_000);
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  // Raw input off: with `unadjustedMovement` the lock takes the OS's raw movement, which synthetic mouse events may not
+  // reach (Chromium 156's headless shell on CI turned nothing). The movement each event carries is counted for the
+  // failure message.
+  await page.addInitScript(() => {
+    localStorage.setItem('airsoft.settings', JSON.stringify({ version: 1, rawInput: 'off' }));
+    const w = window as unknown as { moves: number; movedX: number };
+    w.moves = 0;
+    w.movedX = 0;
+    document.addEventListener('mousemove', (e) => { w.moves++; w.movedX += e.movementX; });
+  });
   await page.goto('/?seed=3&quality=low');
   await page.locator('.menu-title-start').click({ timeout: 30_000 });
   await page.locator('.menu-setup').getByRole('button', { name: 'Start match', exact: true }).click();
@@ -40,7 +50,14 @@ test('the mouse turns the view and picks an order on the wheel under the real po
   await page.waitForTimeout(200);
   const before = await game();
   for (let i = 1; i <= 10; i++) await page.mouse.move(641 + i * 10, 360);
-  await expect.poll(async () => before.yaw - (await game()).yaw, { timeout: 15_000 }).toBeCloseTo(100 * MOUSE.radiansPerCount * before.sensitivity, 3);
+  const turned = 100 * MOUSE.radiansPerCount * before.sensitivity;
+  await expect.poll(async () => before.yaw - (await game()).yaw, { timeout: 15_000 }).toBeCloseTo(turned, 3).catch(async (err: Error) => {
+    const seen = await page.evaluate(() => {
+      const w = window as unknown as { moves: number; movedX: number };
+      return { moves: w.moves, movedX: w.movedX, lock: document.pointerLockElement?.id ?? null, paused: !!document.querySelector('.menu-pause') };
+    });
+    throw new Error(`${err.message}\nseen in the page: ${JSON.stringify(seen)}`);
+  });
 
   // The order wheel: hold Z, push the mouse up onto Follow Me (the top item), let go: the order is given, and the view
   // didn't turn while the wheel had the mouse.
