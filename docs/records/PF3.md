@@ -18,6 +18,7 @@
 - **QA may commit its own `pipeline/*.qa.test.mjs` files, never the gate's other tests.** Its tests of PF3's pipeline code failed scope otherwise (also in DECISIONS).
 - **A perf run ends its window when the simulation stops for 1 s (`STALL_MS`).** The 2026-10-17 Neon Extraction run measured the results screen for 5 minutes once the match ended.
 - **Nine of the ten desktop files are the baselines; Neon Extraction is left out.** That row measured the results screen.
+- **The HUD overflow check sets its twelve spare magazines again until the HUD shows them.** It failed on main and here since PF1 (CI showed three): a round that ends during the long check refills the pouch; test only, `e2e/uiOverflow.spec.ts`.
 
 ## Known issues left
 

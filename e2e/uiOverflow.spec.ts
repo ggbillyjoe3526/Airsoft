@@ -236,16 +236,19 @@ for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]] as const
         expect(await page.evaluate(hudOverlaps), `HUD size ${size}, ${mag} BBs loaded`).toEqual([]);
       }
       // The longest hop-up readout and a belt of twelve spare magazines (they wrap) still sit inside the 176 px panel.
-      await page.evaluate(() => {
-        const a = (window as unknown as Game).airsoft.state.characters[0]!.armament as unknown as { ammo: { pouch: number[] }[]; active: number };
-        const ammo = a.ammo[a.active]!;
-        ammo.pouch = [30, 0, 5, 30, 30, 30, 30, 30, 30, 30, 30, 30];
-        const hop = document.querySelector('.hud-hop') as HTMLElement;
-        hop.hidden = false;
-        hop.querySelector('.hud-hop-value')!.textContent = '100%';
-        hop.querySelector('.hud-hop-reach')!.textContent = 'Too much · floats';
-      });
-      await expect(page.locator('.hud-mags i')).toHaveCount(12);
+      // Set again until the HUD shows them: a round that ends meanwhile (a slow CI runner) refills the pouch to three.
+      await expect(async () => {
+        await page.evaluate(() => {
+          const a = (window as unknown as Game).airsoft.state.characters[0]!.armament as unknown as { ammo: { pouch: number[] }[]; active: number };
+          const ammo = a.ammo[a.active]!;
+          ammo.pouch = [30, 0, 5, 30, 30, 30, 30, 30, 30, 30, 30, 30];
+          const hop = document.querySelector('.hud-hop') as HTMLElement;
+          hop.hidden = false;
+          hop.querySelector('.hud-hop-value')!.textContent = '100%';
+          hop.querySelector('.hud-hop-reach')!.textContent = 'Too much · floats';
+        });
+        await expect(page.locator('.hud-mags i')).toHaveCount(12, { timeout: 2_000 });
+      }).toPass({ timeout: 20_000 });
       const inside = await page.evaluate(() => {
         const panel = document.querySelector('.hud-replica')!.getBoundingClientRect();
         const bad: string[] = [];
