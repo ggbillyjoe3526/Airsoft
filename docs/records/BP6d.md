@@ -26,6 +26,9 @@
   the order wheel under the real lock, and passed in the cloud container's Chromium, but on CI's headless shell
   (Chromium 156) the view never turned, even with raw input off and the round's clock running: four CI runs red. It
   went rather than hold the paused project's last pull request; the two rows it closed are back, with that finding.
+- **The HUD overflow check waits longer for the ammo count.** With that spec gone the shards regrouped, and on one
+  a 2560 × 1440 frame took over 10 s twice in `uiOverflow.spec.ts`; its count now waits 30 s and the test 300 s. A test
+  change only.
 - **The bush's drawn lumps were left as they are.** MS1's look puts them from about 17 % inside the BBs' ellipsoid to
   30 % outside; re-centring them would change how bushes look, which wants the owner's eye on a picture first. The row
   says so.
