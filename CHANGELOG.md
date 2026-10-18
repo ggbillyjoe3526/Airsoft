@@ -119,6 +119,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **DX8** · Developer-only: play flow, match and range setup, Dev settings and results split out of the game file; players see no change
 - **PF3** · Desktop perf run judges Ultra 4K frame times against the 17 Oct baseline; stops at match end, checks npm install, names failed rows
 - **BP6c** · Developer-only: a test fix and docs rows from the pull-request pass; players see the Fixed lines
+- **TL1** · Developer-only: property tests for BB flight, bot routes and scoring, the knip dead-code finder and two browser debugging tools
 
 ## 0.1 Dev 6 · 2026-10-16
 

@@ -65,6 +65,11 @@ itself only. Its licence ships in the build's licences file (Libraries, below).
 | @types/three (dev) | MIT | Three.js type definitions |
 | prettier (dev) | MIT | Formatting |
 | meshoptimizer, inside three | MIT | The packed models' decoder (`three/examples/jsm/libs/meshopt_decoder.module.js`) |
+| fast-check (dev) | MIT | Property tests: generated inputs for ballistics, routes and round rules (TL1) |
+| @fast-check/vitest (dev) | MIT | Runs fast-check properties as Vitest tests (TL1) |
+| knip (dev) | ISC | Finds unused files, exports and dependencies: `npm run knip` (TL1) |
+| chrome-devtools-mcp (dev tool, not installed) | Apache-2.0 | MCP server for performance traces and console errors, run by `npx` from `.mcp.json` (TL1) |
+| @playwright/mcp (dev tool, not installed) | Apache-2.0 | MCP server for clicking through the game in a bug pass, run by `npx` from `.mcp.json` (TL1) |
 
 Every build writes `third-party-licences.txt` beside the page, linked from the title screen's Licences (LC1). Vite's
 `build.license` fills it with each bundled package and its licence text; `vite.config.ts` › `vendoredLicences()` adds
