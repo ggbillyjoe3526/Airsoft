@@ -106,18 +106,6 @@ acceptance:
 status: open
 attempts: 0
 
-## PF1 · No shader hitches mid-match
-tier: core
-perf: required
-touches: src/matchSession.ts, src/render/match/flagRenderer.ts, src/render/figures/characterRenderer.ts, src/render/figures/externalModels.ts, src/render/replicas/viewmodel.ts, src/render/renderer.ts
-contract: none
-acceptance:
-  1. Each first-use hitch is measured before and after with `?perf` on a cold cache, and recorded: the first overtime flag, first tossed magazine, first 2x scope aim, first figure fade, the shadow depth shaders and the post stack's pipelines.
-  2. The warm-up compiles all of them before the round starts (shown for the compile, then hidden), so none compiles mid-match on Medium, High or Ultra. (KI1 did the overtime flag, the tossed magazine, the scope eyepiece and all but two post passes; left: the shadow depth shaders, a figure's first fade, the last pass's canvas draw and the reflections' mask, and every before-and-after measurement.)
-  3. Load time grows by no more than 10 % on any preset. The perf gate is green.
-status: open
-attempts: 0
-
 ## PF2 · The laptop pass (after William's laptop baseline)
 tier: core
 perf: required

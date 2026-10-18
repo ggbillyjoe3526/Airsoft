@@ -217,6 +217,8 @@ for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]] as const
     await page.locator('.menu-title-start').click();
     await setup.getByRole('button', { name: 'Start match', exact: true }).click();
     await page.waitForSelector('.hud-replica', { state: 'visible', timeout: 60_000 });
+    // Round 1 goes live once the shader warm-up is done (PF1), and its start fills every pouch afresh.
+    await page.waitForFunction(() => ((window as unknown as { airsoft?: { state?: { tick: number } } }).airsoft?.state?.tick ?? 0) > 0, null, { timeout: 120_000 });
     await page.waitForTimeout(1000);
     type Game = { airsoft: { prefs: { hudSize: number }; hudLook: { show: () => void }; state: { characters: { armament: { active: number; ammo: { mag: number }[] } }[] } } };
     for (const size of [1, 0.8, 1.5]) {
