@@ -161,3 +161,14 @@ acceptance:
   2. Every KNOWN_ISSUES row in a public area is checked against the build.
 status: open
 attempts: 0
+
+## BP6d · Beta 1 bug pass: the known issues backlog and William's checklist
+tier: core
+perf: skip
+touches: src/config/lasers.ts
+contract: none
+acceptance:
+  1. Every `docs/KNOWN_ISSUES.md` row is checked against main: a row that no longer holds is closed with evidence, one out of date is put right, and every fixable row outside BP6a–c's areas is fixed with a test.
+  2. William's checklist (`/mnt/project-files/playtest/beta1-checklist.md`) moves each item a thread proved to Done with how, and keeps only what needs his hands at the top.
+status: open
+attempts: 0
