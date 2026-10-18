@@ -7,7 +7,7 @@
 | Date | Attempt | Worker model | build | tests | smoke | perf | scope | changelog | Critic | Retry reason | Wall time | Worker tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 2026-10-18 | 1 | Opus 5.5 (build thread) | ✓ 18 s | ✓ 570 s | ✓ 1444 s | ✓ 3156 s | ✓ | – records step | 7/8 Retry (Opus) | AC2: the click line's fix (CSS only) had no test | ~5 h (with the browser play) | QA 33k, performance 29k, critic (Opus) 55k |
-| 2026-10-18 | 2 | Opus 5.5 (build thread) | ✓ 8 s | ✓ 134 s | – tests and docs only since attempt 1 | – tests and docs only since attempt 1 | ✓ | ✓ | 8/8 Accept (Opus) | – | ~1 h (with the rebase onto BP6b and BP6c) | critic (Opus) 22k, changelog 24k |
+| 2026-10-18 | 2 | Opus 5.5 (build thread) | ✓ 19 s | ✓ 611 s | ✓ 1406 s | ✓ 3259 s | ✓ | ✓ | 8/8 Accept (Opus) | – | ~1 h (with the rebase onto BP6b and BP6c) | critic (Opus) 22k, changelog 24k |
 
 ## Decisions
 
