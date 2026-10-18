@@ -10,7 +10,7 @@ import { MOUSE } from '../src/config/controls';
 type Airsoft = {
   airsoft: {
     input: { yaw: number; sensitivity: number; wheelPointer: { pick: number } };
-    state: { round: { phase: string }; characters: { team: number; status: string }[] };
+    state: { time: number; round: { phase: string }; characters: { team: number; status: string }[] };
     session: { player: { team: number; status: string } };
   };
 };
@@ -28,7 +28,8 @@ test('the mouse turns the view and picks an order on the wheel under the real po
     const { input, state, session } = (window as unknown as Airsoft).airsoft;
     const p = session.player;
     const mate = state.characters.some((c) => c !== p && c.team === p.team && c.status === 'alive');
-    return { yaw: input.yaw, sensitivity: input.sensitivity, pick: input.wheelPointer.pick, orders: state.round.phase === 'live' && p.status === 'alive' && mate };
+    // The clock moves only once the shader warm-up is done (PF1); until then the view holds the spawn's (BP6a).
+    return { yaw: input.yaw, sensitivity: input.sensitivity, pick: input.wheelPointer.pick, orders: state.time > 1 && state.round.phase === 'live' && p.status === 'alive' && mate };
   });
   await expect.poll(async () => (await game()).orders, { timeout: 30_000 }).toBe(true);
 
@@ -39,7 +40,7 @@ test('the mouse turns the view and picks an order on the wheel under the real po
   await page.waitForTimeout(200);
   const before = await game();
   for (let i = 1; i <= 10; i++) await page.mouse.move(641 + i * 10, 360);
-  await expect.poll(async () => before.yaw - (await game()).yaw, { timeout: 5_000 }).toBeCloseTo(100 * MOUSE.radiansPerCount * before.sensitivity, 3);
+  await expect.poll(async () => before.yaw - (await game()).yaw, { timeout: 15_000 }).toBeCloseTo(100 * MOUSE.radiansPerCount * before.sensitivity, 3);
 
   // The order wheel: hold Z, push the mouse up onto Follow Me (the top item), let go: the order is given, and the view
   // didn't turn while the wheel had the mouse.
@@ -48,7 +49,7 @@ test('the mouse turns the view and picks an order on the wheel under the real po
   await page.keyboard.down('z');
   await expect(page.locator('.order-wheel .order-wheel-item').first()).toBeVisible({ timeout: 10_000 });
   for (let i = 1; i <= 10; i++) await page.mouse.move(741, 360 - i * 15);
-  await expect.poll(async () => (await game()).pick, { timeout: 5_000 }).toBe(0);
+  await expect.poll(async () => (await game()).pick, { timeout: 15_000 }).toBe(0);
   await page.keyboard.up('z');
   await expect(squadLine).toHaveText(/Follow me/i, { timeout: 10_000 });
   expect((await game()).yaw).toBe(held);

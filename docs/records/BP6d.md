@@ -25,7 +25,8 @@
   while the blurb said "steadier from the hip". A hip-only laser would be a balance change, so the words follow the game.
 - **Mouse look gets a test under the real lock.** Headless Chromium grants the lock (IN1), so `e2e/pointerLock.spec.ts`
   turns the view by mouse counts and picks Follow Me on the order wheel. Esc itself stays a hand check: the browser
-  releases the lock on it, out of reach of a synthetic key.
+  releases the lock on it, out of reach of a synthetic key. It waits for the round clock to run before moving the mouse: on CI's slower
+  runners the shader warm-up was still holding the view when it first moved (red twice on CI, green here).
 - **The bush's drawn lumps were left as they are.** MS1's look puts them from about 17 % inside the BBs' ellipsoid to
   30 % outside; re-centring them would change how bushes look, which wants the owner's eye on a picture first. The row
   says so.
