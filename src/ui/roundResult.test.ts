@@ -70,7 +70,7 @@ describe('the stamp', () => {
     expect(stamp.classList.contains('settled')).toBe(false);
   });
 
-  it.fails('words first set while the HUD is hidden still settle in when it comes back (bug pass BP6a)', () => {
+  it('words first set while the HUD is hidden still settle in when it comes back (bug pass BP6a)', () => {
     const r = new RoundResult(parent as unknown as HTMLElement);
     const stamp = parent.children[0]!;
     r.setVisible(false);

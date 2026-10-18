@@ -42,6 +42,8 @@ export class RoundResult {
   private shownWord: RoundResultWords | null = null;
   private shownHint = '';
   private visible = true;
+  /** Whether the words held have been on screen yet (their settle-in played). */
+  private played = false;
 
   constructor(parent: HTMLElement) {
     this.stamp = document.createElement('div');
@@ -68,6 +70,7 @@ export class RoundResult {
     if (!words) return;
     // New words settle in again; the same words back after a pause don't (bug pass BP6a).
     this.stamp.classList.remove('settled');
+    this.played = this.visible;
     this.word.textContent = words.word;
     this.caption.textContent = words.caption;
     this.stamp.setAttribute('data-tone', words.tone);
@@ -86,7 +89,10 @@ export class RoundResult {
     if (visible === this.visible) return;
     this.visible = visible;
     this.stamp.hidden = !visible || this.shownWord === null;
-    if (visible && this.shownWord) this.stamp.classList.add('settled');
+    if (!visible || !this.shownWord) return;
+    // Words already seen come back as they were; words set while hidden settle in now.
+    if (this.played) this.stamp.classList.add('settled');
+    this.played = true;
   }
 
   clear(): void {
