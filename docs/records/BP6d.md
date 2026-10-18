@@ -37,6 +37,4 @@
 
 ## Known issues left
 
-- A Firefox mouse lock granted and dropped before its change event is handled could leave Play and Resume doing
-  nothing (KNOWN_ISSUES › Save and browsers, can wait): BP6a's review found it, not reproduced. The other rows BP6a–c
-  add are theirs.
+- None added. The rows BP6a–c add are theirs (BP6a logged the Firefox lock hang its review found).
