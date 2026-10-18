@@ -161,3 +161,15 @@ acceptance:
   2. Every KNOWN_ISSUES row in a public area is checked against the build.
 status: open
 attempts: 0
+
+## TL1 · Dev tooling: browser MCP servers, property tests and knip (owner, 2026-10-18)
+tier: fix
+perf: skip
+touches: .mcp.json, tools/mcp-browser.mjs, knip.json, .gitignore, package.json, package-lock.json, src/sim/ballistics.property.test.ts, src/sim/round.property.test.ts, src/nav/navGrid.property.test.ts, docs/ASSETS.md, docs/PROCESS.md
+acceptance:
+  1. Chrome DevTools MCP and Playwright MCP are listed in `.mcp.json` (pinned, no usage statistics or CrUX lookups), with when to use each in `docs/PROCESS.md`; a smoke use of each is recorded honestly.
+  2. fast-check and @fast-check/vitest as dev dependencies, with seeded property tests for BB ballistics, the nav grid and round rules in the fast suite.
+  3. knip as a dev dependency with a config and `npm run knip`; its findings in the shared files, nothing removed.
+  4. A `docs/ASSETS.md` › Libraries row for each package; nothing reaches the shipped game.
+status: open
+attempts: 0
