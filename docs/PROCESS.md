@@ -153,7 +153,7 @@ A full bug pass plus a `docs/KNOWN_ISSUES.md` sweep is a standing practice (owne
 - **How.** It runs as a pipeline task: `BP<n>` in `docs/TASKS.md`, `tier: core`, the gates and the Opus critic. Two
   parallel review agents (for example UI and input; pool, Loadout and maps) read the new code: last time they found
   five small bugs the browser didn't show. A scripted Playwright player (`?nolock`, the e2e build served by
-  `vite preview`) plays the modes.
+  `vite preview`) plays the modes; the Playwright MCP server (Dev tools, below) adds exploratory play where it loads.
 - **Balance.** Run the balance report, `node pipeline/balance.mjs` (about 20 minutes; `pipeline/README.md`), and copy it
   to the run folder. Each figure **outside** its band by two standard errors or more is a balance issue: fix it in the
   pass or log it in `docs/KNOWN_ISSUES.md`. One **outside, within noise** is re-measured on more seeds before anyone acts;
@@ -161,6 +161,21 @@ A full bug pass plus a `docs/KNOWN_ISSUES.md` sweep is a standing practice (owne
   its record: figures are reported, never asserted, since noise across seeds made pass/fail bands cost re-measure loops.
 - **Seeds.** The headless bot guards keep only what must never happen, but a fix that touches movement or materials
   can still fail one seed. Re-measure over 16 seeds before changing a threshold.
+
+## Dev tools
+
+None of these reach the game (TL1, owner 2026-10-18). Versions are pinned; licences in `docs/ASSETS.md` › Libraries.
+
+- **Browser MCP servers** (`.mcp.json`, started by `tools/mcp-browser.mjs`, which picks the flags for a PC or a cloud
+  session). Claude Code asks once per machine before it starts them. **Chrome DevTools MCP** when a number or an error
+  is the question: record a performance trace of a hitch, take a heap snapshot for a leak, read source-mapped console
+  errors. **Playwright MCP** for exploratory play in a bug pass: click through menus and matches and read live values,
+  where a scripted e2e test would only check what it was written for. Each uses its own throwaway browser profile.
+- **Property tests** (fast-check through `@fast-check/vitest`): `*.property.test.ts` beside the code, in the `fast`
+  project. Each has a fixed seed, so a run is repeatable; a failure prints the smallest failing input with its seed and
+  path. A property that finds a real bug outside the task's scope gets a `docs/KNOWN_ISSUES.md` row with that seed.
+- **knip** (`npm run knip`; `npm run knip -- --production` for only what the shipped game reaches). Not a gate: run it
+  before a tidy-up task. Most `--production` findings are exports kept for tests, which is fine.
 
 ## The pipeline
 
