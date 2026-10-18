@@ -220,6 +220,14 @@ for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]] as const
     // Round 1 goes live once the shader warm-up is done (PF1), and its start fills every pouch afresh.
     await page.waitForFunction(() => ((window as unknown as { airsoft?: { state?: { tick: number } } }).airsoft?.state?.tick ?? 0) > 0, null, { timeout: 120_000 });
     await page.waitForTimeout(1000);
+    // Hold round 1 for the checks below: they outlast its 150 s on a slow CI runner, and a round's end freezes the HUD
+    // (WON and the table) and then refills the pouch. Nobody fires, nobody sees you, and the clock reads 50:00.
+    await page.evaluate(() => {
+      type Hold = { airsoft: { dev: { inForce: object }; session: { setDevCheats: (d: object) => void }; state: { round: { clock: number } } } };
+      const g = (window as unknown as Hold).airsoft;
+      g.session.setDevCheats({ ...g.dev.inForce, botsHoldFire: true, ghost: true });
+      g.state.round.clock = 3000;
+    });
     type Game = { airsoft: { prefs: { hudSize: number }; hudLook: { show: () => void }; state: { characters: { armament: { active: number; ammo: { mag: number }[] } }[] } } };
     for (const size of [1, 0.8, 1.5]) {
       await page.evaluate((s) => {
@@ -236,16 +244,19 @@ for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]] as const
         expect(await page.evaluate(hudOverlaps), `HUD size ${size}, ${mag} BBs loaded`).toEqual([]);
       }
       // The longest hop-up readout and a belt of twelve spare magazines (they wrap) still sit inside the 176 px panel.
-      await page.evaluate(() => {
-        const a = (window as unknown as Game).airsoft.state.characters[0]!.armament as unknown as { ammo: { pouch: number[] }[]; active: number };
-        const ammo = a.ammo[a.active]!;
-        ammo.pouch = [30, 0, 5, 30, 30, 30, 30, 30, 30, 30, 30, 30];
-        const hop = document.querySelector('.hud-hop') as HTMLElement;
-        hop.hidden = false;
-        hop.querySelector('.hud-hop-value')!.textContent = '100%';
-        hop.querySelector('.hud-hop-reach')!.textContent = 'Too much · floats';
-      });
-      await expect(page.locator('.hud-mags i')).toHaveCount(12);
+      // Set again until the HUD shows them (the round's start refills the pouch to three).
+      await expect(async () => {
+        await page.evaluate(() => {
+          const a = (window as unknown as Game).airsoft.state.characters[0]!.armament as unknown as { ammo: { pouch: number[] }[]; active: number };
+          const ammo = a.ammo[a.active]!;
+          ammo.pouch = [30, 0, 5, 30, 30, 30, 30, 30, 30, 30, 30, 30];
+          const hop = document.querySelector('.hud-hop') as HTMLElement;
+          hop.hidden = false;
+          hop.querySelector('.hud-hop-value')!.textContent = '100%';
+          hop.querySelector('.hud-hop-reach')!.textContent = 'Too much · floats';
+        });
+        await expect(page.locator('.hud-mags i')).toHaveCount(12, { timeout: 2_000 });
+      }).toPass({ timeout: 20_000 });
       const inside = await page.evaluate(() => {
         const panel = document.querySelector('.hud-replica')!.getBoundingClientRect();
         const bad: string[] = [];

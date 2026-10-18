@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { baselineFileName, baselineLag, baselineLagWarning, budgetFor, isPerfPath, judgeRun, perfScope, perfTag, rendererTag, runFileName, runName, selectPerfRuns } from './perfMatrix.mjs';
+import { baselineFileName, baselineLag, baselineLagWarning, budgetFor, frameTimesGatedFor, isPerfPath, judgeRun, perfScope, perfTag, rendererTag, runFileName, runName, selectPerfRuns } from './perfMatrix.mjs';
 
 const budgets = JSON.parse(readFileSync('pipeline/perf-budget.json', 'utf8'));
 const matrix = budgets.matrix;
@@ -180,5 +180,30 @@ describe('a baseline\'s age (CORE-12: a warning, never a failure)', () => {
     expect(baselineLagWarning('container.json', head, 21, 20)).toContain('21 commits behind HEAD');
     expect(baselineLagWarning('container.json', head, null, 20)).toContain('not in this clone\'s history');
     expect(budgets.baselineMaxLag).toBe(20);
+  });
+});
+
+describe('the desktop\'s Ultra line (PF3)', () => {
+  it('adds an environment\'s lines over every other, only in that environment', () => {
+    const b = { presets: { ultra: { p95Ms: 14, drawCalls: 150 } }, backends: { webgpu: { presets: { ultra: { drawCalls: 160 } } } }, envs: { desktop: { ultra: { p95Ms: 4.2 } } } };
+    expect(budgetFor(b, 'depot', 'ultra', 'webgpu', 'desktop')).toEqual({ p95Ms: 4.2, drawCalls: 160 });
+    const both = { presets: { ultra: { p95Ms: 14 } }, envs: { desktop: { ultra: { p95Ms: 6.5 }, backends: { webgl: { ultra: { p95Ms: 7.2 } } } } } };
+    expect(budgetFor(both, 'depot', 'ultra', 'webgl', 'desktop')).toEqual({ p95Ms: 7.2 });
+    expect(budgetFor(both, 'depot', 'ultra', 'webgpu', 'desktop')).toEqual({ p95Ms: 6.5 });
+    expect(budgetFor(both, 'depot', 'ultra', 'webgl', 'laptop')).toEqual({ p95Ms: 14 });
+    expect(budgetFor(b, 'depot', 'ultra', 'webgpu', 'laptop')).toEqual({ p95Ms: 14, drawCalls: 160 });
+    expect(budgetFor(b, 'depot', 'ultra', 'webgpu')).toEqual({ p95Ms: 14, drawCalls: 160 });
+    expect(budgetFor(b, 'depot', 'high', 'webgl', 'desktop')).toEqual({});
+  });
+
+  it('judges frame times where the environment is listed, and on its listed presets only', () => {
+    const b = { frameTimeGatedEnvs: ['laptop', 'desktop'], frameTimeGatedPresets: { desktop: ['ultra'] } };
+    expect(frameTimesGatedFor(b, 'laptop', 'low')).toBe(true);
+    expect(frameTimesGatedFor(b, 'desktop', 'ultra')).toBe(true);
+    expect(frameTimesGatedFor(b, 'desktop', 'low')).toBe(false);
+    expect(frameTimesGatedFor(b, 'container', 'ultra')).toBe(false);
+    expect(frameTimesGatedFor(budgets, 'desktop', 'ultra')).toBe(true);
+    expect(frameTimesGatedFor(budgets, 'desktop', 'medium')).toBe(false);
+    expect(frameTimesGatedFor(budgets, 'container', 'low')).toBe(false);
   });
 });

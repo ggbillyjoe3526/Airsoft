@@ -46,7 +46,7 @@ import { fileURLToPath } from 'node:url';
 import { measuresFrom, measuresNotRun } from './balanceReport.mjs';
 import { drawMapPictures, drawPictures, mapShotPictures, measureMapPalettes } from './content-pictures.mjs';
 import { balanceResults, LEVELS, mapReportMarkdown, modeReportMarkdown, payResults, perfResult, reportHtml, reportMarkdown, runOrderResults, skinReportMarkdown, worst } from './contentReport.mjs';
-import { baselineFileName, budgetFor, judgeRun, runFileName } from './perfMatrix.mjs';
+import { baselineFileName, budgetFor, frameTimesGatedFor, judgeRun, runFileName } from './perfMatrix.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARTIFACTS = join(ROOT, 'pipeline', 'out', 'qa-artifacts');
@@ -246,7 +246,6 @@ function runNode(args) {
  */
 async function mapPerf(perf, label, o, problems, check = 'map.perf') {
   const budgets = JSON.parse(readFileSync(join(ROOT, 'pipeline', 'perf-budget.json'), 'utf8'));
-  const frameTimesGated = (budgets.frameTimeGatedEnvs ?? []).includes(o.env);
   const out = [];
   for (const preset of perf.presets) {
     console.log(`content-check: the perf run, ${label}, ${perf.mode}, ${preset}…`);
@@ -272,7 +271,7 @@ async function mapPerf(perf, label, o, problems, check = 'map.perf') {
     const baselineName = baselineFileName(o.env, run, budgets.budgetPreset);
     const baselinePath = join(ROOT, 'pipeline', 'baseline', baselineName);
     const baseline = existsSync(baselinePath) ? JSON.parse(readFileSync(baselinePath, 'utf8')) : null;
-    const judged = judgeRun({ run: combo, metrics: result.metrics, budget: budgetFor(budgets, perf.map, preset), baseline, baselineName, frameTimesGated });
+    const judged = judgeRun({ run: combo, metrics: result.metrics, budget: budgetFor(budgets, perf.map, preset, result.backend ?? 'webgl', o.env), baseline, baselineName, frameTimesGated: frameTimesGatedFor(budgets, o.env, preset) });
     out.push(perfResult(label, { ...run, metrics: result.metrics, errors: result.errors }, judged, check));
   }
   return out;

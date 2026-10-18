@@ -12,8 +12,8 @@
  */
 export const ALWAYS_ALLOWED = [/\.test\.ts$/, /^e2e\//, /^docs\//, /^CHANGELOG\.md$/, /^README\.md$/, /^src\/(.+\/)?README\.md$/];
 
-/** What a QA commit (trailer `Agent: qa`) may touch: tests and their support only. */
-export const QA_ALLOWED = [/\.test\.ts$/, /^e2e\//, /^src\/.*\/testSupport\.ts$/, /^src\/ai\/depotMatchSupport\.ts$/, /^src\/pool\/testStorage\.ts$/];
+/** What a QA commit (trailer `Agent: qa`) may touch: tests and their support only, and in `pipeline/` only QA's own `*.qa.test.mjs` files, never the gate's tests (PF3). */
+export const QA_ALLOWED = [/\.test\.ts$/, /^pipeline\/[^/]+\.qa\.test\.mjs$/, /^e2e\//, /^src\/.*\/testSupport\.ts$/, /^src\/ai\/depotMatchSupport\.ts$/, /^src\/pool\/testStorage\.ts$/];
 
 /** A task id as the pipeline writes them: M27, M29a, FA11a, BP1. */
 const TASK_ID = /[A-Z]{1,3}\d+[a-z]?/;

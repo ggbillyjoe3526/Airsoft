@@ -89,6 +89,9 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   and 2026-10-06).** Archived files are never edited. House style: `docs/PROCESS.md › Writing docs`.
 - **Each task keeps one record file, `docs/records/<id>.md` (owner, 2026-10-06, to save tokens).** Format:
   `docs/records/README.md`. `docs/KNOWN_ISSUES.md` stays the shared list of open issues.
+- **QA may commit `pipeline/*.qa.test.mjs` files, its own tests of the pipeline's code, but no other pipeline file (PF3,
+  2026-10-17).** A pipeline task gets QA like any code change, and its tests live beside the module; the gate's own
+  tests (`scope.test.mjs` and the rest) stay out of QA's reach (`pipeline/scope.mjs` QA_ALLOWED).
 - **Fable 5.1 runs only with the owner's explicit approval, asked for each time, and only where it would do
   significantly better than Opus (owner, 2026-10-08).** It costs far more; candidates are audits and reviews of a major
   architectural change or redesign. Other jobs keep their models (`docs/PROCESS.md › Models`).
@@ -502,8 +505,14 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   His ceilings of 150 draw calls and 250k triangles stay on High. No dynamic resolution scaling. Raising any line needs a
   decision line.
 - **Maxed-out settings target a PC built for 4K at 240 Hz (owner, 2026-10-16).** His desktop is the reference (Ryzen 9
-  9950X3D, 64 GB, RTX 5090). Ultra at 3840×2160 aims for about 4.2 ms. Those frame times stay reported, not judged,
-  until PF3 sets the line from his baseline. Low's 60 fps floor is unchanged.
+  9950X3D, 64 GB, RTX 5090). Ultra at 3840×2160 aims for about 4.2 ms. Low's 60 fps floor is unchanged.
+- **The desktop's Ultra line at 4K is today's baseline, not the 240 Hz aim (owner, 2026-10-17, PF3).** His first
+  baseline ran Ultra at 200 to 230 FPS (p95 5.4 to 6.0 ms on WebGPU), so the gate judges Ultra at 3840×2160 against
+  p95 ≤ 6.5 ms and p99 ≤ 9 ms (`envs.desktop.ultra` in `pipeline/perf-budget.json`): Ultra can't get slower, and
+  nothing in the game was cut to reach 240 Hz. The 240 Hz aim stands and is unmet (KNOWN_ISSUES). Only Ultra's frame
+  times are judged there; its other lines are the preset's. WebGL2, the fallback, measured slower on Depot (p95 6.7,
+  p99 10.6 ms), so PF3 read "today's numbers" as its own baseline too: 7.2 and 11.5 ms
+  (`envs.desktop.backends.webgl`; the thread's reading, not the owner's word yet).
 - **Round 1 waits for every shader to be built before it goes live (owner, 2026-10-17, PF1).** A short wait on a still
   field beats a stutter in round 1; the time to round 1 may grow for it (PF1's 10 % load line was dropped for this).
   A 60 s limit (`RENDER.warmUpLimitMs`) only guards against a build that never settles.

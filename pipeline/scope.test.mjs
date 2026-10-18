@@ -52,6 +52,8 @@ describe('the scope gate (pipeline/gate.mjs)', () => {
     expect(qaAllowedFile('src/sim/bbs.test.ts')).toBe(true);
     expect(qaAllowedFile('src/ai/depotMatchSupport.ts')).toBe(true);
     expect(qaAllowedFile('src/sim/bbs.ts')).toBe(false);
+    expect(qaAllowedFile('pipeline/perfBudget.qa.test.mjs')).toBe(true);
+    expect(qaAllowedFile('pipeline/gate.mjs')).toBe(false);
     expect(qaAllowedFile('pool.md')).toBe(false);
     expect(qaAllowedFile('pipeline/scope.test.mjs')).toBe(false);
   });
