@@ -161,18 +161,3 @@ acceptance:
   2. Every KNOWN_ISSUES row in a public area is checked against the build.
 status: open
 attempts: 0
-
-## BP6c · Beta 1 bug pass: menus, settings and browser
-tier: core
-perf: required
-touches: src/render/, src/ui/menus/, e2e/
-contract: none
-acceptance:
-  1. Every menu and screen, every setting that changes the game live, key rebinding, and the layouts at 3840×2160, 1920×1080, 1280×720 and 900×600 with HUD sizes 100 to 150 % are walked in the build; nothing is clipped, overlaps or fails to apply.
-  2. Browser state holds: pointer lock, Esc, pause and Resume, focus loss, a hidden tab, resize, audio unlock and load failures leave no stuck input, leaking click, timer or listener after a restart or a return to the menu, and memory stays flat over repeated match quits.
-  3. Saves and progression (XP, unlocks, records, adaptive) persist in Chromium, with Firefox covered by CI.
-  4. Low to Ultra stay inside every perf budget line in the container (no line raised).
-  5. KNOWN_ISSUES rows IN1, PF1, AX1, RV1, RV2, UX1, TU1 and PF2 are checked against the build, and every fault found is fixed or gets a row.
-  6. The results go to `bugpass/BP3-results.md` in the project's shared files, one line per checklist item: proven, failed, or needs William and why.
-status: open
-attempts: 0

@@ -236,8 +236,10 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | On the node renderer's WebGL2 back end the GPU grass and tree stand-ins draw every slot, culled ones as nothing | document | Transform-feedback compute has no indirect draws. (W5) |
 | On WebGPU the perf harness and the comparison count the grass and stand-ins' triangles at their caps | document | Three counts an indirect draw from the CPU's instance count. (W5, W6a) |
 | The tree stand-ins beyond Woodland's fence are flat cards close up and cast no shadow | can wait | Each is a billboard blending two of 8 pictured views. (W5) MS1 kept them. |
+| On WebGL2 Three's vertex-array cache still grows by about 5 entries a match quit or Play Again | can wait | About 1 MB of heap over ten quits, settling (BP6c took it from about 18 MB a match). Likely geometries kept between matches; heap snapshots name the entries. (BP6c) |
 | The node path's compute passes and lights lean on Three 0.186's private API | document | `computeKit.ts`, `nightLights.ts`, `deferredFrees.ts` and `nodeBackend.ts` log one console error when an upgrade renames what they use. Recheck all on a Three upgrade. (W5, BP3) |
 | In the container's software WebGPU, growing the window mid-match on Medium without the retro look stops the page's frames for good | can wait | Seen in BP3 and the same on main before it; likely the software GPU process, not the game. (BP3) |
+| In the container's SwiftShader a match's first live frame takes 10 s and more at 2560×1440 | document | The software GPU process, not the game's code: no shader is built then (BP6c, measured). The HUD overflow check waits past it. A real GPU's first frame is the owner's PF1 check. (BP6c) |
 | On the node renderer an antialiasing change waits for the next load | document | A node renderer can't change its samples in place. (W1, W6a) |
 
 ## Audio
@@ -262,6 +264,8 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | The hit feed wraps a long line (friendly fire with a ricochet tag) to two rows to keep clear of the scoreboard | can wait | Since BP3 a plain line fits on one row at 1280 and 1366 px. (bug pass, FA5) |
 | The minimap draws Depot's loading dock at the floor's level (a lighter shade); a patch for a player heard on the dock looks like one below | can wait | A map with storeys (Neon Heights) gets one drawing per storey. (M23, BP5) |
 | Dev settings' Game speed runs the simulation slower or faster, but sounds keep their pitch and the replica's bob and sway run on real time | can wait | A toy for watching BBs fly; timing-sensitive presentation isn't speed-aware. (M24) |
+| The Match screen's map stills are 480×270, so they look soft on a 4K screen | can wait | Drawn in code by the menu art script (KI2); a larger still costs download size. (BP6c) |
+| With Settings › Ammo counter off the replica panel keeps its width, its right half empty | can wait | The BB count goes and nothing takes its room. A narrower panel is a visible change, so a picture for the owner first. (BP6c) |
 | The crosshair shows the spread only, not the recoil kick | document | Recoil is light on toy-like replicas; revisit in the Phase 4 HUD pass. (M10) |
 | The round's table shows by itself between rounds and covers the middle of the screen | document | Since HD1 it waits for the WON or LOST stamp, and a click moves on at once. The owner's playtest decides whether it should wait for Tab. (M19, HD1) |
 | Dev settings' Ghost: bots still see you and shoot at you (their BBs pass through) | document | Deliberate: for walking the field under fire, not for hiding. (M24) |
