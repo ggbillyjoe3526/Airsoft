@@ -161,3 +161,15 @@ acceptance:
   2. Every KNOWN_ISSUES row in a public area is checked against the build.
 status: open
 attempts: 0
+
+## LC1 · Third-party licences: the shipped build carries them, and the rules for adding a library
+tier: fix
+perf: skip
+touches: vite.config.ts, src/config/thirdPartyLicences.ts, src/config/thirdPartyLicences.test.ts, src/config/README.md, src/config/menus.ts, src/ui/menus/titleScreen.ts, src/ui/menus/css/play.css, src/ui/menus/menuRedesign.test.ts, src/ui/menus/menuRedesignQA.test.ts, e2e/release.spec.ts, CLAUDE.md, docs/
+contract: none
+acceptance:
+  1. Every build writes one third-party licences file with each bundled package's licence text (Vite's build.license), plus meshoptimizer's notice and Inter's OFL.
+  2. The title screen links it; the release browser test opens it as text and finds every entry.
+  3. The rules for adding a library, the Do not use list and the licence guide are in docs/ASSETS.md, pointed to from CLAUDE.md and DECISIONS (owner, 2026-10-18).
+status: open
+attempts: 0
