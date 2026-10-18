@@ -26,28 +26,6 @@ below. The item numbers are his. Where an older block overlaps one of these, the
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
 
-## WL3 · Woodland: West Hill, two meadow swells and a dry ravine (owner, 2026-10-17)
-tier: fix
-perf: required
-touches: src/map/woodland.ts, src/map/woodlandExtraction.ts, src/map/woodlandDressing.ts, src/config/dressing.ts, public/menu/, pipeline/baseline/
-contract: none
-William, 2026-10-17: "Add more elevation changes to the map. The opposite end from the side with the structure on the
-hill could maybe have a small hill (enough to stop the other side immediately seeing them). Any other elevation
-changes should be small. I'm also thinking one side of the map should have a more significant elevation change.
-Perhaps even add a water stream." He picked "Land first" on the concept (`playtest/wl2-woodland/elevation-concept.jpg`
-in the project's shared files): the hill, the swells and the ravine now; the stream is a later step.
-acceptance:
-  1. West Hill: the West Rise in front of end 0's camp rises to about 3.4 m at its middle and 2.2 m at its ends (was
-     2.6 m), and the camps still start hidden from each other (M88).
-  2. Low swells, about 0.6 m, on the meadow (one, if two tip the balance); nothing else on the field changes height by more than that.
-  3. The south creek becomes a dry ravine about 2.2 m deep where it runs past the meadow, with a bed wide enough for a
-     stream later.
-  4. Every slope stays walkable (PHYSICS.maxRampSlope), the content checks pass, and Woodland's balance guards stay in
-     their bands at every difficulty; Low and Medium perf hold.
-  5. Before and after pictures go to William before the pull request merges.
-status: open
-attempts: 0
-
 ## BL1 · Attack / Defend: fewer attacker wins, more rounds won at the pole (after playtest)
 tier: core
 perf: skip
