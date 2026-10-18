@@ -66,6 +66,8 @@ export class RoundResult {
     this.shownWord = words;
     this.stamp.hidden = !this.visible || words === null;
     if (!words) return;
+    // New words settle in again; the same words back after a pause don't (bug pass BP6a).
+    this.stamp.classList.remove('settled');
     this.word.textContent = words.word;
     this.caption.textContent = words.caption;
     this.stamp.setAttribute('data-tone', words.tone);
@@ -84,6 +86,7 @@ export class RoundResult {
     if (visible === this.visible) return;
     this.visible = visible;
     this.stamp.hidden = !visible || this.shownWord === null;
+    if (visible && this.shownWord) this.stamp.classList.add('settled');
   }
 
   clear(): void {

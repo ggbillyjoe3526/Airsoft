@@ -4,7 +4,7 @@ import { cssColor, TEAM_COLOUR_SETS } from '../config/teams';
 import type { Bush } from '../map/foliage';
 import type { MapBlock } from '../map/mapTypes';
 import { type Terrain, terrainMaxX, terrainMaxZ, terrainRange, vertexHeight } from '../map/terrain';
-import type { ScreenMarker } from '../render/match/screenMarker';
+import type { EdgeFloor, ScreenMarker } from '../render/match/screenMarker';
 import { clampToSquare, clearOfBox, coverHeight, FrameCheck, type HeardPlayer, insideSquare, type MapPoint, minimapPixelRatio, noiseAlpha, type PinStack, type ScreenBox, toMinimap } from './minimapView';
 import { pingAlpha, type ShownPing } from './pingMarkers';
 
@@ -213,6 +213,16 @@ export class Minimap {
     this.pinStep.down = MINIMAP.pinStep.down * scale;
     this.pinStep.across = MINIMAP.pinStep.across * scale;
     return clearOfBox(m, this.panel, gap, this.pins, this.pinStep);
+  }
+
+  /**
+   * Where markers pinned along the left and top edges may start (render/match/screenMarker.ts EdgeFloor), `gap` px clear of
+   * the panel, written into `out`: below it down the left edge, right of it across the top; 0 while the minimap is hidden.
+   */
+  pinFloor(gap: number, out: EdgeFloor): EdgeFloor {
+    out.left = this.visible ? this.panel.y + this.panel.h + gap : 0;
+    out.top = this.visible ? this.panel.x + this.panel.w + gap : 0;
+    return out;
   }
 
   /** The HUD's scale (style.css --hud-scale) as last laid out, 1 before the first layout. */

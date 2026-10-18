@@ -80,6 +80,11 @@
   display: none;
 }
 
+/* Back after a pause: shown as it was, without settling in again (bug pass BP6a). */
+.round-result.settled {
+  animation: none;
+}
+
 .round-result-word {
   font: 800 64px/1 var(--ui-display);
   letter-spacing: var(--ls-wide);
@@ -106,8 +111,14 @@
   }
 }
 
-/* "Click for the next round" (or the results), small under the round while a click would move on. */
+/* "Click for the next round" (or the results), small under the round while a click would move on. Out of the flow, so
+   the word doesn't move up when it appears (bug pass BP6a). */
 .round-result-hint {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  translate: -50% 0;
+  white-space: nowrap;
   margin-top: 10px;
   font: 700 15px/1.2 var(--ui-font);
   letter-spacing: var(--ls-caps);

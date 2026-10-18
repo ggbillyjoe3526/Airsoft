@@ -56,6 +56,19 @@ describe('the stamp', () => {
     r.clear();
     expect(stamp.hidden).toBe(true);
   });
+
+  it('comes back from a pause as it was, without settling in again; new words settle in (bug pass BP6a)', () => {
+    const r = new RoundResult(parent as unknown as HTMLElement);
+    const stamp = parent.children[0]!;
+    r.setWords({ word: 'Won', tone: 'won', caption: 'Round 2' });
+    expect(stamp.classList.contains('settled')).toBe(false);
+    r.setVisible(false);
+    r.setVisible(true);
+    expect(stamp.classList.contains('settled')).toBe(true);
+    r.setWords(null);
+    r.setWords({ word: 'Lost', tone: 'lost', caption: 'Round 3' });
+    expect(stamp.classList.contains('settled')).toBe(false);
+  });
 });
 
 describe('how long a round\'s end lasts (Beta 1 playtest item 15, RE1)', () => {

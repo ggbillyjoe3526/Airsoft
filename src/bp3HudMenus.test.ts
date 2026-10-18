@@ -96,7 +96,8 @@ describe('BP3a: wiring of the presentation classes, pinned at the source', () =>
 
   it('holds the round message while the player calls their hit, and shows it again after', () => {
     const src = sources['./render/match/matchPresentation.ts']!;
-    expect(src).toMatch(/this\.updateRoundMessage\(status === 'calling'\)/);
+    // BP6a: and while WON, LOST or DRAW is up.
+    expect(src).toMatch(/this\.updateRoundMessage\(status === 'calling' \|\| this\.resultWordsUp\(\)\)/);
     expect(src).toMatch(/if \(calling\) this\.feedback\.setRoundMessage\(''\)/);
     // Changing the state rebuilds the message, so it comes back when the call ends.
     expect(src).toMatch(/shown\.calling === calling\) return/);

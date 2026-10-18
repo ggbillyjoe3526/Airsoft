@@ -55,7 +55,7 @@ import { ExitRenderer } from './exitRenderer';
 import type { FigureModel } from '../figures/externalModels';
 import { FlagRenderer } from './flagRenderer';
 import type { ProbeGrid } from '../light/probeGrid';
-import { EdgePins, type EdgeStep, edgeAngle, projectMarker, type ScreenMarker } from './screenMarker';
+import { type EdgeFloor, EdgePins, type EdgeStep, edgeAngle, projectMarker, type ScreenMarker } from './screenMarker';
 import { SpectatorCamera } from './spectatorCamera';
 import type { FigureRigs } from '../figures/figureRig';
 import { type FigureCrowd, HUMAN_CROWD } from '../figures/figureMix';
@@ -85,6 +85,8 @@ export class MatchPresentation {
   private markerTowards = 0;
   /** This frame's edge-pinned markers (pings, the flag, exits, the hold marker), laid out a label apart (KI1). */
   private readonly edgePins = new EdgePins();
+  /** Where edge markers may start beside the minimap (Minimap.pinFloor), filled each time one is placed. */
+  private readonly edgeFloor: EdgeFloor = { left: 0, top: 0 };
   private readonly edgeStep: EdgeStep = { down: 0, across: 0 };
   private readonly feed: HitFeed;
   /** WON or LOST at a round's end (Dev 6 playtest item 33) and the line saying a click moves on. */
@@ -688,8 +690,9 @@ export class MatchPresentation {
     this.feedback.setOutLabel(this.out ? this.outLabel() : '');
     // Extraction: respawns left first, as the banner says them on the frame you're back.
     if (this.extraction) this.runInfo.respawnsLeft = respawnsLeft(this.state.round.run, this.player, this.extraction);
-    this.updateRoundMessage(status === 'calling');
     this.updateRoundResult(status === 'calling');
+    // The banner gives way to WON, LOST or DRAW while it is up, as both sit over the field's middle (bug pass BP6a).
+    this.updateRoundMessage(status === 'calling' || this.resultWordsUp());
     if (this.extraction) {
       this.scoreboard.update(this.state.round, this.state.characters, this.runInfo);
     } else this.scoreboard.update(this.state.round, this.state.characters);
@@ -898,7 +901,7 @@ export class MatchPresentation {
     const at = projectMarker(anchor, camera, this.view.width, this.view.height, edge, out);
     if (!pin) return at;
     this.markerTowards = edgeAngle(at, this.view.width, this.view.height);
-    return this.edgePins.place(this.minimap.clearPinned(at, edge), this.view.width, this.view.height, this.edgeStep);
+    return this.edgePins.place(this.minimap.clearPinned(at, edge), this.view.width, this.view.height, this.edgeStep, this.minimap.pinFloor(edge, this.edgeFloor));
   }
 
   /** "OUT · hit by Beta 2", rebuilt only when who hit you changes. */
@@ -943,6 +946,13 @@ export class MatchPresentation {
     this.board.setNext(hint);
   }
 
+  /** WON, LOST or DRAW is on screen (updateRoundResult): from the round's end, once your hit call is over, for HUD.roundResultTime. */
+  private resultWordsUp(): boolean {
+    const r = this.state.round;
+    if (this.extraction !== undefined || (r.phase !== 'over' && r.phase !== 'matchOver') || Number.isNaN(this.resultAt)) return false;
+    return this.state.time - this.resultAt < HUD.roundResultTime;
+  }
+
   /** Whether a click now moves on from a round's end (to the next round, or the results): see updateRoundResult. */
   get resultContinuable(): boolean {
     const r = this.state.round;
@@ -958,9 +968,10 @@ export class MatchPresentation {
   }
 
   /**
-   * Rebuilds the round message only when what it says changes. While you call your hit (`calling`) it waits: the hit
-   * that ends a round would otherwise put the result under the "HIT!" stamp, both unreadable (BP3); the result follows
-   * once the call ends, still inside the countdown.
+   * Rebuilds the round message only when what it says changes. While you call your hit, and then while WON, LOST or DRAW
+   * is up (`calling`), it waits: the hit that ends a round would otherwise put the result under the "HIT!" stamp (BP3),
+   * and the banner under the result's word (BP6a), each unreadable; the banner follows over the round's table, still
+   * inside the countdown.
    */
   private updateRoundMessage(calling: boolean): void {
     const r = this.state.round;
