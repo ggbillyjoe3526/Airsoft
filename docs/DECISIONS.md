@@ -54,6 +54,8 @@ binds; the rest goes in the task's record. When this file nears 50 KB, move supe
   small additions (an in-match hop-up control, a home-screen fullscreen button, one feed with a placement setting, WON
   or LOST at a round's end) and removals (resting on cover, Voices, the Skins option). Each is a block in
   `docs/TASKS.md`.
+- **The project goes on hold once 0.1 Beta 1 is tagged (owner, 2026-10-18).** No further work until he picks it up
+  again; `main` holds everything, and `docs/HANDOFF.md` lists what waits.
 - **Only full releases are tagged, and only the owner creates tags (owner, 2026-10-01).** After he tags, the release
   checklist is due in the next pull request (owner, 2026-10-03): `docs/PROCESS.md › Releases`.
 - **The release path: 0.1 Dev 6, 0.1 Beta, then 0.1.0 opens Early Access; themed updates follow; 1.0 is the full

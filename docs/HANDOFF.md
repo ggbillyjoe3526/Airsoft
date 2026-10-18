@@ -1,26 +1,32 @@
 # Handoff
 
-What is happening now (as of 2026-10-16), for a session picking up the work. The planning thread rewrites it once per
+What is happening now (as of 2026-10-18), for a session picking up the work. The planning thread rewrites it once per
 batch. The plan is `docs/ROADMAP.md`, the open tasks `docs/TASKS.md`, and the engine facts `docs/ARCHITECTURE.md` and
 each `src/` folder's `README.md`.
 
 ## Now
 
-- **0.1 Dev 6 is out.** The owner tagged `0.1-dev.6` on 2026-10-16 (commit `c810dd3`). Every item in
-  `docs/archive/0.1-dev/ROADMAP.md` › 0.1 Dev 6 is done, the last its full bug pass (BP5, `docs/records/BP5.md`).
-- **Now: 0.1 Beta 1** (owner, 2026-10-16; he tags it when complete). His Dev 6 playtest list (34 items) is seven blocks
-  at the top of `docs/TASKS.md` (ST1, MR1, HD1, MV1, BD1, MS1, TT1), each built by its own thread. He played Dev 6 (2026-10-16). The Beta 1 blocks are in `docs/TASKS.md`, highest
-  priority first: fixes, balance, performance and polish, with no features. His playtest made three of them: WL1
-  (Woodland Attack / Defend), NH1 (Neon Heights' upper floors, placed with the Maps Update) and HV1 (the hit area
-  fitted to each figure, his ruling, done in HV1 with BD1, which made the rigged figures the default). The callouts' pace is fine, and
-  the overtime flag went unseen because rounds ended first. The spring sniper waits for 0.2 and his specs.
-- **Waiting on the owner:** trying Adaptive difficulty, the laptop and desktop Ultra perf baselines (PF2 waits on
-  them), and the Save checks in Firefox and Edge (`docs/PLAYTEST.md` › Only you can do these).
-- **Vault clips.** Both rigged figures (the default since BD1) have their own (shared in
-  `tools/blender/bot-figure/scripts/bot18.py`: the robot's built with it in RM10, the human's spliced into its RM9
-  export); a figure file without them falls back to the old placeholder. The built-in figures don't change. Of the
-  bots, anchors aim from cover where they stand still to fight or hold (BN1; not while sidestepping or hunting, BP5);
-  the rest fire from the hip.
+- **The project is on hold once the owner tags 0.1 Beta 1** (owner, 2026-10-18: "No further work will be done for
+  now"). Start nothing until he picks it up again. `main` holds everything: no thread has work in progress or an
+  unmerged branch.
+- **0.1 Beta 1 is complete.** Every thread merged, then the full bug pass ran in four parts (BP6a gunplay and HUD,
+  BP6b bots, modes and maps, BP6c menus, settings and browser, BP6d the known issues and the owner's checklist;
+  `docs/records/BP6a.md` to `BP6d.md`). Its summary, and the owner's own checks, are in the project's shared files
+  (`bugpass/summary.md`, `playtest/beta1-checklist.md` › Only you can do these). He tags `0.1-beta.1` himself.
+- **Open blocks in `docs/TASKS.md` all wait** on his playtest answers (BL1, WL1, BL2, BT1, TU1), his laptop baseline
+  (PF2) or the Maps Update (NH1, NH2). None has started.
+
+## On hold, not started
+
+Each waits for the owner to pick the project up again; none has a branch.
+
+- **Prettier's one-off reformat and CI's format check** (owner, 2026-10-17: after the 0.1 Beta 1 tag). DX4 installed
+  Prettier and didn't run it.
+- **knip's tidy-ups** (TL1): 79 exports that could lose `export` and 3 unlisted dependencies in the Blender figure
+  tools (`audit/knip-2026-10-18.md` in the shared files). Nothing is removed without his word.
+- **A desktop download** (Tauri or Electron) and **an installable web app** (`vite-plugin-pwa`): after Beta, on his
+  word (the desktop download is in `docs/ROADMAP.md` › Early Access; the web app came from the third-party briefing,
+  2026-10-18).
 
 ## Where to look
 
