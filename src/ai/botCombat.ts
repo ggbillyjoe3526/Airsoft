@@ -227,6 +227,12 @@ function bodyInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number, to
     if (rayCharacter(from, dir, harmed, v) >= 0) return true;
     shiftHitVolume(v, mate.velocity.x * flight, mate.velocity.z * flight);
     if (rayCharacter(from, dir, harmed, v) >= 0) return true;
+    // Speeding up the way they're heading, as a teammate strafing in a duel does (friendlyMateSpeed).
+    const speed = Math.hypot(mate.velocity.x, mate.velocity.z);
+    if (speed <= 0 || speed >= w.cfg.friendlyMateSpeed) continue;
+    const more = ((w.cfg.friendlyMateSpeed - speed) * flight) / speed;
+    shiftHitVolume(v, mate.velocity.x * more, mate.velocity.z * more);
+    if (rayCharacter(from, dir, harmed, v) >= 0) return true;
   }
   return false;
 }
