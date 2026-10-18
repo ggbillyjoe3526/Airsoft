@@ -64,6 +64,15 @@ function edgeOf(m: ScreenMarker, width: number, height: number): number {
   return top <= bottom ? 2 : 3;
 }
 
+/**
+ * Where an edge marker may start along the left and the top edges (px down the left edge, across the top one): the
+ * minimap's panel sits in that corner, and a marker moved along an edge never goes back onto it (bug pass BP6a).
+ */
+export interface EdgeFloor {
+  left: number;
+  top: number;
+}
+
 /** The most edge markers laid out in one frame (pings, the flag, exits, the hold marker); past it they are left as they are. */
 const EDGE_PINS_MAX = 32;
 
@@ -82,13 +91,17 @@ export class EdgePins {
     this.count = 0;
   }
 
-  /** Moves `m` (if pinned to an edge) clear of the markers placed this frame on its edge, and notes it. Returns `m`. */
-  place(m: ScreenMarker, width: number, height: number, step: Readonly<EdgeStep>): ScreenMarker {
+  /**
+   * Moves `m` (if pinned to an edge) clear of the markers placed this frame on its edge, and notes it; never before
+   * `floor` on the left and top edges (the minimap's corner). Returns `m`.
+   */
+  place(m: ScreenMarker, width: number, height: number, step: Readonly<EdgeStep>, floor?: Readonly<EdgeFloor>): ScreenMarker {
     if (m.onScreen || this.count >= EDGE_PINS_MAX) return m;
     const e = edgeOf(m, width, height);
     const side = e < 2;
     const gap = side ? step.down : step.across;
     const size = side ? height : width;
+    const start = Math.max(gap / 2, (e === 0 ? floor?.left : e === 2 ? floor?.top : 0) ?? 0);
     let at = side ? m.y : m.x;
     // Each pass moves past one marker in the way; a marker can be in the way at most once from each side.
     for (let pass = 0; pass <= this.count * 2; pass++) {
@@ -105,8 +118,8 @@ export class EdgePins {
       const up = at < b || (at === b && b < size / 2);
       let next = up ? b - gap : b + gap;
       // Off the end of the edge that way: the other side of the one in the way.
-      if (next < gap / 2 || next > size - gap / 2) next = up ? b + gap : b - gap;
-      if (next < gap / 2 || next > size - gap / 2) break;
+      if (next < start || next > size - gap / 2) next = up ? b + gap : b - gap;
+      if (next < start || next > size - gap / 2) break;
       at = next;
     }
     if (side) m.y = at;

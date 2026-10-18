@@ -91,6 +91,10 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BP6c** · Memory no longer climbs each time you quit a match or press Play Again (it kept about 18 MB a match before)
 - **BP6c** · On the Match screen the rules note fades at its foot while there is more to scroll; Start practice fits a 900 px window
 - **BP6b** · A click that moves past a round's end fires nothing in the next round until you let go; in windows under about 800 px tall, WON or LOST clears a two-line banner
+- **BP6a** · WON, LOST or DRAW doesn't replay its settle-in after a pause and resume
+- **BP6a** · Round 1's start whistle blows when play starts after the loading warm-up, not on the frozen picture; mouse moves in the warm-up don't turn you
+- **BP6a** · Two quick hop-up taps in one slow frame turn two notches
+- **BP6a** · An off-screen marker pinned along the left or top edge no longer slides back onto the minimap
 
 ### Internal
 - **MS1** · Tests remove skyline pieces no player can see and keep hung units and cables clear of the player's room; perf baselines re-recorded

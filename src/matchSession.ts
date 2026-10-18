@@ -430,9 +430,10 @@ export class MatchSession implements Session {
   advance(dt: number): number {
     const p = this.player;
     this.input.update(p.armament.active, this.loadout.length, this.combat.aimRaised, this.combat.aimSensitivityScale, canAimDownSights(p.armament));
-    // The round starts once the warm-up is done (PF1): the frames meanwhile show the field, standing still.
+    // The round starts once the warm-up is done (PF1): the frames meanwhile show the field, standing still, and the view
+    // stays on the spawn's, so a mouse moved during the wait doesn't turn you as the round opens (bug pass BP6a).
     if (!this.warm) {
-      this.input.clearLatches();
+      this.input.resetView(this.player.spawnYaw);
       return 0;
     }
     // Skipping the round (M83): clicks, inspects and orders made meanwhile are dropped; the ticks run flat out.

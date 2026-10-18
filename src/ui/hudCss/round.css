@@ -80,6 +80,11 @@
   display: none;
 }
 
+/* Back after a pause: shown as it was, without settling in again (bug pass BP6a). */
+.round-result.settled {
+  animation: none;
+}
+
 .round-result-word {
   font: 800 64px/1 var(--ui-display);
   letter-spacing: var(--ls-wide);
